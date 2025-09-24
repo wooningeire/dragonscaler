@@ -14,6 +14,9 @@
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright test"
 	},
+	"dependencies": {
+		"@vaie/hui": "^0.0.0"
+	},
 	"devDependencies": {
 		"@playwright/test": "^1.55.1",
 		"@sveltejs/adapter-auto": "^6.1.0",
@@ -22,6 +25,7 @@
 		"@testing-library/jest-dom": "^6.8.0",
 		"@testing-library/svelte": "^5.2.8",
 		"jsdom": "^27.0.0",
+		"sass": "^1.93.2",
 		"svelte": "^5.39.5",
 		"svelte-check": "^4.3.2",
 		"typescript": "^5.9.2",

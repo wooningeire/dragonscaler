@@ -1,2 +1,31 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<script lang="ts">
+import "./index.scss";
+
+import Overlays from "./Overlays.svelte";
+import CharacterViewer from "./CharacterViewer.svelte";
+import type { Character } from "./Character.svelte";
+
+let characters = $state<Character[]>([]);
+const addCharacter = (character: Character) => {
+    characters.push(character);
+};
+</script>
+
+<main>
+    <CharacterViewer {characters} />
+    <Overlays
+        {characters}
+        onAddCharacter={addCharacter}
+    />
+</main>
+
+<style lang="scss">
+
+main {
+    width: 100vw;
+    height: 100vh;
+
+    display: grid;
+    place-items: stretch;
+}
+</style>
