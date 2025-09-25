@@ -3,20 +3,11 @@ import "./index.scss";
 
 import Overlays from "./Overlays.svelte";
 import CharacterViewer from "./CharacterViewer.svelte";
-import type { Character } from "./Character.svelte";
-
-let characters = $state<Character[]>([]);
-const addCharacter = (character: Character) => {
-    characters.push(character);
-};
 </script>
 
 <main>
-    <CharacterViewer {characters} />
-    <Overlays
-        {characters}
-        onAddCharacter={addCharacter}
-    />
+    <CharacterViewer />
+    <Overlays />
 </main>
 
 <style lang="scss">

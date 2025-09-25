@@ -1,15 +1,10 @@
 <script lang="ts">
-import type { Character } from "./Character.svelte";
+import { currentCharacters } from "$lib/state/characters.svelte";
 import CharacterDisplay from "./CharacterDisplay.svelte";
 
-let {
-    characters,
-}: {
-    characters: Character[],
-} = $props();
-
-
 const PX_PER_M = 144;
+
+const characters = $derived(currentCharacters());
 
 const offsets = $derived.by(() => {
     const offsets: number[] = [0];
@@ -25,14 +20,13 @@ const offsets = $derived.by(() => {
 <div class="character-viewer">
     <div
         class="viewport"
-        style:--scale="{PX_PER_M}px"
+        style:--scale={PX_PER_M}
     >
         {#each characters as character, i}
             <CharacterDisplay
                 {character}
                 x={offsets[i]}
                 y={0}
-                referenceScale={PX_PER_M}
             />
         {/each}
     </div>
@@ -57,14 +51,14 @@ const offsets = $derived.by(() => {
             oklch(0.95 0.04 120) 0,
             oklch(0.95 0.04 120) 1px,
             oklch(0 0 0 / 0) 1px,
-            oklch(0 0 0 / 0) var(--scale),
+            oklch(0 0 0 / 0) calc(var(--scale) * 1px),
         ),
         repeating-linear-gradient(
             to bottom,
             oklch(0.95 0.04 120) 0,
             oklch(0.95 0.04 120) 1px,
             oklch(0 0 0 / 0) 1px,
-            oklch(0 0 0 / 0) var(--scale),
+            oklch(0 0 0 / 0) calc(var(--scale) * 1px),
         );
 }
 </style>

@@ -1,32 +1,18 @@
 <script lang="ts">
 import AddCharacterMenu from "./AddCharacterMenu.svelte";
-import type { Character } from "./Character.svelte";
-    import CharacterCard from "./CharacterCard.svelte";
-    import CharacterCarousel from "./CharacterCarousel.svelte";
+import CharacterCarousel from "./CharacterCarousel.svelte";
+import { beginNewCharacter, currentNewCharacter } from "../lib/state/NewCharacter.svelte";
+import { currentCharacters } from "$lib/state/characters.svelte";
 
-let {
-    characters,
-    onAddCharacter,
-}: {
-    characters: Character[],
-    onAddCharacter: (character: Character) => void,
-} = $props();
-
-
-let isAddingCharacter = $state(false);
+const characters = $derived(currentCharacters());
+const newCharacter = $derived(currentNewCharacter());
 </script>
 
 <div class="overlays">
-    <button onclick={() => isAddingCharacter = true}>Add</button>
+    <button onclick={beginNewCharacter}>Add</button>
 
-    {#if isAddingCharacter}
-        <AddCharacterMenu
-            onSubmit={character => {
-                isAddingCharacter = false;
-                onAddCharacter(character);
-            }}
-            onCancel={() => isAddingCharacter = false}
-        />
+    {#if newCharacter !== null}
+        <AddCharacterMenu />
     {/if}
 
     <CharacterCarousel {characters} />

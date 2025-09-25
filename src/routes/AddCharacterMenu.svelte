@@ -1,31 +1,13 @@
 <script lang="ts">
-import { Character } from "./Character.svelte";
-    import { ReferenceCurve } from "./ReferenceCurve.svelte";
-    import TextEntry from "./TextEntry.svelte";
+import { Character } from "../lib/types/Character.svelte";
+import { ReferenceCurve } from "../lib/types/ReferenceCurve.svelte";
+import TextEntry from "./TextEntry.svelte";
+import { addCharacter } from "$lib/state/characters.svelte";
+import { currentNewCharacter, deleteNewCharacter } from "$lib/state/NewCharacter.svelte";
 
-let {
-    onSubmit,
-    onCancel,
-}: {
-    onSubmit: (character: Character) => void,
-    onCancel: () => void,
-} = $props();
 
-let image: {
-    src: string,
-    dimensions: {
-        width: number,
-        height: number,
-    },
-} | null = $state.raw(null);
+const newCharacter = $derived(currentNewCharacter()!);
 
-let name = $state("");
-let points = $state.raw([
-    {x: 0, y: 0},
-    {x: 0, y: 1},
-]);
-let targetLength = $state(1);
-let descriptor = $state("");
 
 let fileInput: HTMLInputElement;
 
@@ -37,8 +19,8 @@ const loadFile = async () => {
 
     loading = true;
 
-    if (image !== null) {
-        URL.revokeObjectURL(image.src);
+    if (newCharacter.image !== null) {
+        URL.revokeObjectURL(newCharacter.image.src);
     }
 
     const file = fileInput.files[0];
@@ -46,7 +28,7 @@ const loadFile = async () => {
 
     const img = new Image();
     img.addEventListener("load", () => {
-        image = {
+        newCharacter.image = {
             src: url,
             dimensions: {
                 width: img.width,
@@ -59,18 +41,21 @@ const loadFile = async () => {
 };
 
 const submit = () => {
-    if (image === null) return;
+    if (newCharacter.image === null) return;
 
-    onSubmit(new Character({
-        imageSrc: image.src,
-        imageDimensions: image.dimensions,
-        name,
+    const character = new Character({
+        imageSrc: newCharacter.image.src,
+        imageDimensions: newCharacter.image.dimensions,
+        name: newCharacter.name,
         referenceCurve: new ReferenceCurve({
-            points,
-            targetLength,
-            descriptor,
+            points: newCharacter.points,
+            targetLength: newCharacter.targetLength,
+            descriptor: newCharacter.descriptor,
         }),
-    }));
+    });
+    addCharacter(character);
+
+    deleteNewCharacter();
 };
 </script>
 
@@ -80,18 +65,24 @@ const submit = () => {
         onclick={() => fileInput.click()}
         disabled={loading}
     >
-        {#if image !== null}
+        {#if newCharacter.image !== null}
             <img
-                src={image.src}
-                alt={name}
+                src={newCharacter.image.src}
+                alt={newCharacter.name}
             />
         {/if}
     </button>
 
     <TextEntry
-        value={name}
-        onValueChange={value => name = value}
+        value={newCharacter.name}
+        onValueChange={value => newCharacter.name = value}
         placeholderText="Name"
+    />
+
+    <TextEntry
+        value={newCharacter.targetLength.toString()}
+        onValueChange={value => newCharacter.targetLength = Number(value)}
+        placeholderText="Target length"
     />
 
     <button onclick={submit}>Submit</button>
