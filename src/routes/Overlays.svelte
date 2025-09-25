@@ -2,6 +2,7 @@
 import AddCharacterMenu from "./AddCharacterMenu.svelte";
 import type { Character } from "./Character.svelte";
     import CharacterCard from "./CharacterCard.svelte";
+    import CharacterCarousel from "./CharacterCarousel.svelte";
 
 let {
     characters,
@@ -28,15 +29,14 @@ let isAddingCharacter = $state(false);
         />
     {/if}
 
-    {#each characters as character}
-        <CharacterCard {character} />
-    {/each}
+    <CharacterCarousel {characters} />
 </div>
 
 <style lang="scss">
 .overlays {
     grid-area: 1/1;
     height: 30vh;
+    position: relative;
 
     align-self: end;
 

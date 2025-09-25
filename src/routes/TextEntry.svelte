@@ -4,15 +4,18 @@ import {TextInput} from "@vaie/hui";
 let {
     value,
     onValueChange,
+    placeholderText = "",
 }: {
     value: string,
     onValueChange: (value: string) => void,
+    placeholderText?: string,
 } = $props();
 </script>
 
 <TextInput
     {value}
     {onValueChange}
+    {placeholderText}
 >
     {#snippet container({contents})}
         <div class="text-entry">
