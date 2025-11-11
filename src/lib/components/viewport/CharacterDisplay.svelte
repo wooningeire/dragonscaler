@@ -1,7 +1,7 @@
 <script lang="ts">
 import type { Character } from "$lib/types/Character.svelte";
 import type { CharacterManager } from "$lib/types/CharacterManager.svelte";
-    import CenterView from "./CenterView.svelte";
+import CenterView from "./CenterView.svelte";
 import ReferenceCurveView from "./ReferenceCurveView.svelte";
 
 let {
@@ -16,6 +16,7 @@ let {
     y: number,
 } = $props();
 
+const editing = $derived(character === characterManager.characterBeingEdited);
 </script>
 
 <div
@@ -38,7 +39,7 @@ let {
     <ReferenceCurveView
         referenceCurve={character.referenceCurve}
         aspect={character.aspect}
-        editable={characterManager.characterBeingEdited === character}
+        editable={editing}
         onDraw={points => {
             const oldPoints = character.referenceCurve.points;
             character.referenceCurve.points = points;
@@ -50,18 +51,21 @@ let {
     />
 
 
-    <CenterView
-        center={character.center}
-        scaleFac={character.referenceCurve.scaleFac}
-        onCenterChange={center => character.center = center}
-    />
+    {#if editing}
+        <CenterView
+            center={character.center}
+            scaleFac={character.referenceCurve.scaleFac}
+            onCenterChange={center => character.center = center}
+        />
+    {/if}
 </div>
 
 <style lang="scss">
 .character-display {
     position: absolute;
     left: calc(var(--x) * var(--scale) * 1px);
-    transform: translateY(/* calc(var(--center-x) * -100%),  */calc(var(--center-y) * 100%)) translateY(-100%);
+    // bottom: calc(var(--y) * var(--scale) * 1px);
+    transform: translateY(/* calc(var(--center-x) * -100%),  */calc(var(--center-y) * 100%)) translate(-50%, -100%);
     display: grid;
 
     > :global(*) {

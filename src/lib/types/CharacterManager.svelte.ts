@@ -5,6 +5,8 @@ export class CharacterManager {
     characters = $state<Character[]>([]);
     characterBeingEdited = $state<Character | null>(null);
 
+    overlapFac = $state(0.5);
+
     offsetsX = $derived.by(() => {
         const offsets: number[] = [0];
 

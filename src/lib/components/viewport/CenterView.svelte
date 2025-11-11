@@ -1,6 +1,7 @@
 <script lang="ts">
 import type { Point } from "$lib/types/Point";
 import Draggable from "$lib/components/generic/Draggable.svelte";
+import { clamp } from "$lib/util/math";
 
 const {
     center,
@@ -37,8 +38,8 @@ let container: HTMLDivElement;
             const dy = -movement.y / rect.height;
 
             onCenterChange({
-                x: center.x + dx,
-                y: center.y + dy,
+                x: clamp(center.x + dx, 0, 1),
+                y: clamp(center.y + dy, 0, 1),
             });
         }}
         onUp={() => {
@@ -63,7 +64,7 @@ let container: HTMLDivElement;
 }
 
 .center-control {
-    width: 0.25rem;
+    width: 0.5rem;
     aspect-ratio: 1;
 
     position: absolute;
@@ -74,7 +75,8 @@ let container: HTMLDivElement;
     background: oklch(0 0 0);
     box-shadow: 0 0 0 0.0625rem oklch(1 0 0);
 
-    transform: translate(-50%, 50%) scale(var(--scale-fac));
+    transform: translate(-50%, 50%);
+
     cursor: move;
     pointer-events: auto;
 

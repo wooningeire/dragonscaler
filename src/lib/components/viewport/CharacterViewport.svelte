@@ -1,7 +1,9 @@
 <script lang="ts">
 import { CharacterManager } from "$lib/types/CharacterManager.svelte";
     import Draggable from "../generic/Draggable.svelte";
+    import { Camera2d } from "./Camera2d.svelte";
 import CharacterDisplay from "./CharacterDisplay.svelte";
+    import DynamicGrid from "./DynamicGrid.svelte";
 
 const {
     characterManager,
@@ -9,23 +11,22 @@ const {
     characterManager: CharacterManager,
 } = $props();
 
-let scale = $state(144);  // px per m
-let pos = $state({x: 0, y: 0});  // m; (0, 0) => origin at center of viewport
+const camera = new Camera2d();
 </script>
 
 <Draggable
     onDrag={({movement, button}) => {
         if (button !== 1) return;
-        pos.x += movement.x;
-        pos.y += movement.y;
+        camera.posMeters.x -= movement.x / camera.scalePxPerMeter;
+        camera.posMeters.y += movement.y / camera.scalePxPerMeter;
     }}
 >
     {#snippet dragTarget({onpointerdown})}
         <div
             class="character-viewport"
-            style:--scale={scale}
-            style:--pos-x={pos.x}
-            style:--pos-y={pos.y}
+            style:--scale={camera.scalePxPerMeter}
+            style:--pos-x={camera.posMeters.x}
+            style:--pos-y={camera.posMeters.y}
             {onpointerdown}
             onwheel={event => {
                 const rect = event.currentTarget.getBoundingClientRect();
@@ -34,11 +35,16 @@ let pos = $state({x: 0, y: 0});  // m; (0, 0) => origin at center of viewport
                 
                 const scaleFac = 2 ** (-event.deltaY * 0.0005);
                 
-                pos.x = mouseX - (mouseX - pos.x) * scaleFac;
-                pos.y = mouseY - (mouseY - pos.y) * scaleFac;
-                scale *= scaleFac;
+                camera.posMeters.x = mouseX - (mouseX - camera.posMeters.x) * scaleFac;
+                camera.posMeters.y = mouseY - (mouseY - camera.posMeters.y) * scaleFac;
+                camera.scalePxPerMeter *= scaleFac;
             }}
+
+            bind:clientWidth={null, width => camera.viewportDimsPx.width = width!}
+            bind:clientHeight={null, height => camera.viewportDimsPx.height = height!}
         >
+            <DynamicGrid {camera} />
+
             <div
                 class="viewport"
             >
@@ -46,7 +52,7 @@ let pos = $state({x: 0, y: 0});  // m; (0, 0) => origin at center of viewport
                     <CharacterDisplay
                         {character}
                         {characterManager}
-                        x={characterManager.offsetsX[i]}
+                        x={characterManager.offsetsX[i] * characterManager.overlapFac}
                         y={0}
                     />
                 {/each}
@@ -62,26 +68,16 @@ let pos = $state({x: 0, y: 0});  // m; (0, 0) => origin at center of viewport
     position: relative;
     overflow: hidden;
 
-
-    background:
-        repeating-linear-gradient(
-            to right,
-            oklch(0.95 0.04 120) 0,
-            oklch(0.95 0.04 120) 1px,
-            oklch(0 0 0 / 0) 1px,
-            oklch(0 0 0 / 0) calc(var(--scale) * 1px),
-        ),
-        repeating-linear-gradient(
-            to bottom,
-            oklch(0.95 0.04 120) 0,
-            oklch(0.95 0.04 120) 1px,
-            oklch(0 0 0 / 0) 1px,
-            oklch(0 0 0 / 0) calc(var(--scale) * 1px),
-        );
+    display: grid;
+    place-items: stretch;
+    
+    > :global(*) {
+        grid-area: 1/1;
+    }
 }
 
 .viewport {
-    transform: translate(calc(var(--pos-x) * 1px), calc(var(--pos-y) * 1px)) translate(50vw, 50vh);
+    transform: translate(calc(var(--pos-x) * var(--scale) * -1px), calc(var(--pos-y) * var(--scale) * 1px)) translate(50vw, 50vh);
     transform-origin: 50% 50%;
 }
 </style>
