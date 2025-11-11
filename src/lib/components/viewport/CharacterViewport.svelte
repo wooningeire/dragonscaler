@@ -30,14 +30,17 @@ const camera = new Camera2d();
             {onpointerdown}
             onwheel={event => {
                 const rect = event.currentTarget.getBoundingClientRect();
-                const mouseX = event.clientX - rect.left - rect.width * 0.5;
-                const mouseY = event.clientY - rect.top - rect.height * 0.5;
+                const mouseX = event.clientX - rect.left - camera.viewportDimsPx.width * 0.5;
+                const mouseY = event.clientY - rect.top - camera.viewportDimsPx.height * 0.5;
+                
+                const worldX = camera.posMeters.x + mouseX / camera.scalePxPerMeter;
+                const worldY = camera.posMeters.y - mouseY / camera.scalePxPerMeter;
                 
                 const scaleFac = 2 ** (-event.deltaY * 0.0005);
-                
-                camera.posMeters.x = mouseX - (mouseX - camera.posMeters.x) * scaleFac;
-                camera.posMeters.y = mouseY - (mouseY - camera.posMeters.y) * scaleFac;
                 camera.scalePxPerMeter *= scaleFac;
+                
+                camera.posMeters.x = worldX - mouseX / camera.scalePxPerMeter;
+                camera.posMeters.y = worldY + mouseY / camera.scalePxPerMeter;
             }}
 
             bind:clientWidth={null, width => camera.viewportDimsPx.width = width!}
