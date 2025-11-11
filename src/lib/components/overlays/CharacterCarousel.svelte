@@ -1,6 +1,6 @@
 <script lang="ts">
-import type { Character } from "../../types/Character.svelte";
-    import CharacterCard from "../../../routes/CharacterCard.svelte";
+import type { Character } from "$lib/types/Character.svelte";
+import CharacterCard from "./CharacterCard.svelte";
 
 let {
     characters,

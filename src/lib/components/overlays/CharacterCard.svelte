@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { Character } from "../lib/types/Character.svelte";
+import type { Character } from "$lib/types/Character.svelte";
 
 let {
     character,

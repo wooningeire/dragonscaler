@@ -1,26 +1,23 @@
 export class ReferenceCurve {
-    readonly points: {x: number, y: number}[];
-    readonly targetLength: number;
-    readonly descriptor: string;
+    points: {x: number, y: number}[] = $state()!;
+    targetLength: number = $state()!;
+    descriptor: string = $state()!;
     
-    readonly arcLength: number;
-    readonly scaleFac: number;
+    readonly arcLength = $derived(computeArcLength(this.points));
+    readonly scaleFac = $derived(this.targetLength / this.arcLength);
 
     constructor({
-        points,
-        targetLength,
-        descriptor,
+        points = [],
+        targetLength = 1,
+        descriptor = "",
     }: {
-        points: {x: number, y: number}[],
-        targetLength: number,
-        descriptor: string,
-    }) {
+        points?: {x: number, y: number}[],
+        targetLength?: number,
+        descriptor?: string,
+    } = {}) {
         this.points = points;
         this.targetLength = targetLength;
         this.descriptor = descriptor;
-
-        this.arcLength = computeArcLength(points);
-        this.scaleFac = targetLength / this.arcLength;
     }
 }
 

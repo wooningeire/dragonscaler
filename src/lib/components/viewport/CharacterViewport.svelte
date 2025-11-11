@@ -1,7 +1,6 @@
 <script lang="ts">
 import { currentCharacters } from "$lib/state/characters.svelte";
     import { currentNewCharacter } from "$lib/state/NewCharacter.svelte";
-    import CharacterCard from "../../../routes/CharacterCard.svelte";
 import CharacterDisplay from "./CharacterDisplay.svelte";
 
 const PX_PER_M = 144;
