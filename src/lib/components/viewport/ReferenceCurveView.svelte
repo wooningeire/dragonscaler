@@ -37,7 +37,7 @@ let svg: SVGElement = $state()!;
 const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
     const rect = svg.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width * aspect;
-    const y = (event.clientY - rect.top) / rect.height;
+    const y = 1 - (event.clientY - rect.top) / rect.height;
     
     return { x, y };
 };
@@ -45,13 +45,15 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
 
 {#if !editable}
     <svg viewBox="0 0 {aspect} 1">
-        <path
-            {d}
-            stroke="#000"
-            stroke-width="0.01"
-            stroke-linecap="round"
-            fill="#0000"
-        />
+        <g>
+            <path
+                {d}
+                stroke="#000"
+                stroke-width="0.01"
+                stroke-linecap="round"
+                fill="#0000"
+            />
+        </g>
     </svg>
 {:else}
     <Draggable
@@ -85,23 +87,25 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
                 viewBox="0 0 {aspect} 1"
                 {onpointerdown}
             >
-                {#if !editing}
-                    <path
-                        {d}
-                        stroke="#000"
-                        stroke-width="0.01"
-                        stroke-linecap="round"
-                        fill="#0000"
-                    />
-                {:else}
-                    <path
-                        d={dNew}
-                        stroke="#0000003f"
-                        stroke-width="0.01"
-                        stroke-linecap="round"
-                        fill="#0000"
-                    />
-                {/if}
+                <g>
+                    {#if !editing}
+                        <path
+                            {d}
+                            stroke="#000"
+                            stroke-width="0.01"
+                            stroke-linecap="round"
+                            fill="#0000"
+                        />
+                    {:else}
+                        <path
+                            d={dNew}
+                            stroke="#0000003f"
+                            stroke-width="0.01"
+                            stroke-linecap="round"
+                            fill="#0000"
+                        />
+                    {/if}
+                </g>
             </svg>
         {/snippet}
     </Draggable>
@@ -110,5 +114,9 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
 <style lang="scss">
 svg {
     overflow: visible;
+}
+
+g {
+    transform: translateY(100%) scaleY(-1);
 }
 </style>

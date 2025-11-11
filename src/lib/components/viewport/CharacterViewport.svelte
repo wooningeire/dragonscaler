@@ -10,8 +10,7 @@ const {
 } = $props();
 
 let scale = $state(144);  // px per m
-let pos = $state({x: 0, y: 0});  // m
-const originOffsetYFac = 0.5;
+let pos = $state({x: 0, y: 0});  // m; (0, 0) => origin at center of viewport
 </script>
 
 <Draggable
@@ -27,12 +26,11 @@ const originOffsetYFac = 0.5;
             style:--scale={scale}
             style:--pos-x={pos.x}
             style:--pos-y={pos.y}
-            style:--origin-offset-vh={originOffsetYFac}
             {onpointerdown}
             onwheel={event => {
                 const rect = event.currentTarget.getBoundingClientRect();
-                const mouseX = event.clientX - rect.left;
-                const mouseY = event.clientY - rect.top - rect.height * originOffsetYFac;
+                const mouseX = event.clientX - rect.left - rect.width * 0.5;
+                const mouseY = event.clientY - rect.top - rect.height * 0.5;
                 
                 const scaleFac = 2 ** (-event.deltaY * 0.0005);
                 
@@ -83,7 +81,7 @@ const originOffsetYFac = 0.5;
 }
 
 .viewport {
-    transform: translate(calc(var(--pos-x) * 1px), calc(var(--pos-y) * 1px)) translateY(calc(var(--origin-offset-vh) * 100vh));
+    transform: translate(calc(var(--pos-x) * 1px), calc(var(--pos-y) * 1px)) translate(50vw, 50vh);
     transform-origin: 50% 50%;
 }
 </style>
