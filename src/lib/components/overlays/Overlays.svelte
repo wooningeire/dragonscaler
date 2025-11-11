@@ -1,7 +1,7 @@
 <script lang="ts">
 import AddCharacterMenu from "./AddCharacterMenu.svelte";
 import CharacterCarousel from "./CharacterCarousel.svelte";
-import { beginNewCharacter, currentNewCharacter } from "../lib/state/NewCharacter.svelte";
+import { beginNewCharacter, currentNewCharacter } from "$lib/state/NewCharacter.svelte";
 import { currentCharacters } from "$lib/state/characters.svelte";
 
 const characters = $derived(currentCharacters());

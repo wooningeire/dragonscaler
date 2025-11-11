@@ -1,7 +1,7 @@
 <script lang="ts">
 import "./index.scss";
 
-import Overlays from "./Overlays.svelte";
+import Overlays from "../lib/components/overlays/Overlays.svelte";
 import CharacterViewport from "../lib/components/viewport/CharacterViewport.svelte";
 </script>
 

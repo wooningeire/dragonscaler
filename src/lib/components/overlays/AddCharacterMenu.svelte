@@ -1,7 +1,7 @@
 <script lang="ts">
-import { Character } from "../lib/types/Character.svelte";
-import { ReferenceCurve } from "../lib/types/ReferenceCurve.svelte";
-import TextEntry from "./TextEntry.svelte";
+import { Character } from "$lib/types/Character.svelte";
+import { ReferenceCurve } from "$lib/types/ReferenceCurve.svelte";
+import TextEntry from "$lib/components/generic/TextEntry.svelte";
 import { addCharacter } from "$lib/state/characters.svelte";
 import { currentNewCharacter, deleteNewCharacter } from "$lib/state/NewCharacter.svelte";
 

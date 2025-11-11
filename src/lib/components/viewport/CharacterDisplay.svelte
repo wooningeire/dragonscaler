@@ -1,6 +1,5 @@
 <script lang="ts">
 import type { ReferenceCurve } from "$lib/types/ReferenceCurve.svelte";
-import type { Character } from "../../types/Character.svelte";
 import ReferenceCurveView from "./ReferenceCurveView.svelte";
 
 let {
@@ -51,9 +50,5 @@ let {
     > img {
         height: calc(var(--height) * var(--scale) * 1px);
     }
-}
-
-svg {
-    overflow: visible;
 }
 </style>

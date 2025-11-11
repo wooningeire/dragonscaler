@@ -31,3 +31,9 @@ const d = $derived.by(() => {
         stroke-linecap="round"
     />
 </svg>
+
+<style lang="scss">
+svg {
+    overflow: visible;
+}
+</style>
