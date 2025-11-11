@@ -5,48 +5,47 @@ import Draggable from "$lib/components/generic/Draggable.svelte";
 const {
     center,
     scaleFac,
-    aspect,
     onCenterChange,
 }: {
     center: Point,
     scaleFac: number,
-    aspect: number,
     onCenterChange: (point: Point) => void,
 } = $props();
 
-let container: HTMLDivElement = $state()!;
+let container: HTMLDivElement;
 </script>
 
-<Draggable
-    onDown={({button, pointerEvent}) => {
-        if (button !== 0) return;
-        
-        pointerEvent.preventDefault();
-        
-        (pointerEvent.currentTarget as HTMLElement).requestPointerLock();
-    }}
-    onDrag={({movement, button, pointerEvent}) => {
-        if (button !== 0 || !container) return;
-        
-        pointerEvent.preventDefault();
-        
-        const dx = movement.x / aspect * 0.01;
-        const dy = -movement.y * 0.01;
-        
-        onCenterChange({
-            x: center.x + dx,
-            y: center.y + dy,
-        });
-    }}
-    onUp={() => {
-        document.exitPointerLock();
-    }}
+<div
+    class="center-view-container"
+    bind:this={container}
 >
-    {#snippet dragTarget({onpointerdown})}
-        <div
-            bind:this={container}
-            class="center-container"
-        >
+    <Draggable
+        onDown={({button, pointerEvent}) => {
+            if (button !== 0) return;
+            
+            pointerEvent.preventDefault();
+        
+            (pointerEvent.currentTarget as HTMLElement).requestPointerLock();
+        }}
+        onDrag={({movement, button, pointerEvent}) => {
+            if (button !== 0) return;
+            
+            pointerEvent.preventDefault();
+            
+            const rect = container.getBoundingClientRect();
+            const dx = movement.x / rect.width;
+            const dy = -movement.y / rect.height;
+
+            onCenterChange({
+                x: center.x + dx,
+                y: center.y + dy,
+            });
+        }}
+        onUp={() => {
+            document.exitPointerLock();
+        }}
+    >
+        {#snippet dragTarget({onpointerdown})}
             <div
                 class="center-control"
                 style:--center-x={center.x}
@@ -54,16 +53,13 @@ let container: HTMLDivElement = $state()!;
                 style:--scale-fac={scaleFac}
                 {onpointerdown}
             ></div>
-        </div>
-    {/snippet}
-</Draggable>
+        {/snippet}
+    </Draggable>
+</div>
 
 <style lang="scss">
-.center-container {
-    grid-area: 1/1;
-    position: relative;
-    width: 100%;
-    height: 100%;
+.center-view-container {
+    pointer-events: none;
 }
 
 .center-control {
@@ -78,8 +74,9 @@ let container: HTMLDivElement = $state()!;
     background: oklch(0 0 0);
     box-shadow: 0 0 0 0.0625rem oklch(1 0 0);
 
-    transform: scale(var(--scale-fac)) translate(-50%, -50%);
+    transform: translate(-50%, 50%) scale(var(--scale-fac));
     cursor: move;
+    pointer-events: auto;
 
     &:hover {
         background: oklch(0.3 0 0);

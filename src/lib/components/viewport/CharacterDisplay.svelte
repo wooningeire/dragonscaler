@@ -53,7 +53,6 @@ let {
     <CenterView
         center={character.center}
         scaleFac={character.referenceCurve.scaleFac}
-        aspect={character.aspect}
         onCenterChange={center => character.center = center}
     />
 </div>
@@ -62,7 +61,7 @@ let {
 .character-display {
     position: absolute;
     left: calc(var(--x) * var(--scale) * 1px);
-    transform: translate(calc(var(--center-x) * -100%), calc(var(--center-y) * 100%)) translateY(-100%);
+    transform: translateY(/* calc(var(--center-x) * -100%),  */calc(var(--center-y) * 100%)) translateY(-100%);
     display: grid;
 
     > :global(*) {
