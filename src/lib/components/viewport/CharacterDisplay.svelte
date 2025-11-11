@@ -1,6 +1,7 @@
 <script lang="ts">
 import type { Character } from "$lib/types/Character.svelte";
 import type { CharacterManager } from "$lib/types/CharacterManager.svelte";
+    import CenterView from "./CenterView.svelte";
 import ReferenceCurveView from "./ReferenceCurveView.svelte";
 
 let {
@@ -22,6 +23,8 @@ let {
     style:--x={x}
     style:--y={y}
     style:--height={character.referenceCurve.scaleFac}
+    style:--center-x={character.center.x}
+    style:--center-y={character.center.y}
 >
     {#if character.image !== null}
         <img
@@ -45,13 +48,21 @@ let {
             }
         }}
     />
+
+
+    <CenterView
+        center={character.center}
+        scaleFac={character.referenceCurve.scaleFac}
+        aspect={character.aspect}
+        onCenterChange={center => character.center = center}
+    />
 </div>
 
 <style lang="scss">
 .character-display {
     position: absolute;
     left: calc(var(--x) * var(--scale) * 1px);
-    transform: translateY(-100%);
+    transform: translate(calc(var(--center-x) * -100%), calc(var(--center-y) * 100%)) translateY(-100%);
     display: grid;
 
     > :global(*) {

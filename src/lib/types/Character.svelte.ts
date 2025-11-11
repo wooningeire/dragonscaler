@@ -5,7 +5,7 @@ import { ReferenceCurve } from "./ReferenceCurve.svelte";
 export class Character {
     image: CharacterImage | null = $state()!;
     name: string = $state()!;
-    center: Point = $state()!;
+    center: Point = $state()!; // in image [0, 1] uv coordinates
     readonly referenceCurve: ReferenceCurve;
 
     readonly aspect = $derived.by(() => this.image?.aspect ?? 1);
@@ -14,7 +14,7 @@ export class Character {
     constructor({
         image = null,
         name = "",
-        center = {x: 0.5, y: 0.125},
+        center = {x: 0.5, y: 0},
         referenceCurve = new ReferenceCurve(),
     }: {
         image?: CharacterImage | null,
