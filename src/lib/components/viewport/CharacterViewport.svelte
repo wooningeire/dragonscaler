@@ -28,7 +28,7 @@ let pos = $state({x: 0, y: 0});
             style:--pos-y={pos.y}
             {onpointerdown}
             onwheel={event => {
-                scale *= 2 ** (event.deltaY * 0.0005);
+                scale *= 2 ** (-event.deltaY * 0.0005);
             }}
         >
             <div
@@ -53,6 +53,7 @@ let pos = $state({x: 0, y: 0});
     position: relative;
     overflow: hidden;
 
+
     background:
         repeating-linear-gradient(
             to right,
@@ -71,7 +72,7 @@ let pos = $state({x: 0, y: 0});
 }
 
 .viewport {
-    transform: translate(calc(var(--pos-x) * 1px), calc(var(--pos-y) * 1px));
+    transform: translate(calc(var(--pos-x) * 1px), calc(var(--pos-y) * 1px)) translateY(60vh);
     transform-origin: 50% 50%;
 }
 </style>

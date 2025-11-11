@@ -39,6 +39,7 @@ let {
 .character-display {
     position: absolute;
     left: calc(var(--x) * var(--scale) * 1px);
+    transform: translateY(-100%);
     display: grid;
 
     > :global(*) {

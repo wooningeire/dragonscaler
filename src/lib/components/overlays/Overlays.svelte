@@ -38,6 +38,8 @@ const {
     flex-direction: column;
     align-items: center;
 
+    overflow: hidden;
+
     background: oklch(0.8 0.1 120 / 0.5);
 }
 
