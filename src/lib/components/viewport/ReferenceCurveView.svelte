@@ -48,6 +48,13 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
         <g>
             <path
                 {d}
+                stroke="#fff"
+                stroke-width="0.03"
+                stroke-linecap="round"
+                fill="#0000"
+            />
+            <path
+                {d}
                 stroke="#000"
                 stroke-width="0.01"
                 stroke-linecap="round"
@@ -91,12 +98,26 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
                     {#if !editing}
                         <path
                             {d}
+                            stroke="#fff"
+                            stroke-width="0.03"
+                            stroke-linecap="round"
+                            fill="#0000"
+                        />
+                        <path
+                            {d}
                             stroke="#000"
                             stroke-width="0.01"
                             stroke-linecap="round"
                             fill="#0000"
                         />
                     {:else}
+                        <path
+                            d={dNew}
+                            stroke="#fff"
+                            stroke-width="0.03"
+                            stroke-linecap="round"
+                            fill="#0000"
+                        />
                         <path
                             d={dNew}
                             stroke="#0000003f"
