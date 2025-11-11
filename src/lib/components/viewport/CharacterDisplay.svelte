@@ -1,6 +1,5 @@
 <script lang="ts">
-    import type { Character } from "$lib/types/Character.svelte";
-import type { ReferenceCurve } from "$lib/types/ReferenceCurve.svelte";
+import type { Character } from "$lib/types/Character.svelte";
 import ReferenceCurveView from "./ReferenceCurveView.svelte";
 
 let {

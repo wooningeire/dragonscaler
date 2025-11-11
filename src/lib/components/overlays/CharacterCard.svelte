@@ -9,20 +9,24 @@ let {
 </script>
 
 <div class="character-card">
-    {#if character.image !== null}
-        <img
-            src={character.image.src}
-            alt={character.name}
-        />
-    {:else}
-        <div class="image-placeholder"></div>
-    {/if}
+    <div class="character-card-image-container">
+        {#if character.image !== null}
+            <img
+                src={character.image.src}
+                alt={character.name}
+            />
+        {:else}
+            <div class="image-placeholder"></div>
+        {/if}
+    </div>
+    
+    <div>{character.name}</div>
 </div>
 
 <style lang="scss">
 $image-size: 10rem;
 
-.character-card {
+.character-card-image-container {
     width: $image-size;
     aspect-ratio: 1/1;
     display: grid;

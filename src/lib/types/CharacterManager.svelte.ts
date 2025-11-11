@@ -1,3 +1,4 @@
+import { untrack } from "svelte";
 import { Character } from "./Character.svelte";
 
 export class CharacterManager {
@@ -16,7 +17,13 @@ export class CharacterManager {
 
     addCharacter(character: Character) {
         this.characters.push(character);
-        this.characters.sort((a, b) => a.referenceCurve.scaleFac - b.referenceCurve.scaleFac);
+
+        $effect.root(() => {
+            $effect(() => {
+                void character.referenceCurve.scaleFac;
+                untrack(() => this.characters.sort((a, b) => a.referenceCurve.scaleFac - b.referenceCurve.scaleFac));
+            });
+        });
     }
 
     beginNewCharacter() {
