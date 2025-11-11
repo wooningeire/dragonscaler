@@ -36,7 +36,14 @@ let {
         referenceCurve={character.referenceCurve}
         aspect={character.aspect}
         editable={characterManager.characterBeingEdited === character}
-        onDraw={points => character.referenceCurve.points = points}
+        onDraw={points => {
+            const oldPoints = character.referenceCurve.points;
+            character.referenceCurve.points = points;
+            
+            if (character.referenceCurve.arcLength === 0) {
+                character.referenceCurve.points = oldPoints;
+            }
+        }}
     />
 </div>
 
