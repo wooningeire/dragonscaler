@@ -1,10 +1,13 @@
 <script lang="ts">
 import { currentCharacters } from "$lib/state/characters.svelte";
+    import { currentNewCharacter } from "$lib/state/NewCharacter.svelte";
+    import CharacterCard from "../../../routes/CharacterCard.svelte";
 import CharacterDisplay from "./CharacterDisplay.svelte";
 
 const PX_PER_M = 144;
 
 const characters = $derived(currentCharacters());
+const newCharacter = $derived(currentNewCharacter());
 
 const offsets = $derived.by(() => {
     const offsets: number[] = [0];
@@ -17,33 +20,40 @@ const offsets = $derived.by(() => {
 });
 </script>
 
-<div class="character-viewer">
+<div
+    class="character-viewport"
+    style:--scale={PX_PER_M}
+>
     <div
         class="viewport"
-        style:--scale={PX_PER_M}
     >
         {#each characters as character, i}
             <CharacterDisplay
-                {character}
+                referenceCurve={character.referenceCurve}
+                imageSrc={character.imageSrc}
+                name={character.name}
+                aspectRatio={character.aspectRatio}
                 x={offsets[i]}
                 y={0}
             />
         {/each}
+
+        {#if newCharacter !== null}
+            <!-- <CharacterDisplay
+                
+            /> -->
+        {/if}
     </div>
 </div>
 
 <style lang="scss">
-.character-viewer {
+.character-viewport {
     grid-area: 1/1;
 
     display: grid;
     place-items: stretch;
 
     overflow: hidden;
-}
-
-.viewport {
-    position: relative;
 
     background:
         repeating-linear-gradient(
@@ -60,5 +70,9 @@ const offsets = $derived.by(() => {
             oklch(0 0 0 / 0) 1px,
             oklch(0 0 0 / 0) calc(var(--scale) * 1px),
         );
+}
+
+.viewport {
+    position: relative;
 }
 </style>

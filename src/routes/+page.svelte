@@ -2,11 +2,11 @@
 import "./index.scss";
 
 import Overlays from "./Overlays.svelte";
-import CharacterViewer from "./CharacterViewer.svelte";
+import CharacterViewport from "../lib/components/viewport/CharacterViewport.svelte";
 </script>
 
 <main>
-    <CharacterViewer />
+    <CharacterViewport />
     <Overlays />
 </main>
 
