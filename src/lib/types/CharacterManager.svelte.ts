@@ -9,7 +9,7 @@ export class CharacterManager {
         const offsets: number[] = [0];
 
         for (let i = 1; i < this.characters.length; i++) {
-            offsets.push(offsets[i - 1] + this.characters[i - 1].actualWidth);
+            offsets.push(offsets[i - 1] + this.characters[i - 1].viewportWidth);
         }
 
         return offsets;

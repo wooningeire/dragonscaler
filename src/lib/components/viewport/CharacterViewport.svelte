@@ -37,6 +37,7 @@ let pos = $state({x: 0, y: 0});
                 {#each characterManager.characters as character, i}
                     <CharacterDisplay
                         {character}
+                        {characterManager}
                         x={characterManager.offsetsX[i]}
                         y={0}
                     />

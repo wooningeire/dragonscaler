@@ -1,5 +1,7 @@
+import type { Point } from "./Point";
+
 export class ReferenceCurve {
-    points: {x: number, y: number}[] = $state()!;
+    points: Point[] = $state.raw()!;
     targetLength: number = $state()!;
     descriptor: string = $state()!;
     

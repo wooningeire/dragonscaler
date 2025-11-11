@@ -8,13 +8,24 @@ export type Point = {
 
 const {
     dragTarget,
+    onDown,
     onDrag,
+    onUp,
 }: {
     dragTarget: Snippet<[{
         onpointerdown: (event: PointerEvent) => void,
     }]>,
-    onDrag: (data: {
+    onDown?: (data: {
+        button: number,
+        pointerEvent: PointerEvent,
+    }) => void,
+    onDrag?: (data: {
         movement: Point,
+        displacement: Point,
+        button: number,
+        pointerEvent: PointerEvent,
+    }) => void,
+    onUp?: (data: {
         displacement: Point,
         button: number,
         pointerEvent: PointerEvent,
@@ -31,11 +42,16 @@ const handlePointerDown = (event: PointerEvent) => {
         y: event.pageY,
     };
     button = event.button;
+
+    onDown?.({
+        button,
+        pointerEvent: event,
+    });
 };
 const handlePointerMove = (event: PointerEvent) => {
     if (dragStartPos === null) return;
 
-    onDrag({
+    onDrag?.({
         movement: {
             x: event.movementX,
             y: event.movementY,
@@ -48,7 +64,18 @@ const handlePointerMove = (event: PointerEvent) => {
         pointerEvent: event,
     });
 };
-const handlePointerUp = () => {
+const handlePointerUp = (event: PointerEvent) => {
+    if (dragStartPos === null) return;
+    
+    onUp?.({
+        displacement: {
+            x: event.pageX - dragStartPos.x,
+            y: event.pageY - dragStartPos.y,
+        },
+        button,
+        pointerEvent: event,
+    });
+
     dragStartPos = null;
 };
 </script>

@@ -1,13 +1,16 @@
 <script lang="ts">
 import type { Character } from "$lib/types/Character.svelte";
+import type { CharacterManager } from "$lib/types/CharacterManager.svelte";
 import ReferenceCurveView from "./ReferenceCurveView.svelte";
 
 let {
     character,
+    characterManager,
     x,
     y,
 }: {
     character: Character,
+    characterManager: CharacterManager,
     x: number,
     y: number,
 } = $props();
@@ -32,6 +35,8 @@ let {
     <ReferenceCurveView
         referenceCurve={character.referenceCurve}
         aspectRatio={character.aspect}
+        editable={characterManager.characterBeingEdited === character}
+        onDraw={points => character.referenceCurve.points = points}
     />
 </div>
 
