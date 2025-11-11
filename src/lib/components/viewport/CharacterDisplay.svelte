@@ -43,7 +43,7 @@ let {
     left: calc(var(--x) * var(--scale) * 1px);
     display: grid;
 
-    > * {
+    > :global(*) {
         grid-area: 1/1;
     }
 

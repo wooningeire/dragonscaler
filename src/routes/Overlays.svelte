@@ -9,10 +9,13 @@ const newCharacter = $derived(currentNewCharacter());
 </script>
 
 <div class="overlays">
-    <button onclick={beginNewCharacter}>Add</button>
-
     {#if newCharacter !== null}
         <AddCharacterMenu />
+    {:else}
+        <button
+            class="add-character-button"
+            onclick={beginNewCharacter}
+        >+</button>
     {/if}
 
     <CharacterCarousel {characters} />
@@ -26,6 +29,16 @@ const newCharacter = $derived(currentNewCharacter());
 
     align-self: end;
 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
     background: oklch(0.8 0.1 120 / 0.5);
+}
+
+.add-character-button {
+    font-size: 2rem;
+    border: 1px solid oklch(0.5 0 0);
+    padding: 0.5rem;
 }
 </style>
