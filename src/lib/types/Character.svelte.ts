@@ -1,31 +1,25 @@
-import type { ReferenceCurve } from "./ReferenceCurve.svelte";
+import type { CharacterImage } from "./CharacterImage.svelte";
+import { ReferenceCurve } from "./ReferenceCurve.svelte";
 
 export class Character {
-    readonly imageSrc: string;
-    readonly imageDimensions: {width: number, height: number};
-    readonly name: string;
+    image: CharacterImage | null = $state()!;
+    name: string = $state()!;
     readonly referenceCurve: ReferenceCurve;
 
-    readonly aspectRatio: number;
-    readonly actualWidth: number;
+    readonly aspect = $derived.by(() => this.image?.aspect ?? 1);
+    readonly actualWidth = $derived.by(() => this.referenceCurve.scaleFac * this.aspect);
 
     constructor({
-        imageSrc,
-        imageDimensions,
-        name,
-        referenceCurve,
+        image = null,
+        name = "",
+        referenceCurve = new ReferenceCurve(),
     }: {
-        imageSrc: string,
-        imageDimensions: {width: number, height: number},
-        name: string,
-        referenceCurve: ReferenceCurve,
-    }) {
-        this.imageSrc = imageSrc;
-        this.imageDimensions = imageDimensions;
+        image?: CharacterImage | null,
+        name?: string,
+        referenceCurve?: ReferenceCurve,
+    } = {}) {
+        this.image = image;
         this.name = name;
         this.referenceCurve = referenceCurve;
-
-        this.aspectRatio = imageDimensions.width / imageDimensions.height;
-        this.actualWidth = referenceCurve.scaleFac * this.aspectRatio;
     }
 }

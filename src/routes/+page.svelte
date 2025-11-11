@@ -3,11 +3,14 @@ import "./index.scss";
 
 import Overlays from "../lib/components/overlays/Overlays.svelte";
 import CharacterViewport from "../lib/components/viewport/CharacterViewport.svelte";
+import { CharacterManager } from "$lib/types/CharacterManager.svelte";
+
+const characterManager = new CharacterManager();
 </script>
 
 <main>
-    <CharacterViewport />
-    <Overlays />
+    <CharacterViewport {characterManager} />
+    <Overlays {characterManager} />
 </main>
 
 <style lang="scss">

@@ -9,10 +9,14 @@ let {
 </script>
 
 <div class="character-card">
-    <img
-        src={character.imageSrc}
-        alt={character.name}
-    />
+    {#if character.image !== null}
+        <img
+            src={character.image.src}
+            alt={character.name}
+        />
+    {:else}
+        <div class="image-placeholder"></div>
+    {/if}
 </div>
 
 <style lang="scss">
@@ -32,5 +36,9 @@ $image-size: 10rem;
 
 img {
     object-fit: contain;
+}
+
+.image-placeholder {
+    background: oklch(0.9 0 0);
 }
 </style>

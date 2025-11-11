@@ -7,7 +7,10 @@ export class ReferenceCurve {
     readonly scaleFac = $derived(this.targetLength / this.arcLength);
 
     constructor({
-        points = [],
+        points = [
+            {x: 0.5, y: 0},
+            {x: 0.5, y: 0.5},
+        ],
         targetLength = 1,
         descriptor = "",
     }: {

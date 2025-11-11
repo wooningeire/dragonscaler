@@ -1,22 +1,14 @@
 <script lang="ts">
-import { currentCharacters } from "$lib/state/characters.svelte";
-    import { currentNewCharacter } from "$lib/state/NewCharacter.svelte";
+import { CharacterManager } from "$lib/types/CharacterManager.svelte";
 import CharacterDisplay from "./CharacterDisplay.svelte";
 
+const {
+    characterManager,
+}: {
+    characterManager: CharacterManager,
+} = $props();
+
 const PX_PER_M = 144;
-
-const characters = $derived(currentCharacters());
-const newCharacter = $derived(currentNewCharacter());
-
-const offsets = $derived.by(() => {
-    const offsets: number[] = [0];
-
-    for (let i = 1; i < characters.length; i++) {
-        offsets.push(offsets[i - 1] + characters[i - 1].actualWidth);
-    }
-
-    return offsets;
-});
 </script>
 
 <div
@@ -26,22 +18,13 @@ const offsets = $derived.by(() => {
     <div
         class="viewport"
     >
-        {#each characters as character, i}
+        {#each characterManager.characters as character, i}
             <CharacterDisplay
-                referenceCurve={character.referenceCurve}
-                imageSrc={character.imageSrc}
-                name={character.name}
-                aspectRatio={character.aspectRatio}
-                x={offsets[i]}
+                {character}
+                x={characterManager.offsetsX[i]}
                 y={0}
             />
         {/each}
-
-        {#if newCharacter !== null}
-            <!-- <CharacterDisplay
-                
-            /> -->
-        {/if}
     </div>
 </div>
 

@@ -1,38 +1,38 @@
 <script lang="ts">
+    import type { Character } from "$lib/types/Character.svelte";
 import type { ReferenceCurve } from "$lib/types/ReferenceCurve.svelte";
 import ReferenceCurveView from "./ReferenceCurveView.svelte";
 
 let {
-    referenceCurve,
-    imageSrc,
-    name,
-    aspectRatio,
+    character,
     x,
     y,
 }: {
-    referenceCurve: ReferenceCurve,
-    imageSrc: string,
-    name: string,
-    aspectRatio: number,
+    character: Character,
     x: number,
     y: number,
 } = $props();
+
 </script>
 
 <div
     class="character-display"
     style:--x={x}
     style:--y={y}
-    style:--height={referenceCurve.scaleFac}
+    style:--height={character.referenceCurve.scaleFac}
 >
-    <img
-        src={imageSrc}
-        alt={name}
-    />
+    {#if character.image !== null}
+        <img
+            src={character.image.src}
+            alt={character.name}
+        />
+    {:else}
+        <div class="image-placeholder"></div>
+    {/if}
 
     <ReferenceCurveView
-        {referenceCurve}
-        {aspectRatio}
+        referenceCurve={character.referenceCurve}
+        aspectRatio={character.aspect}
     />
 </div>
 
@@ -47,8 +47,13 @@ let {
     }
 
     &,
-    > img {
+    > img,
+    > .image-placeholder {
         height: calc(var(--height) * var(--scale) * 1px);
     }
+}
+
+.image-placeholder {
+    background: oklch(0.9 0 0);
 }
 </style>

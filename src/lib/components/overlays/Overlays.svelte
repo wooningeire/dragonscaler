@@ -1,24 +1,29 @@
 <script lang="ts">
-import AddCharacterMenu from "./AddCharacterMenu.svelte";
+import CharacterEditMenu from "./CharacterEditMenu.svelte";
 import CharacterCarousel from "./CharacterCarousel.svelte";
-import { beginNewCharacter, currentNewCharacter } from "$lib/state/NewCharacter.svelte";
-import { currentCharacters } from "$lib/state/characters.svelte";
+import { CharacterManager } from "$lib/types/CharacterManager.svelte";
 
-const characters = $derived(currentCharacters());
-const newCharacter = $derived(currentNewCharacter());
+const {
+    characterManager,
+}: {
+    characterManager: CharacterManager,
+} = $props();
 </script>
 
 <div class="overlays">
-    {#if newCharacter !== null}
-        <AddCharacterMenu />
+    {#if characterManager.characterBeingEdited !== null}
+        <CharacterEditMenu
+            newCharacter={characterManager.characterBeingEdited}
+            onSubmit={() => characterManager.characterBeingEdited = null}
+        />
     {:else}
         <button
             class="add-character-button"
-            onclick={beginNewCharacter}
+            onclick={() => characterManager.beginNewCharacter()}
         >+</button>
     {/if}
 
-    <CharacterCarousel {characters} />
+    <CharacterCarousel characters={characterManager.characters} />
 </div>
 
 <style lang="scss">

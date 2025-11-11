@@ -1,13 +1,15 @@
 <script lang="ts">
 import { Character } from "$lib/types/Character.svelte";
-import { ReferenceCurve } from "$lib/types/ReferenceCurve.svelte";
 import TextEntry from "$lib/components/generic/TextEntry.svelte";
-import { addCharacter } from "$lib/state/characters.svelte";
-import { currentNewCharacter, deleteNewCharacter } from "$lib/state/NewCharacter.svelte";
+import { CharacterImage } from "$lib/types/CharacterImage.svelte";
 
-
-const newCharacter = $derived(currentNewCharacter()!);
-
+const {
+    newCharacter,
+    onSubmit,
+}: {
+    newCharacter: Character,
+    onSubmit: () => void,
+} = $props();
 
 let fileInput: HTMLInputElement;
 
@@ -24,38 +26,14 @@ const loadFile = async () => {
     }
 
     const file = fileInput.files[0];
-    const url = URL.createObjectURL(file);
-
-    const img = new Image();
-    img.addEventListener("load", () => {
-        newCharacter.image = {
-            src: url,
-            dimensions: {
-                width: img.width,
-                height: img.height,
-            },
-        };
-        loading = false;
-    });
-    img.src = url;
+    newCharacter.image = await CharacterImage.fromFile(file);
+    loading = false;
 };
 
 const submit = () => {
     if (newCharacter.image === null) return;
 
-    const character = new Character({
-        imageSrc: newCharacter.image.src,
-        imageDimensions: newCharacter.image.dimensions,
-        name: newCharacter.name,
-        referenceCurve: new ReferenceCurve({
-            points: newCharacter.points,
-            targetLength: newCharacter.targetLength,
-            descriptor: newCharacter.descriptor,
-        }),
-    });
-    addCharacter(character);
-
-    deleteNewCharacter();
+    onSubmit();
 };
 </script>
 
@@ -80,8 +58,8 @@ const submit = () => {
     />
 
     <TextEntry
-        value={newCharacter.targetLength.toString()}
-        onValueChange={value => newCharacter.targetLength = Number(value)}
+        value={newCharacter.referenceCurve.targetLength.toString()}
+        onValueChange={value => newCharacter.referenceCurve.targetLength = Number(value)}
         placeholderText="Target length"
     />
 
