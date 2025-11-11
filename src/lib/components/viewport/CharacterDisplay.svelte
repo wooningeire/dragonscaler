@@ -34,7 +34,7 @@ let {
 
     <ReferenceCurveView
         referenceCurve={character.referenceCurve}
-        aspectRatio={character.aspect}
+        aspect={character.aspect}
         editable={characterManager.characterBeingEdited === character}
         onDraw={points => character.referenceCurve.points = points}
     />

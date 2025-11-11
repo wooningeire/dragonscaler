@@ -5,12 +5,12 @@ import Draggable from "../generic/Draggable.svelte";
 
 let {
     referenceCurve,
-    aspectRatio,
+    aspect,
     editable = false,
     onDraw,
 }: {
     referenceCurve: ReferenceCurve,
-    aspectRatio: number,
+    aspect: number,
     editable?: boolean,
     onDraw?: (points: Point[]) => void,
 } = $props();
@@ -32,10 +32,19 @@ const d = $derived(dFromPoints(referenceCurve.points));
 let newPoints = $state<Point[]>([]);
 let editing = $state(false);
 const dNew = $derived(dFromPoints(newPoints));
+
+let svg: SVGElement = $state()!;
+const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
+    const rect = svg.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width * aspect;
+    const y = (event.clientY - rect.top) / rect.height;
+    
+    return { x, y };
+};
 </script>
 
 {#if !editable}
-    <svg viewBox="0 0 {aspectRatio} 1">
+    <svg viewBox="0 0 {aspect} 1">
         <path
             {d}
             stroke="#000"
@@ -46,13 +55,20 @@ const dNew = $derived(dFromPoints(newPoints));
     </svg>
 {:else}
     <Draggable
-        onDown={({button}) => {
+        onDown={({button, pointerEvent}) => {
             if (button !== 0) return;
+            const coords = getCoordinatesFromEvent(pointerEvent);
+            if (!coords) return;
+            
             editing = true;
+            newPoints.push(coords);
         }}
-        onDrag={() => {
+        onDrag={({pointerEvent}) => {
             if (!editing) return;
-            newPoints.push({x: Math.random(), y: Math.random()});
+            const coords = getCoordinatesFromEvent(pointerEvent);
+            if (!coords) return;
+            
+            newPoints.push(coords);
         }}
         onUp={() => {
             if (!editing) return;
@@ -65,7 +81,8 @@ const dNew = $derived(dFromPoints(newPoints));
     >
         {#snippet dragTarget({onpointerdown})}
             <svg
-                viewBox="0 0 {aspectRatio} 1"
+                bind:this={svg}
+                viewBox="0 0 {aspect} 1"
                 {onpointerdown}
             >
                 {#if !editing}

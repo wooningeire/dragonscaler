@@ -75,7 +75,7 @@ const submit = () => {
 </div>
 
 <style lang="scss">
-$image-size: 15rem;
+$image-size: 12rem;
 
 .add-character-menu {
     display: flex;
