@@ -2,15 +2,10 @@
 import { Character } from "$lib/types/Character.svelte";
 import TextEntry from "$lib/components/generic/TextEntry.svelte";
 import { CharacterImage } from "$lib/types/CharacterImage.svelte";
-    import Button from "../generic/Button.svelte";
+import Button from "../generic/Button.svelte";
+import { store } from "$lib/types/Store.svelte";
 
-const {
-    newCharacter,
-    onSubmit,
-}: {
-    newCharacter: Character,
-    onSubmit: () => void,
-} = $props();
+const characterBeingEdited = $derived(store.characterManager.characterBeingEdited!);
 
 let fileInput: HTMLInputElement;
 
@@ -22,57 +17,75 @@ const loadFile = async () => {
 
     loading = true;
 
-    if (newCharacter.image !== null) {
-        URL.revokeObjectURL(newCharacter.image.src);
+    if (characterBeingEdited.image !== null) {
+        URL.revokeObjectURL(characterBeingEdited.image.src);
     }
 
     const file = fileInput.files[0];
-    newCharacter.image = await CharacterImage.fromFile(file);
+    characterBeingEdited.image = await CharacterImage.fromFile(file);
     loading = false;
 };
 
-const submit = () => {
-    if (newCharacter.image === null) return;
+const submit = async () => {
+    if (characterBeingEdited.image === null) return;
 
-    onSubmit();
+    const createResult = await store.databaseStore.createCharacter(characterBeingEdited);
+    
+    characterBeingEdited.id = createResult.id;
+    store.characterManager.characterBeingEdited = null;
 };
 </script>
 
 <div class="add-character-menu">
-    <Button
-        onclick={() => fileInput.click()}
-        disabled={loading}
-        displayClass="character-image"
-    >
-        {#if newCharacter.image !== null}
-            <img
-                src={newCharacter.image.src}
-                alt={newCharacter.name}
+    <div class="character-image-container">
+        <Button
+            onclick={() => fileInput.click()}
+            disabled={loading}
+            displayClass="character-image"
+        >
+            {#if characterBeingEdited.image !== null}
+                <img
+                    src={characterBeingEdited.image.src}
+                    alt={characterBeingEdited.name}
+                />
+            {/if}
+        </Button>
+
+
+        <input
+            type="file"
+            bind:this={fileInput}
+            oninput={loadFile}
+        />
+    </div>
+
+    <div class="character-form-inputs">
+        <label>
+            Name
+
+            <TextEntry
+                value={characterBeingEdited.name}
+                onValueChange={value => characterBeingEdited.name = value}
+                placeholderText="Name"
             />
-        {/if}
-    </Button>
+        </label>
 
-    <TextEntry
-        value={newCharacter.name}
-        onValueChange={value => newCharacter.name = value}
-        placeholderText="Name"
-    />
+        <label>
+            Baseline length
 
-    <TextEntry
-        value={newCharacter.referenceCurve.targetLength.toString()}
-        onValueChange={value => newCharacter.referenceCurve.targetLength = Number(value)}
-        placeholderText="Target length"
-    />
-
-    <Button onclick={submit} padded>Submit</Button>
+            <TextEntry
+                value={characterBeingEdited.referenceCurve.targetLength.toString()}
+                onValueChange={value => characterBeingEdited.referenceCurve.targetLength = Number(value)}
+                placeholderText="Target length"
+            />
+        </label>
+    </div>
 
 
-    <input
-        type="file"
-        bind:this={fileInput}
-        oninput={loadFile}
-    />
 
+    <div class="submit-button">
+        <Button onclick={submit} padded>Submit</Button>
+    </div>
 </div>
 
 <style lang="scss">
@@ -80,6 +93,15 @@ $image-size: 12rem;
 
 .add-character-menu {
     display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.character-form-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 20rem;
 }
 
 :global(.character-image) {

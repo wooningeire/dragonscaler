@@ -1,35 +1,26 @@
 <script lang="ts">
 import CharacterEditMenu from "./CharacterEditMenu.svelte";
 import CharacterCarousel from "./CharacterCarousel.svelte";
-import { CharacterManager } from "$lib/types/CharacterManager.svelte";
+import { store } from "$lib/types/Store.svelte";
     import Button from "../generic/Button.svelte";
-
-const {
-    characterManager,
-}: {
-    characterManager: CharacterManager,
-} = $props();
 </script>
 
 <div class="overlays">
     <div class="gizmos">
         <div class="gizmos-bottom-left">
             <Button
-                onclick={() => characterManager.beginNewCharacter()}
-                disabled={characterManager.characterBeingEdited !== null}
+                onclick={() => store.characterManager.beginNewCharacter()}
+                disabled={store.characterManager.characterBeingEdited !== null}
             >+</Button>
         </div>
     </div>
 
     <div class="bottom-dock">
-        {#if characterManager.characterBeingEdited !== null}
-            <CharacterEditMenu
-                newCharacter={characterManager.characterBeingEdited}
-                onSubmit={() => characterManager.characterBeingEdited = null}
-            />
+        {#if store.characterManager.characterBeingEdited !== null}
+            <CharacterEditMenu />
         {/if}
     
-        <CharacterCarousel characters={characterManager.characters} />
+        <CharacterCarousel />
     </div>
 </div>
 

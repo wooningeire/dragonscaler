@@ -1,15 +1,9 @@
 <script lang="ts">
-import { CharacterManager } from "$lib/types/CharacterManager.svelte";
-    import Draggable from "../generic/Draggable.svelte";
-    import { Camera2d } from "./Camera2d.svelte";
+import { store } from "$lib/types/Store.svelte";
+import Draggable from "../generic/Draggable.svelte";
+import { Camera2d } from "./Camera2d.svelte";
 import CharacterDisplay from "./CharacterDisplay.svelte";
-    import DynamicGrid from "./DynamicGrid.svelte";
-
-const {
-    characterManager,
-}: {
-    characterManager: CharacterManager,
-} = $props();
+import DynamicGrid from "./DynamicGrid.svelte";
 
 const camera = new Camera2d();
 </script>
@@ -51,11 +45,10 @@ const camera = new Camera2d();
             <div
                 class="viewport"
             >
-                {#each characterManager.characters.toReversed() as character, i}
+                {#each store.characterManager.characters.toReversed() as character, i}
                     <CharacterDisplay
                         {character}
-                        {characterManager}
-                        x={characterManager.offsetsX.at(-i - 1)! * characterManager.overlapFac}
+                        x={store.characterManager.offsetsX.at(-i - 1)! * store.characterManager.overlapFac}
                         y={0}
                     />
                 {/each}

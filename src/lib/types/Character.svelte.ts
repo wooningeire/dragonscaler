@@ -3,6 +3,8 @@ import type { Point } from "./Point";
 import { ReferenceCurve } from "./ReferenceCurve.svelte";
 
 export class Character {
+    id: string | null = $state(null);
+
     image: CharacterImage | null = $state()!;
     name: string = $state()!;
     center: Point = $state()!; // in image [0, 1] uv coordinates
@@ -12,16 +14,19 @@ export class Character {
     readonly viewportWidth = $derived.by(() => this.referenceCurve.scaleFac * this.aspect);
 
     constructor({
+        id = null,
         image = null,
         name = "",
         center = {x: 0.5, y: 0},
         referenceCurve = new ReferenceCurve(),
     }: {
+        id?: string | null,
         image?: CharacterImage | null,
         name?: string,
         center?: Point,
         referenceCurve?: ReferenceCurve,
     } = {}) {
+        this.id = id;
         this.image = image;
         this.name = name;
         this.center = center;

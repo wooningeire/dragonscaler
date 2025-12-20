@@ -1,22 +1,20 @@
 <script lang="ts">
 import type { Character } from "$lib/types/Character.svelte";
-import type { CharacterManager } from "$lib/types/CharacterManager.svelte";
 import CenterView from "./CenterView.svelte";
 import ReferenceCurveView from "./ReferenceCurveView.svelte";
+import { store } from "$lib/types/Store.svelte";
 
 let {
     character,
-    characterManager,
     x,
     y,
 }: {
     character: Character,
-    characterManager: CharacterManager,
     x: number,
     y: number,
 } = $props();
 
-const editing = $derived(character === characterManager.characterBeingEdited);
+const editing = $derived(character === store.characterManager.characterBeingEdited);
 </script>
 
 <div

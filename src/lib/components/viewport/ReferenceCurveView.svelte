@@ -50,6 +50,7 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
                 {d}
                 stroke="#fff"
                 stroke-width="0.03"
+                stroke-linecap="square"
                 fill="#0000"
             />
             <path

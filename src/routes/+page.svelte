@@ -3,14 +3,17 @@ import "./index.scss";
 
 import Overlays from "../lib/components/overlays/Overlays.svelte";
 import CharacterViewport from "../lib/components/viewport/CharacterViewport.svelte";
-import { CharacterManager } from "$lib/types/CharacterManager.svelte";
+import { onMount } from "svelte";
+import { store } from "$lib/types/Store.svelte";
 
-const characterManager = new CharacterManager();
+onMount(async () => {
+    await store.loadCharacters();
+});
 </script>
 
 <main>
-    <CharacterViewport {characterManager} />
-    <Overlays {characterManager} />
+    <CharacterViewport />
+    <Overlays />
 </main>
 
 <style lang="scss">
