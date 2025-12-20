@@ -2,6 +2,7 @@
 import { Character } from "$lib/types/Character.svelte";
 import TextEntry from "$lib/components/generic/TextEntry.svelte";
 import { CharacterImage } from "$lib/types/CharacterImage.svelte";
+    import Button from "../generic/Button.svelte";
 
 const {
     newCharacter,
@@ -38,10 +39,10 @@ const submit = () => {
 </script>
 
 <div class="add-character-menu">
-    <button
-        class="character-image"
+    <Button
         onclick={() => fileInput.click()}
         disabled={loading}
+        displayClass="character-image"
     >
         {#if newCharacter.image !== null}
             <img
@@ -49,7 +50,7 @@ const submit = () => {
                 alt={newCharacter.name}
             />
         {/if}
-    </button>
+    </Button>
 
     <TextEntry
         value={newCharacter.name}
@@ -63,7 +64,7 @@ const submit = () => {
         placeholderText="Target length"
     />
 
-    <button onclick={submit}>Submit</button>
+    <Button onclick={submit} padded>Submit</Button>
 
 
     <input
@@ -81,7 +82,7 @@ $image-size: 12rem;
     display: flex;
 }
 
-.character-image {
+:global(.character-image) {
     width: $image-size;
     aspect-ratio: 1/1;
     display: grid;

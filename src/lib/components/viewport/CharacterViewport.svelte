@@ -51,11 +51,11 @@ const camera = new Camera2d();
             <div
                 class="viewport"
             >
-                {#each characterManager.characters as character, i}
+                {#each characterManager.characters.toReversed() as character, i}
                     <CharacterDisplay
                         {character}
                         {characterManager}
-                        x={characterManager.offsetsX[i] * characterManager.overlapFac}
+                        x={characterManager.offsetsX.at(-i - 1)! * characterManager.overlapFac}
                         y={0}
                     />
                 {/each}

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { fade } from "svelte/transition";
 import type { Camera2d } from "./Camera2d.svelte";
 import { GridlineWeight, type Gridline } from "./Gridline";
 
