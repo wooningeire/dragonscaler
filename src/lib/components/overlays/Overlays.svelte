@@ -51,7 +51,7 @@ import Button from "../generic/Button.svelte";
     position: relative;
 
     display: grid;
-    grid-template-rows: 1fr 30vh;
+    grid-template-rows: 1fr 40vh;
     
     pointer-events: none;
 }
@@ -80,12 +80,13 @@ import Button from "../generic/Button.svelte";
     display: flex;
     flex-direction: column;
     align-items: center;
+    padding: 1rem;
 
     pointer-events: auto;
 
     overflow: hidden;
 
-    background: oklch(0.8 0.1 120 / 0.5);
+    background: oklch(0.8 0.05 140 / 0.5);
 }
 
 .user-icon {

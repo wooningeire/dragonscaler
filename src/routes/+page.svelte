@@ -24,5 +24,7 @@ main {
 
     display: grid;
     place-items: stretch;
+
+    background: radial-gradient(oklch(0.995 0.01 150), oklch(0.975 0.05 130));
 }
 </style>
