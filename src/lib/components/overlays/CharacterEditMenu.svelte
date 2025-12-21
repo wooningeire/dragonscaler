@@ -46,7 +46,12 @@ onMount(() => {
     originalCharacter = characterBeingEdited.clone();
 });
 const cancel = () => {
-    characterBeingEdited.copy(originalCharacter);
+    if (characterBeingEdited.uploaded) {
+        characterBeingEdited.copy(originalCharacter);
+    } else {
+        store.characterManager.characters.splice(store.characterManager.characters.indexOf(characterBeingEdited), 1);
+    }
+
     store.characterManager.selectedCharacter = null;
 };
 
