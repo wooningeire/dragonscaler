@@ -7,7 +7,10 @@ import { onMount } from "svelte";
 import { store } from "$lib/types/Store.svelte";
 
 onMount(async () => {
-    await store.loadCharacters();
+    await Promise.all([
+        store.databaseStore.loadUserRecord(),
+        store.loadCharacters(),
+    ])
 });
 </script>
 

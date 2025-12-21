@@ -14,6 +14,7 @@ export class Character {
     readonly viewportWidth = $derived.by(() => this.referenceCurve.scaleFac * this.aspect);
 
     owner = $state<{
+        id: string,
         name: string,
         avatarUrl: string,
     } | null>(null);
@@ -35,6 +36,7 @@ export class Character {
         center?: Point,
         referenceCurve?: ReferenceCurve,
         owner?: {
+            id: string,
             name: string,
             avatarUrl: string,
         } | null,

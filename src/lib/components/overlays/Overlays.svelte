@@ -3,19 +3,20 @@ import CharacterEditMenu from "./CharacterEditMenu.svelte";
 import CharacterCarousel from "./CharacterCarousel.svelte";
 import { store } from "$lib/types/Store.svelte";
 import Button from "../generic/Button.svelte";
+import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
 </script>
 
 <div class="overlays">
     <div class="gizmos">
         <div class="gizmos-bottom-left">
-            {#if store.databaseStore.authResult !== null}
+            {#if store.databaseStore.userRecord !== null}
                 <Button
                     onclick={() => store.databaseStore.logout()}
                     buttonStyle="icon"
                 >
                     <img
-                        src={store.databaseStore.authResult.meta!.avatarUrl}
-                        alt="{store.databaseStore.authResult.meta!.name} icon"
+                        src="{PUBLIC__POCKETBASE_URL}/api/files/users/{store.databaseStore.userRecord!.id}/{store.databaseStore.userRecord!.avatar}"
+                        alt="{store.databaseStore.userRecord!.username} icon"
                         class="user-icon"
                     />
                 </Button>
@@ -29,8 +30,8 @@ import Button from "../generic/Button.svelte";
             {/if}
 
             <Button
-                onclick={() => store.characterManager.beginNewCharacter()}
-                disabled={store.characterManager.selectedCharacter !== null}
+                onclick={() => store.beginNewCharacter()}
+                disabled={store.characterManager.selectedCharacter !== null || store.databaseStore.userRecord === null}
                 buttonStyle="icon"
             >Add character</Button>
         </div>

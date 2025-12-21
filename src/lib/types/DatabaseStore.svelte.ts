@@ -4,15 +4,21 @@ import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
 import { CharacterImage } from "./CharacterImage.svelte";
 import { ReferenceCurve } from "./ReferenceCurve.svelte";
 import { SvelteMap } from "svelte/reactivity";
+import { onMount } from "svelte";
 
 
 export class DatabaseStore {
     private readonly pb: PocketBase;
-    authResult = $state<RecordAuthResponse<RecordModel> | null>(null);
+    userRecord = $state<AuthRecord>(null);
 
 
     constructor() {
         this.pb = new PocketBase(PUBLIC__POCKETBASE_URL);
+    }
+
+    loadUserRecord() {
+        this.pb.authStore.loadFromCookie(document.cookie);
+        this.userRecord = this.pb.authStore.record;
     }
 
     async loadCharacterData() {
@@ -43,6 +49,7 @@ export class DatabaseStore {
                         points: characterData.reference_curve_points,
                     }),
                     owner: {
+                        id: owner.id,
                         name: owner.username,
                         avatarUrl: ownerAvatarImageUrl,
                     },
@@ -67,6 +74,7 @@ export class DatabaseStore {
             image: character.image?.file,
             center_point: character.center,
             reference_curve_points: character.referenceCurve.points,
+            owner_id: character.owner?.id,
         });
     }
 
@@ -87,7 +95,7 @@ export class DatabaseStore {
             scopes: ["identify"],
         });
 
-        this.authResult = authResult;
+        this.userRecord = authResult.record;
 
         // pocketbase doesn't set avatar correctly
         const avatarUrl = authResult.meta!.avatarUrl;
@@ -96,6 +104,8 @@ export class DatabaseStore {
                 this.pb.collection("users").update(authResult.record.id, {
                     avatar: new File([await response.blob()], new URL(avatarUrl).pathname.slice(avatarUrl.lastIndexOf("/"))),
                 });
+
+                this.userRecord = await this.pb.collection("users").getOne(authResult.record.id);
             })
             .catch(error => console.error(error));
 
@@ -105,6 +115,16 @@ export class DatabaseStore {
     logout() {
         this.pb.authStore.clear();
 
-        this.authResult = null;
+        this.userRecord = null;
+    }
+
+    createOwnerObject() {
+        if (this.userRecord === null) throw new Error("not authenticated");
+
+        return {
+            id: this.userRecord.id,
+            name: this.userRecord.username,
+            avatarUrl: `${PUBLIC__POCKETBASE_URL}/api/files/users/${this.userRecord.id}/${this.userRecord.avatar}`,
+        };
     }
 }

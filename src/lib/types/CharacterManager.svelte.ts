@@ -28,8 +28,11 @@ export class CharacterManager {
         });
     }
 
-    beginNewCharacter() {
-        const newCharacter = new Character();
+    beginNewCharacter(owner: {id: string, name: string, avatarUrl: string}) {
+        const newCharacter = new Character({
+            owner,
+            uploaded: false,
+        });
         this.addCharacter(newCharacter);
         this.selectedCharacter = newCharacter;
     }

@@ -11,6 +11,10 @@ export class Store {
     async loadCharacters() {
         this.characterManager.characters = await this.databaseStore.loadCharacterData();
     }
+
+    beginNewCharacter() {
+        this.characterManager.beginNewCharacter(this.databaseStore.createOwnerObject());
+    }
 }
 
 export const store = new Store();
