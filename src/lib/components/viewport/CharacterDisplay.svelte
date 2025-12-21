@@ -15,7 +15,7 @@ let {
     y: number,
 } = $props();
 
-const editing = $derived(character === store.characterManager.characterBeingEdited);
+const editing = $derived(character === store.characterManager.selectedCharacter);
 </script>
 
 <div

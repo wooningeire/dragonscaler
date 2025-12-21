@@ -30,14 +30,14 @@ import Button from "../generic/Button.svelte";
 
             <Button
                 onclick={() => store.characterManager.beginNewCharacter()}
-                disabled={store.characterManager.characterBeingEdited !== null}
+                disabled={store.characterManager.selectedCharacter !== null}
                 buttonStyle="icon"
             >Add character</Button>
         </div>
     </div>
 
     <div class="bottom-dock">
-        {#if store.characterManager.characterBeingEdited !== null}
+        {#if store.characterManager.selectedCharacter !== null}
             <CharacterEditMenu />
         {/if}
     

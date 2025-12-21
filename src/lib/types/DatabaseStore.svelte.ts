@@ -46,6 +46,7 @@ export class DatabaseStore {
                         name: owner.username,
                         avatarUrl: ownerAvatarImageUrl,
                     },
+                    uploaded: true,
                 });
 
                 CharacterImage.fromUrl(characterImageUrl, characterData.image)

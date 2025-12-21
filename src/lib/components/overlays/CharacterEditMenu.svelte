@@ -4,8 +4,9 @@ import TextEntry from "$lib/components/generic/TextEntry.svelte";
 import { CharacterImage } from "$lib/types/CharacterImage.svelte";
 import Button from "../generic/Button.svelte";
 import { store } from "$lib/types/Store.svelte";
+    import { onMount } from "svelte";
 
-const characterBeingEdited = $derived(store.characterManager.characterBeingEdited!);
+const characterBeingEdited = $derived(store.characterManager.selectedCharacter!);
 
 let fileInput: HTMLInputElement;
 
@@ -29,11 +30,27 @@ const loadFile = async () => {
 const submit = async () => {
     if (characterBeingEdited.image === null) return;
 
-    const createResult = await store.databaseStore.createCharacter(characterBeingEdited);
+    if (characterBeingEdited.uploaded) {
+        await store.databaseStore.updateCharacter(characterBeingEdited);
+    } else {
+        const createResult = await store.databaseStore.createCharacter(characterBeingEdited);
+        characterBeingEdited.uploaded = true;
 
-    characterBeingEdited.id = createResult.id;
-    store.characterManager.characterBeingEdited = null;
+        characterBeingEdited.id = createResult.id;
+    }
 };
+
+
+let originalCharacter: Character;
+onMount(() => {
+    originalCharacter = characterBeingEdited.clone();
+});
+const cancel = () => {
+    characterBeingEdited.copy(originalCharacter);
+    store.characterManager.selectedCharacter = null;
+};
+
+const canSubmit = $derived(characterBeingEdited.image !== null && characterBeingEdited.name !== "");
 </script>
 
 <div class="add-character-menu">
@@ -71,31 +88,37 @@ const submit = async () => {
             />
         </label>
 
-        <label>
-            Baseline length
+        <div>
+            Baseline
 
             <TextEntry
                 value={characterBeingEdited.referenceCurve.targetLength.toString()}
                 onValueChange={value => characterBeingEdited.referenceCurve.targetLength = Number(value)}
                 placeholderText="Target length"
             />
-        </label>
-
-        <label>
-            Baseline descriptor
 
             <TextEntry
                 value={characterBeingEdited.referenceCurve.descriptor}
                 onValueChange={value => characterBeingEdited.referenceCurve.descriptor = value}
                 placeholderText="to the shoulder"
             />
-        </label>
+        </div>
     </div>
 
 
 
-    <div class="submit-button">
-        <Button onclick={submit}>Submit</Button>
+    <div class="buttons">
+        <Button onclick={submit} disabled={!canSubmit}>
+            {#if characterBeingEdited.uploaded}
+                Update
+            {:else}
+                Create
+            {/if}
+        </Button>
+
+        <Button onclick={cancel}>
+            Cancel
+        </Button>
     </div>
 </div>
 
@@ -135,5 +158,11 @@ img {
 
 input[type="file"] {
     display: none;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 </style>

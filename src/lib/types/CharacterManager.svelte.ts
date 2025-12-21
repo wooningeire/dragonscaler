@@ -3,7 +3,7 @@ import { Character } from "./Character.svelte";
 
 export class CharacterManager {
     characters = $state<Character[]>([]);
-    characterBeingEdited = $state<Character | null>(null);
+    selectedCharacter = $state<Character | null>(null);
 
     overlapFac = $state(0.5);
 
@@ -31,6 +31,6 @@ export class CharacterManager {
     beginNewCharacter() {
         const newCharacter = new Character();
         this.addCharacter(newCharacter);
-        this.characterBeingEdited = newCharacter;
+        this.selectedCharacter = newCharacter;
     }
 }

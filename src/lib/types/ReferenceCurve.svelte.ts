@@ -24,6 +24,20 @@ export class ReferenceCurve {
         this.targetLength = targetLength;
         this.descriptor = descriptor;
     }
+
+    clone() {
+        return new ReferenceCurve({
+            points: [...this.points],
+            targetLength: this.targetLength,
+            descriptor: this.descriptor,
+        });
+    }
+
+    copy(other: ReferenceCurve) {
+        this.points = other.points;
+        this.targetLength = other.targetLength;
+        this.descriptor = other.descriptor;
+    }
 }
 
 const computeArcLength = (points: {x: number, y: number}[]) => {
