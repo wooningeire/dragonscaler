@@ -1,4 +1,4 @@
-import PocketBase, { type RecordModel } from "pocketbase";
+import PocketBase, { type RecordModel, type AuthRecord, type RecordAuthResponse } from "pocketbase";
 import { Character } from "./Character.svelte";
 import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
 import { CharacterImage } from "./CharacterImage.svelte";
@@ -6,6 +6,7 @@ import { ReferenceCurve } from "./ReferenceCurve.svelte";
 
 export class DatabaseStore {
     private readonly pb: PocketBase;
+    authResult = $state<RecordAuthResponse<RecordModel> | null>(null);
 
     constructor() {
         this.pb = new PocketBase(PUBLIC__POCKETBASE_URL);
@@ -32,7 +33,7 @@ export class DatabaseStore {
         CharacterImage.fromUrl(imageUrl, characterData.image)
             .then(image => character.image = image)
             .catch(error => console.error(error));
-            
+
         return character;
     }
 
@@ -54,5 +55,21 @@ export class DatabaseStore {
             center_point: character.center,
             reference_curve_points: character.referenceCurve.points,
         });
+    }
+
+    async promptDiscordLogin() {
+        const authResult = await this.pb.collection("users").authWithOAuth2({
+            provider: "discord",
+        });
+
+        this.authResult = authResult;
+
+        return authResult;
+    }
+
+    logout() {
+        this.pb.authStore.clear();
+
+        this.authResult = null;
     }
 }

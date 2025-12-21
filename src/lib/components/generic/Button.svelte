@@ -5,13 +5,13 @@
 let {
     children,
     keyHeld = false,
-    padded = false,
     displayClass,
+    buttonStyle = "text",
     ...buttonProps
 }: {
     children: Snippet,
     keyHeld?: boolean,
-    padded?: boolean,
+    buttonStyle?: "text" | "image" | "icon",
     displayClass?: string,
 } & HTMLButtonAttributes = $props();
 </script>
@@ -19,7 +19,8 @@ let {
 <button {...buttonProps}>
     <button-display
         class:key-held={keyHeld}
-        class:padded
+        class:text-button={buttonStyle === "text"}
+        class:icon-button={buttonStyle === "icon"}
         class={displayClass}
     >
         {@render children?.()}
@@ -27,6 +28,10 @@ let {
 </button>
 
 <style lang="scss">
+$bg-col: oklch(1 0 0 / 0.75);
+$inset-box-shadow: 0 1rem 4rem 2rem oklch(0.6 0.1 120 / 0.125) inset;
+
+
 button {
     margin: 0;
     padding: 0;
@@ -38,29 +43,63 @@ button {
 
     cursor: pointer;
 
+
+    button-display {
+        display: block;
+
+        border-radius: 1rem;
+        background: $bg-col;
+        box-shadow:
+            0 0.25rem 1rem 0.5rem oklch(0.75 0.05 140 / 0.5),
+            $inset-box-shadow;
+
+        pointer-events: none;
+        overflow: hidden;
+
+        transition:
+            transform 0.25s cubic-bezier(0,2.75,.47,1),
+            box-shadow 0.1s cubic-bezier(0,1,.47,1),
+            filter 0.25s ease;
+
+        &.text-button {
+            padding: 0.25rem 1rem;
+        }
+
+        &.icon-button {
+            padding: 0.5rem;
+        }
+    }
+
     &:is(:hover, :focus-visible) > button-display,
     button-display.key-held {
         border-color: currentcolor;
 
-        transform: translateY(-0.125rem) scale(1.1);
-        box-shadow: 0 0.25rem 0.5rem oklch(from currentcolor l c h / 0.5);
+        transform: translateY(-0.125rem) scale(1.05);
 
         animation: sliding-background 1s infinite linear;
-        background: repeating-linear-gradient(
-            135deg,
-            oklch(0 0 0 / 0) 0,
-            oklch(0 0 0 / 0) 1rem,
-            oklch(from currentcolor l c h / 0.25) 1rem,
-            oklch(from currentcolor l c h / 0.25) 2rem,
-        );
-        background-size: calc(100% + 3rem) calc(100% + 3rem);
+        background-image:
+            linear-gradient($bg-col, $bg-col),
+            repeating-linear-gradient(
+                135deg,
+                oklch(0 0 0 / 0) 0,
+                oklch(0 0 0 / 0) 1rem,
+                oklch(0.8 0.1 120 / 0.25) 1rem,
+                oklch(0.8 0.1 120 / 0.25) 2rem,
+            );
+        background-size:
+            100% 100%,
+            calc(100% + 3rem) calc(100% + 3rem);
 
         @keyframes sliding-background {
             from {
-                background-position: -2.828427rem -2.828427rem; // 2 * sqrt(2)
+                background-position:
+                    0 0,
+                    -2.828427rem -2.828427rem; // 2 * sqrt(2)
             }
             to {
-                background-position: 0 0;
+                background-position:
+                    0 0,
+                    0 0;
             }
         }
     }
@@ -69,32 +108,14 @@ button {
     button-display.key-held {
         transform: translateY(0.0625rem) scale(0.95);
 
-        box-shadow: 0 0 0 oklch(0 0 0 / 0);
-        filter: brightness(0.5);
+        box-shadow:
+            0 0 oklch(0 0 0 / 0),
+            $inset-box-shadow;
     }
 
     &[disabled] {
         pointer-events: none;
         opacity: 0.3;
-    }
-}
-
-button-display {
-    display: block;
-
-    border: 2px solid oklch(from currentcolor l c h / 0.5);
-    border-radius: 1rem;
-
-    pointer-events: none;
-    overflow: hidden;
-
-    transition:
-        transform 0.25s cubic-bezier(0,2.75,.47,1),
-        box-shadow 0.1s cubic-bezier(0,1,.47,1),
-        filter 0.25s ease;
-
-    &.padded {
-        padding: 0.25rem 1rem;
     }
 }
 </style>

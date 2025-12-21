@@ -30,7 +30,7 @@ const submit = async () => {
     if (characterBeingEdited.image === null) return;
 
     const createResult = await store.databaseStore.createCharacter(characterBeingEdited);
-    
+
     characterBeingEdited.id = createResult.id;
     store.characterManager.characterBeingEdited = null;
 };
@@ -42,6 +42,7 @@ const submit = async () => {
             onclick={() => fileInput.click()}
             disabled={loading}
             displayClass="character-image"
+            buttonStyle="image"
         >
             {#if characterBeingEdited.image !== null}
                 <img
@@ -79,12 +80,22 @@ const submit = async () => {
                 placeholderText="Target length"
             />
         </label>
+
+        <label>
+            Baseline descriptor
+
+            <TextEntry
+                value={characterBeingEdited.referenceCurve.descriptor}
+                onValueChange={value => characterBeingEdited.referenceCurve.descriptor = value}
+                placeholderText="to the shoulder"
+            />
+        </label>
     </div>
 
 
 
     <div class="submit-button">
-        <Button onclick={submit} padded>Submit</Button>
+        <Button onclick={submit}>Submit</Button>
     </div>
 </div>
 
