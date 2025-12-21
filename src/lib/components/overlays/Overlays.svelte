@@ -69,6 +69,9 @@ import Button from "../generic/Button.svelte";
 .gizmos-bottom-left {
     align-self: flex-end;
 
+    display: flex;
+    gap: 0.5rem;
+
     > :global(*) {
         pointer-events: auto;
     }

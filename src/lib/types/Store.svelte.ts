@@ -9,8 +9,7 @@ export class Store {
     readonly databaseStore = new DatabaseStore();
 
     async loadCharacters() {
-        const characterData = await this.databaseStore.loadCharacterData();
-        this.characterManager.characters = characterData.map(characterData => this.databaseStore.convertCharacterData(characterData));
+        this.characterManager.characters = await this.databaseStore.loadCharacterData();
     }
 }
 

@@ -107,10 +107,6 @@ button {
     &:active > button-display,
     button-display.key-held {
         transform: translateY(0.0625rem) scale(0.95);
-
-        box-shadow:
-            0 0 oklch(0 0 0 / 0),
-            $inset-box-shadow;
     }
 
     &[disabled] {

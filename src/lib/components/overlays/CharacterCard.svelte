@@ -1,5 +1,7 @@
 <script lang="ts">
 import type { Character } from "$lib/types/Character.svelte";
+    import Button from "../generic/Button.svelte";
+    import CharacterLabel from "../viewport/CharacterLabel.svelte";
 
 let {
     character,
@@ -9,18 +11,20 @@ let {
 </script>
 
 <div class="character-card">
-    <div class="character-card-image-container">
-        {#if character.image !== null}
-            <img
-                src={character.image.src}
-                alt={character.name}
-            />
-        {:else}
-            <div class="image-placeholder"></div>
-        {/if}
-    </div>
-    
-    <div>{character.name}</div>
+    <Button>
+        <div class="character-card-image-container">
+            {#if character.image !== null}
+                <img
+                    src={character.image.src}
+                    alt={character.name}
+                />
+            {:else}
+                <div class="image-placeholder"></div>
+            {/if}
+        </div>
+        
+        <CharacterLabel {character} />
+    </Button>
 </div>
 
 <style lang="scss">

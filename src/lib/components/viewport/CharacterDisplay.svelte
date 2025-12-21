@@ -3,6 +3,7 @@ import type { Character } from "$lib/types/Character.svelte";
 import CenterView from "./CenterView.svelte";
 import ReferenceCurveView from "./ReferenceCurveView.svelte";
 import { store } from "$lib/types/Store.svelte";
+    import CharacterLabel from "./CharacterLabel.svelte";
 
 let {
     character,
@@ -56,6 +57,10 @@ const editing = $derived(character === store.characterManager.characterBeingEdit
             onCenterChange={center => character.center = center}
         />
     {/if}
+
+    <div class="character-label-container">
+        <CharacterLabel character={character} />
+    </div>
 </div>
 
 <style lang="scss">
@@ -79,5 +84,12 @@ const editing = $derived(character === store.characterManager.characterBeingEdit
 
 .image-placeholder {
     background: oklch(0.9 0 0);
+}
+
+.character-label-container {
+    bottom: 0;
+    transform: translateY(100%);
+    position: absolute;
+    margin-top: 0.5rem;
 }
 </style>
