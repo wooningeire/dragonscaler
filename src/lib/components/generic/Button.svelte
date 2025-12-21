@@ -29,6 +29,7 @@ let {
 
 <style lang="scss">
 $bg-col: oklch(1 0 0 / 0.75);
+$bg-stripe-col: oklch(0.975 0.02 120 / 0.75);
 $inset-box-shadow: 0 1rem 4rem 2rem oklch(0.6 0.1 120 / 0.125) inset;
 
 
@@ -77,29 +78,21 @@ button {
         transform: translateY(-0.125rem) scale(1.05);
 
         animation: sliding-background 1s infinite linear;
-        background-image:
-            linear-gradient($bg-col, $bg-col),
-            repeating-linear-gradient(
-                135deg,
-                oklch(0 0 0 / 0) 0,
-                oklch(0 0 0 / 0) 1rem,
-                oklch(0.8 0.1 120 / 0.25) 1rem,
-                oklch(0.8 0.1 120 / 0.25) 2rem,
-            );
-        background-size:
-            100% 100%,
-            calc(100% + 3rem) calc(100% + 3rem);
+        background-image: repeating-linear-gradient(
+            135deg,
+            $bg-col 0,
+            $bg-col 1rem,
+            $bg-stripe-col 1rem,
+            $bg-stripe-col 2rem,
+        );
+        background-size: calc(100% + 3rem) calc(100% + 3rem);
 
         @keyframes sliding-background {
             from {
-                background-position:
-                    0 0,
-                    -2.828427rem -2.828427rem; // 2 * sqrt(2)
+                background-position: -2.828427rem -2.828427rem; // 2 * sqrt(2)
             }
             to {
-                background-position:
-                    0 0,
-                    0 0;
+                background-position: 0 0;
             }
         }
     }
