@@ -1,10 +1,9 @@
-import PocketBase, { type RecordModel, type AuthRecord, type RecordAuthResponse } from "pocketbase";
+import PocketBase, { type RecordModel, type AuthRecord } from "pocketbase";
 import { Character } from "./Character.svelte";
+import { Collections, type CharacterRecord, type BaselineRecord, type UserRecord } from "./PocketbaseTypes";
 import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
 import { CharacterImage } from "./CharacterImage.svelte";
 import { ReferenceCurve } from "./ReferenceCurve.svelte";
-import { SvelteMap } from "svelte/reactivity";
-import { onMount } from "svelte";
 
 
 export class DatabaseStore {
@@ -22,22 +21,33 @@ export class DatabaseStore {
     }
 
     async loadCharacterData() {
-        const characterDataResult = await this.pb.collection("dragonscaler_character_data").getList();
+        const characterDataResultPromise = this.pb.collection(Collections.Characters).getFullList<CharacterRecord>();
+        const baselinesResultPromise = this.pb.collection(Collections.Baselines).getFullList<BaselineRecord>();
 
+        const [characterDataResult, baselinesResult] = await Promise.all([characterDataResultPromise, baselinesResultPromise]);
+
+        const baselinesMap = new Map<string, BaselineRecord>();
+        for (const baseline of baselinesResult) {
+            if (!baseline.is_default || baselinesMap.has(baseline.character_id)) continue;
+
+            baselinesMap.set(baseline.character_id, baseline);
+        }
 
         const characterPromises: Promise<Character>[] = [];
 
         const seenUsers = new Map<string, Promise<RecordModel>>();
-        for (const characterData of characterDataResult.items) {
+        for (const characterData of characterDataResult) {
+            const baseline = baselinesMap.get(characterData.id);
+
             characterPromises.push((async () => {
-                const characterImageUrl = `${PUBLIC__POCKETBASE_URL}/api/files/dragonscaler_character_data/${characterData.id}/${characterData.image}`;
+                const characterImageUrl = `${PUBLIC__POCKETBASE_URL}/api/files/${Collections.Characters}/${characterData.id}/${characterData.image}`;
 
                 
                 if (!seenUsers.has(characterData.owner_id)) {
-                    seenUsers.set(characterData.owner_id, this.pb.collection("users").getOne(characterData.owner_id));
+                    seenUsers.set(characterData.owner_id, this.pb.collection(Collections.Users).getOne<UserRecord>(characterData.owner_id));
                 }
                 const owner = await seenUsers.get(characterData.owner_id)!;
-                const ownerAvatarImageUrl = `${PUBLIC__POCKETBASE_URL}/api/files/users/${owner.id}/${owner.avatar}`;
+                const ownerAvatarImageUrl = `${PUBLIC__POCKETBASE_URL}/api/files/${Collections.Users}/${owner.id}/${owner.avatar}`;
 
 
                 const character = new Character({
@@ -46,7 +56,10 @@ export class DatabaseStore {
                     name: characterData.name,
                     center: characterData.center_point,
                     referenceCurve: new ReferenceCurve({
-                        points: characterData.reference_curve_points,
+                        id: baseline?.id ?? null,
+                        points: baseline?.points,
+                        descriptor: baseline?.descriptor,
+                        targetLength: baseline?.length_meters,
                     }),
                     owner: {
                         id: owner.id,
@@ -69,24 +82,57 @@ export class DatabaseStore {
     }
 
     async createCharacter(character: Character) {
-        return await this.pb.collection("dragonscaler_character_data").create({
+        const charRecord = await this.pb.collection(Collections.Characters).create({
             name: character.name,
             image: character.image?.file,
             center_point: character.center,
-            reference_curve_points: character.referenceCurve.points,
             owner_id: character.owner?.id,
         });
+
+        const baselineRecord = await this.pb.collection(Collections.Baselines).create({
+            character_id: charRecord.id,
+            is_default: true,
+            points: character.referenceCurve.points,
+            descriptor: character.referenceCurve.descriptor,
+            length_meters: character.referenceCurve.targetLength,
+        });
+        
+        character.referenceCurve.id = baselineRecord.id;
+
+        return charRecord;
     }
 
     async updateCharacter(character: Character) {
         if (character.id === null) throw new Error("character has no id");
 
-        return await this.pb.collection("dragonscaler_character_data").update(character.id, {
+        const updateCharPromise = this.pb.collection(Collections.Characters).update(character.id, {
             name: character.name,
             image: character.image?.file,
             center_point: character.center,
-            reference_curve_points: character.referenceCurve.points,
         });
+
+        let updateBaselinePromise: Promise<unknown>;
+
+        if (character.referenceCurve.id !== null) {
+            updateBaselinePromise = this.pb.collection(Collections.Baselines).update(character.referenceCurve.id, {
+                points: character.referenceCurve.points,
+                descriptor: character.referenceCurve.descriptor,
+                length_meters: character.referenceCurve.targetLength,
+            });
+        } else {
+            updateBaselinePromise = this.pb.collection(Collections.Baselines).create({
+                character_id: character.id,
+                is_default: true,
+                points: character.referenceCurve.points,
+                descriptor: character.referenceCurve.descriptor,
+                length_meters: character.referenceCurve.targetLength,
+            }).then(record => {
+                character.referenceCurve.id = record.id;
+                return record;
+            });
+        }
+
+        return await Promise.all([updateCharPromise, updateBaselinePromise]);
     }
 
     async promptDiscordLogin() {

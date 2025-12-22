@@ -1,4 +1,3 @@
-import { untrack } from "svelte";
 import { Character } from "./Character.svelte";
 
 export class CharacterManager {
@@ -16,16 +15,17 @@ export class CharacterManager {
 
         return offsets;
     });
+    
+    constructor() {
+        $effect.root(() => {
+            $effect(() => {
+                this.characters.sort((a, b) => a.referenceCurve.scaleFac - b.referenceCurve.scaleFac);
+            });
+        });
+    }
 
     addCharacter(character: Character) {
         this.characters.push(character);
-
-        $effect.root(() => {
-            $effect(() => {
-                void character.referenceCurve.scaleFac;
-                untrack(() => this.characters.sort((a, b) => a.referenceCurve.scaleFac - b.referenceCurve.scaleFac));
-            });
-        });
     }
 
     beginNewCharacter(owner: {id: string, name: string, avatarUrl: string}) {
