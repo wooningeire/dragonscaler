@@ -76,7 +76,7 @@ const overlayOpacity = $derived(Math.exp(-((Math.log(characterViewportScale / 25
     position: absolute;
     left: calc(var(--x) * var(--viewport-scale) * 1px);
     // bottom: calc(var(--y) * var(--viewport-scale) * 1px);
-    transform: translateY(/* calc(var(--center-x) * -100%),  */calc(var(--center-y) * 100%)) translate(-50%, -100%);
+    transform: translateY(/* calc(var(--center-x) * -100%),  */calc(var(--center-y) * 100%)) translateY(-100%);
     display: grid;
 
     > :global(*) {

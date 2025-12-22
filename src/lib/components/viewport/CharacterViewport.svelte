@@ -46,7 +46,7 @@ import DynamicGrid from "./DynamicGrid.svelte";
                 {#each store.characterManager.characters.toReversed() as character, i}
                     <CharacterDisplay
                         {character}
-                        x={store.characterManager.offsetsX.at(-i - 1)! * store.characterManager.overlapFac}
+                        x={store.characterManager.positionsX.at(-i - 1)!}
                         y={0}
                     />
                 {/each}

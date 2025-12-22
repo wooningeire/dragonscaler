@@ -57,6 +57,8 @@ button {
         pointer-events: none;
         overflow: hidden;
 
+        backdrop-filter: blur(4px);
+
         transition:
             transform 0.25s cubic-bezier(0,2.75,.47,1),
             box-shadow 0.1s cubic-bezier(0,1,.47,1),

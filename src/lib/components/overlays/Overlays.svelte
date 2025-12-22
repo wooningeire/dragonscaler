@@ -3,6 +3,7 @@ import CharacterEditMenu from "./CharacterEditMenu.svelte";
 import CharacterCarousel from "./CharacterCarousel.svelte";
 import { store } from "$lib/types/Store.svelte";
 import Button from "../generic/Button.svelte";
+import Slider from "../generic/Slider.svelte";
 import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
 </script>
 
@@ -35,6 +36,16 @@ import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
                 buttonStyle="icon"
             >Add character</Button>
         </div>
+
+        <div class="gizmos-bottom-right">
+            <Slider
+                label="Spacing"
+                min={0}
+                max={1}
+                step={0.01}
+                bind:value={store.characterManager.overlapFac}
+            />
+        </div>
     </div>
 
     <div class="bottom-dock">
@@ -47,6 +58,9 @@ import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
 </div>
 
 <style lang="scss">
+$dock-bg-col: oklch(0.8 0.05 140 / 0.5);
+
+
 .overlays {
     grid-area: 1/1;
     position: relative;
@@ -68,6 +82,8 @@ import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
 }
 
 .gizmos-bottom-left {
+    grid-area: 1/1;
+
     align-self: flex-end;
 
     display: flex;
@@ -90,12 +106,32 @@ import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
 
     overflow: hidden;
 
-    background: oklch(0.8 0.05 140 / 0.5);
+    background: $dock-bg-col;
 }
 
 .user-icon {
     width: 3rem;
     height: 3rem;
     border-radius: 50%;
+}
+
+.gizmos-bottom-right {
+    grid-area: 1/2;
+
+    align-self: flex-end;
+    justify-self: flex-end;
+    
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 12rem;
+
+    padding: 1rem;
+    background: $dock-bg-col;
+    border-radius: 1rem;
+    
+    > :global(*) {
+        pointer-events: auto;
+    }
 }
 </style>
