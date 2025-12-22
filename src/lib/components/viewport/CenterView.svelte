@@ -51,7 +51,7 @@ let container: HTMLDivElement;
                 class="center-control"
                 style:--center-x={center.x}
                 style:--center-y={center.y}
-                style:--scale-fac={scaleFac}
+                style:--viewport-scale-fac={scaleFac}
                 {onpointerdown}
             ></div>
         {/snippet}

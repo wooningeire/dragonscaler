@@ -3,7 +3,7 @@ import { Character } from "./Character.svelte";
 import { Collections, type CharacterRecord, type BaselineRecord, type UserRecord } from "./PocketbaseTypes";
 import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
 import { CharacterImage } from "./CharacterImage.svelte";
-import { ReferenceCurve } from "./ReferenceCurve.svelte";
+import { Baseline } from "./Baseline.svelte";
 
 
 export class DatabaseStore {
@@ -55,7 +55,7 @@ export class DatabaseStore {
                     image: null,
                     name: characterData.name,
                     center: characterData.center_point,
-                    referenceCurve: new ReferenceCurve({
+                    baseline: new Baseline({
                         id: baseline?.id ?? null,
                         points: baseline?.points,
                         descriptor: baseline?.descriptor,
@@ -92,12 +92,12 @@ export class DatabaseStore {
         const baselineRecord = await this.pb.collection(Collections.Baselines).create({
             character_id: charRecord.id,
             is_default: true,
-            points: character.referenceCurve.points,
-            descriptor: character.referenceCurve.descriptor,
-            length_meters: character.referenceCurve.targetLength,
+            points: character.baseline.points,
+            descriptor: character.baseline.descriptor,
+            length_meters: character.baseline.targetLength,
         });
         
-        character.referenceCurve.id = baselineRecord.id;
+        character.baseline.id = baselineRecord.id;
 
         return charRecord;
     }
@@ -113,21 +113,21 @@ export class DatabaseStore {
 
         let updateBaselinePromise: Promise<unknown>;
 
-        if (character.referenceCurve.id !== null) {
-            updateBaselinePromise = this.pb.collection(Collections.Baselines).update(character.referenceCurve.id, {
-                points: character.referenceCurve.points,
-                descriptor: character.referenceCurve.descriptor,
-                length_meters: character.referenceCurve.targetLength,
+        if (character.baseline.id !== null) {
+            updateBaselinePromise = this.pb.collection(Collections.Baselines).update(character.baseline.id, {
+                points: character.baseline.points,
+                descriptor: character.baseline.descriptor,
+                length_meters: character.baseline.targetLength,
             });
         } else {
             updateBaselinePromise = this.pb.collection(Collections.Baselines).create({
                 character_id: character.id,
                 is_default: true,
-                points: character.referenceCurve.points,
-                descriptor: character.referenceCurve.descriptor,
-                length_meters: character.referenceCurve.targetLength,
+                points: character.baseline.points,
+                descriptor: character.baseline.descriptor,
+                length_meters: character.baseline.targetLength,
             }).then(record => {
-                character.referenceCurve.id = record.id;
+                character.baseline.id = record.id;
                 return record;
             });
         }

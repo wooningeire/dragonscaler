@@ -1,46 +1,44 @@
 <script lang="ts">
 import { store } from "$lib/types/Store.svelte";
 import Draggable from "../generic/Draggable.svelte";
-import { Camera2d } from "./Camera2d.svelte";
 import CharacterDisplay from "./CharacterDisplay.svelte";
 import DynamicGrid from "./DynamicGrid.svelte";
 
-const camera = new Camera2d();
 </script>
 
 <Draggable
     onDrag={({movement, button}) => {
         if (button !== 1) return;
-        camera.posMeters.x -= movement.x / camera.scalePxPerMeter;
-        camera.posMeters.y += movement.y / camera.scalePxPerMeter;
+        store.camera.posMeters.x -= movement.x / store.camera.scalePxPerMeter;
+        store.camera.posMeters.y += movement.y / store.camera.scalePxPerMeter;
     }}
 >
     {#snippet dragTarget({onpointerdown})}
         <div
             class="character-viewport"
-            style:--scale={camera.scalePxPerMeter}
-            style:--pos-x={camera.posMeters.x}
-            style:--pos-y={camera.posMeters.y}
+            style:--viewport-scale={store.camera.scalePxPerMeter}
+            style:--pos-x={store.camera.posMeters.x}
+            style:--pos-y={store.camera.posMeters.y}
             {onpointerdown}
             onwheel={event => {
                 const rect = event.currentTarget.getBoundingClientRect();
-                const mouseX = event.clientX - rect.left - camera.viewportDimsPx.width * 0.5;
-                const mouseY = event.clientY - rect.top - camera.viewportDimsPx.height * 0.5;
+                const mouseX = event.clientX - rect.left - store.camera.viewportDimsPx.width * 0.5;
+                const mouseY = event.clientY - rect.top - store.camera.viewportDimsPx.height * 0.5;
                 
-                const worldX = camera.posMeters.x + mouseX / camera.scalePxPerMeter;
-                const worldY = camera.posMeters.y - mouseY / camera.scalePxPerMeter;
+                const worldX = store.camera.posMeters.x + mouseX / store.camera.scalePxPerMeter;
+                const worldY = store.camera.posMeters.y - mouseY / store.camera.scalePxPerMeter;
                 
                 const scaleFac = 2 ** (-event.deltaY * 0.0005);
-                camera.scalePxPerMeter *= scaleFac;
+                store.camera.scalePxPerMeter *= scaleFac;
                 
-                camera.posMeters.x = worldX - mouseX / camera.scalePxPerMeter;
-                camera.posMeters.y = worldY + mouseY / camera.scalePxPerMeter;
+                store.camera.posMeters.x = worldX - mouseX / store.camera.scalePxPerMeter;
+                store.camera.posMeters.y = worldY + mouseY / store.camera.scalePxPerMeter;
             }}
 
-            bind:clientWidth={null, width => camera.viewportDimsPx.width = width!}
-            bind:clientHeight={null, height => camera.viewportDimsPx.height = height!}
+            bind:clientWidth={null, width => store.camera.viewportDimsPx.width = width!}
+            bind:clientHeight={null, height => store.camera.viewportDimsPx.height = height!}
         >
-            <DynamicGrid {camera} />
+            <DynamicGrid />
 
             <div
                 class="viewport"
@@ -73,7 +71,7 @@ const camera = new Camera2d();
 }
 
 .viewport {
-    transform: translate(calc(var(--pos-x) * var(--scale) * -1px), calc(var(--pos-y) * var(--scale) * 1px)) translate(50vw, 50vh);
+    transform: translate(calc(var(--pos-x) * var(--viewport-scale) * -1px), calc(var(--pos-y) * var(--viewport-scale) * 1px)) translate(50vw, 50vh);
     transform-origin: 50% 50%;
 }
 </style>

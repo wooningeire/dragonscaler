@@ -1,41 +1,34 @@
 <script lang="ts">
-    import { fade } from "svelte/transition";
-import type { Camera2d } from "./Camera2d.svelte";
 import { GridlineWeight, type Gridline } from "./Gridline";
+import { store } from "$lib/types/Store.svelte";
 
-const {
-    camera,
-}: {
-    camera: Camera2d,
-} = $props();
-
-const gridlineStepMeters = $derived(2 ** Math.round(-Math.log2(camera.scalePxPerMeter / 144)));
+const gridlineStepMeters = $derived(2 ** Math.round(-Math.log2(store.camera.scalePxPerMeter / 144)));
 
 const gridlinesX = $derived.by(() => {
-    let xMeters = Math.floor(camera.screenBoundsMeters.left / gridlineStepMeters) * gridlineStepMeters;
+    let xMeters = Math.floor(store.camera.screenBoundsMeters.left / gridlineStepMeters) * gridlineStepMeters;
     const out: Gridline[] = [];
     do {
         out.push({
-            offsetPx: camera.xMetersAsScreenPx(xMeters),
+            offsetPx: store.camera.xMetersAsScreenPx(xMeters),
             coordMeters: xMeters,
             weight: GridlineWeight.Light,
         });
         xMeters += gridlineStepMeters;
-    } while (xMeters < camera.screenBoundsMeters.right);
+    } while (xMeters < store.camera.screenBoundsMeters.right);
     return out;
 });
 
 const gridlinesY = $derived.by(() => {
-    let yMeters = Math.floor(camera.screenBoundsMeters.bottom / gridlineStepMeters) * gridlineStepMeters;
+    let yMeters = Math.floor(store.camera.screenBoundsMeters.bottom / gridlineStepMeters) * gridlineStepMeters;
     const out: Gridline[] = [];
     do {
         out.push({
-            offsetPx: camera.yMetersAsScreenPx(yMeters),
+            offsetPx: store.camera.yMetersAsScreenPx(yMeters),
             coordMeters: yMeters,
             weight: Math.abs(yMeters) < 1e-4 ? GridlineWeight.Origin : GridlineWeight.Strong,
         });
         yMeters += gridlineStepMeters;
-    } while (yMeters < camera.screenBoundsMeters.top);
+    } while (yMeters < store.camera.screenBoundsMeters.top);
     return out;
 });
 </script>

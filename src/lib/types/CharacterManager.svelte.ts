@@ -19,7 +19,7 @@ export class CharacterManager {
     constructor() {
         $effect.root(() => {
             $effect(() => {
-                this.characters.sort((a, b) => a.referenceCurve.scaleFac - b.referenceCurve.scaleFac);
+                this.characters.sort((a, b) => a.baseline.scaleFac - b.baseline.scaleFac);
             });
         });
     }

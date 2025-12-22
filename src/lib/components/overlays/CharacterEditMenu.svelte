@@ -31,6 +31,7 @@ const submit = async () => {
     if (characterBeingEdited.image === null) return;
 
     if (characterBeingEdited.uploaded) {
+        console.log(characterBeingEdited);
         await store.databaseStore.updateCharacter(characterBeingEdited);
     } else {
         const createResult = await store.databaseStore.createCharacter(characterBeingEdited);
@@ -97,14 +98,14 @@ const canSubmit = $derived(characterBeingEdited.image !== null && characterBeing
             Baseline
 
             <TextEntry
-                value={characterBeingEdited.referenceCurve.targetLength.toString()}
-                onValueChange={value => characterBeingEdited.referenceCurve.targetLength = Number(value)}
+                value={characterBeingEdited.baseline.targetLength.toString()}
+                onValueChange={value => characterBeingEdited.baseline.targetLength = Number(value)}
                 placeholderText="Target length"
             />
 
             <TextEntry
-                value={characterBeingEdited.referenceCurve.descriptor}
-                onValueChange={value => characterBeingEdited.referenceCurve.descriptor = value}
+                value={characterBeingEdited.baseline.descriptor}
+                onValueChange={value => characterBeingEdited.baseline.descriptor = value}
                 placeholderText="to the shoulder"
             />
         </div>

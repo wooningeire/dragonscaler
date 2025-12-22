@@ -1,9 +1,9 @@
 <script lang="ts">
 import type { Character } from "$lib/types/Character.svelte";
 import CenterView from "./CenterView.svelte";
-import ReferenceCurveView from "./ReferenceCurveView.svelte";
+import BaselineView from "./BaselineView.svelte";
 import { store } from "$lib/types/Store.svelte";
-    import CharacterLabel from "./CharacterLabel.svelte";
+import CharacterLabel from "./CharacterLabel.svelte";
 
 let {
     character,
@@ -22,7 +22,7 @@ const editing = $derived(character === store.characterManager.selectedCharacter)
     class="character-display"
     style:--x={x}
     style:--y={y}
-    style:--height={character.referenceCurve.scaleFac}
+    style:--height={character.baseline.scaleFac}
     style:--center-x={character.center.x}
     style:--center-y={character.center.y}
 >
@@ -35,16 +35,16 @@ const editing = $derived(character === store.characterManager.selectedCharacter)
         <div class="image-placeholder"></div>
     {/if}
 
-    <ReferenceCurveView
-        referenceCurve={character.referenceCurve}
+    <BaselineView
+        baseline={character.baseline}
         aspect={character.aspect}
         editable={editing}
         onDraw={points => {
-            const oldPoints = character.referenceCurve.points;
-            character.referenceCurve.points = points;
+            const oldPoints = character.baseline.points;
+            character.baseline.points = points;
             
-            if (character.referenceCurve.arcLength === 0) {
-                character.referenceCurve.points = oldPoints;
+            if (character.baseline.arcLength === 0) {
+                character.baseline.points = oldPoints;
             }
         }}
     />
@@ -53,7 +53,7 @@ const editing = $derived(character === store.characterManager.selectedCharacter)
     {#if editing}
         <CenterView
             center={character.center}
-            scaleFac={character.referenceCurve.scaleFac}
+            scaleFac={character.baseline.scaleFac}
             onCenterChange={center => character.center = center}
         />
     {/if}
@@ -65,9 +65,11 @@ const editing = $derived(character === store.characterManager.selectedCharacter)
 
 <style lang="scss">
 .character-display {
+    --character-scale: calc(var(--viewport-scale) * var(--height));
+
     position: absolute;
-    left: calc(var(--x) * var(--scale) * 1px);
-    // bottom: calc(var(--y) * var(--scale) * 1px);
+    left: calc(var(--x) * var(--viewport-scale) * 1px);
+    // bottom: calc(var(--y) * var(--viewport-scale) * 1px);
     transform: translateY(/* calc(var(--center-x) * -100%),  */calc(var(--center-y) * 100%)) translate(-50%, -100%);
     display: grid;
 
@@ -78,7 +80,7 @@ const editing = $derived(character === store.characterManager.selectedCharacter)
     &,
     > img,
     > .image-placeholder {
-        height: calc(var(--height) * var(--scale) * 1px);
+        height: calc(var(--character-scale) * 1px);
     }
 }
 
@@ -88,7 +90,8 @@ const editing = $derived(character === store.characterManager.selectedCharacter)
 
 .character-label-container {
     bottom: 0;
-    transform: translateY(100%);
+    transform: translateY(100%) scale(calc(var(--character-scale) / 256));
+    transform-origin: 0 0;
     position: absolute;
     margin-top: 0.5rem;
 }

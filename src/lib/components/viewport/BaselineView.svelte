@@ -1,15 +1,16 @@
 <script lang="ts">
-    import type { Point } from "$lib/types/Point";
-import type { ReferenceCurve } from "$lib/types/ReferenceCurve.svelte";
+import type { Point } from "$lib/types/Point";
+import type { Baseline } from "$lib/types/Baseline.svelte";
 import Draggable from "../generic/Draggable.svelte";
+import { store } from "$lib/types/Store.svelte";
 
 let {
-    referenceCurve,
+    baseline,
     aspect,
     editable = false,
     onDraw,
 }: {
-    referenceCurve: ReferenceCurve,
+    baseline: Baseline,
     aspect: number,
     editable?: boolean,
     onDraw?: (points: Point[]) => void,
@@ -27,7 +28,7 @@ const dFromPoints = (points: Point[]) => {
     return d;
 };
 
-const d = $derived(dFromPoints(referenceCurve.points));
+const d = $derived(dFromPoints(baseline.points));
 
 let newPoints = $state<Point[]>([]);
 let editing = $state(false);
@@ -49,14 +50,14 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
             <path
                 {d}
                 stroke="#fff"
-                stroke-width="0.03"
+                stroke-width={0.01}
                 stroke-linecap="square"
                 fill="#0000"
             />
             <path
                 {d}
                 stroke="#000"
-                stroke-width="0.01"
+                stroke-width={0.003}
                 fill="#0000"
             />
         </g>
@@ -98,28 +99,28 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
                         <path
                             {d}
                             stroke="#fff"
-                            stroke-width="0.03"
+                            stroke-width={0.01}
                             stroke-linecap="square"
                             fill="#0000"
                         />
                         <path
                             {d}
                             stroke="#000"
-                            stroke-width="0.01"
+                            stroke-width={0.003}
                             fill="#0000"
                         />
                     {:else}
                         <path
                             d={dNew}
                             stroke="#fff"
-                            stroke-width="0.03"
+                            stroke-width={0.01}
                             stroke-linecap="square"
                             fill="#0000"
                         />
                         <path
                             d={dNew}
                             stroke="#0000003f"
-                            stroke-width="0.01"
+                            stroke-width={0.003}
                             fill="#0000"
                         />
                     {/if}
@@ -131,6 +132,7 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
 
 <style lang="scss">
 svg {
+    opacity: 0.3333333;
     overflow: visible;
 }
 

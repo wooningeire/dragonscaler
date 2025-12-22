@@ -1,6 +1,6 @@
 import type { Point } from "./Point";
 
-export class ReferenceCurve {
+export class Baseline {
     points: Point[] = $state.raw()!;
     targetLength: number = $state()!;
     descriptor: string = $state()!;
@@ -30,7 +30,7 @@ export class ReferenceCurve {
     }
 
     clone() {
-        return new ReferenceCurve({
+        return new Baseline({
             id: this.id,
             points: [...this.points],
             targetLength: this.targetLength,
@@ -38,7 +38,7 @@ export class ReferenceCurve {
         });
     }
 
-    copy(other: ReferenceCurve) {
+    copy(other: Baseline) {
         this.id = other.id;
         this.points = other.points;
         this.targetLength = other.targetLength;

@@ -1,6 +1,6 @@
 import type { CharacterImage } from "./CharacterImage.svelte";
 import type { Point } from "./Point";
-import { ReferenceCurve } from "./ReferenceCurve.svelte";
+import { Baseline } from "./Baseline.svelte";
 
 export class Character {
     id: string | null = $state(null);
@@ -8,10 +8,10 @@ export class Character {
     image: CharacterImage | null = $state()!;
     name: string = $state()!;
     center: Point = $state()!; // in image [0, 1] uv coordinates
-    readonly referenceCurve: ReferenceCurve;
+    readonly baseline: Baseline;
 
     readonly aspect = $derived.by(() => this.image?.aspect ?? 1);
-    readonly viewportWidth = $derived.by(() => this.referenceCurve.scaleFac * this.aspect);
+    readonly viewportWidth = $derived.by(() => this.baseline.scaleFac * this.aspect);
 
     owner = $state<{
         id: string,
@@ -26,7 +26,7 @@ export class Character {
         image = null,
         name = "",
         center = {x: 0.5, y: 0},
-        referenceCurve = new ReferenceCurve(),
+        baseline = new Baseline(),
         owner = null,
         uploaded = false,
     }: {
@@ -34,7 +34,7 @@ export class Character {
         image?: CharacterImage | null,
         name?: string,
         center?: Point,
-        referenceCurve?: ReferenceCurve,
+        baseline?: Baseline,
         owner?: {
             id: string,
             name: string,
@@ -46,7 +46,7 @@ export class Character {
         this.image = image;
         this.name = name;
         this.center = center;
-        this.referenceCurve = referenceCurve;
+        this.baseline = baseline;
         this.owner = owner;
         this.uploaded = uploaded;
     }
@@ -57,7 +57,7 @@ export class Character {
             image: this.image,
             name: this.name,
             center: {...this.center},
-            referenceCurve: this.referenceCurve.clone(),
+            baseline: this.baseline.clone(),
             owner: this.owner === null ? null : {...this.owner},
             uploaded: this.uploaded,
         });
@@ -68,7 +68,7 @@ export class Character {
         this.image = character.image;
         this.name = character.name;
         this.center = character.center;
-        this.referenceCurve.copy(character.referenceCurve);
+        this.baseline.copy(character.baseline);
         this.owner = character.owner;
         this.uploaded = character.uploaded;
     }
