@@ -4,7 +4,7 @@ import TextEntry from "$lib/components/generic/TextEntry.svelte";
 import { CharacterImage } from "$lib/types/CharacterImage.svelte";
 import Button from "../generic/Button.svelte";
 import { store } from "$lib/types/Store.svelte";
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
 
 const characterBeingEdited = $derived(store.characterManager.selectedCharacter!);
 
@@ -31,7 +31,6 @@ const submit = async () => {
     if (characterBeingEdited.image === null) return;
 
     if (characterBeingEdited.uploaded) {
-        console.log(characterBeingEdited);
         await store.databaseStore.updateCharacter(characterBeingEdited);
     } else {
         const createResult = await store.databaseStore.createCharacter(characterBeingEdited);
@@ -39,13 +38,18 @@ const submit = async () => {
 
         characterBeingEdited.id = createResult.id;
     }
+
+    originalCharacter = characterBeingEdited.clone()
 };
 
 
 let originalCharacter: Character;
-onMount(() => {
-    originalCharacter = characterBeingEdited.clone();
+$effect(() => {
+    void characterBeingEdited.id;
+
+    untrack(() => originalCharacter = characterBeingEdited.clone());
 });
+
 const cancel = () => {
     if (characterBeingEdited.uploaded) {
         characterBeingEdited.copy(originalCharacter);

@@ -16,6 +16,8 @@ let {
 } = $props();
 
 const editing = $derived(character === store.characterManager.selectedCharacter);
+const characterViewportScale = $derived(store.camera.scalePxPerMeter * character.baseline.scaleFac);
+const overlayOpacity = $derived(Math.exp(-((Math.log(characterViewportScale / 256)) ** 2)));
 </script>
 
 <div
@@ -58,7 +60,11 @@ const editing = $derived(character === store.characterManager.selectedCharacter)
         />
     {/if}
 
-    <div class="character-label-container">
+    <div
+        class="character-label-container"
+        style:opacity={overlayOpacity}
+        style:pointer-events={overlayOpacity < 0.3333333 ? "none" : "auto"}
+    >
         <CharacterLabel character={character} />
     </div>
 </div>

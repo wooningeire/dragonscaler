@@ -45,7 +45,9 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
 </script>
 
 {#if !editable}
-    <svg viewBox="0 0 {aspect} 1">
+    <svg
+        viewBox="0 0 {aspect} 1"
+    >
         <g>
             <path
                 {d}
