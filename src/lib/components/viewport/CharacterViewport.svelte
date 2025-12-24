@@ -12,9 +12,9 @@ $effect(() => {
             const index = store.characterManager.characters.indexOf(selected);
             if (index !== -1) {
                 const pos = store.centeredCameraPosition(index);
-                store.camera.posMeters.x = pos.x;
-                store.camera.posMeters.y = pos.y;
-                store.camera.scalePxPerMeter = pos.scalePxPerMeter;
+                store.camera.setPosMetersXWithEase(pos.x);
+                store.camera.setPosMetersYWithEase(pos.y);
+                store.camera.setScalePxPerMeterWithEase(pos.scalePxPerMeter);
             }
         }
     });
@@ -25,30 +25,30 @@ $effect(() => {
 <Draggable
     onDrag={({movement, button}) => {
         if (button !== 1) return;
-        store.camera.posMeters.x -= movement.x / store.camera.scalePxPerMeter;
-        store.camera.posMeters.y += movement.y / store.camera.scalePxPerMeter;
+        store.camera.setPosMetersX(store.camera.posMetersX - movement.x / store.camera.scalePxPerMeter);
+        store.camera.setPosMetersY(store.camera.posMetersY + movement.y / store.camera.scalePxPerMeter);
     }}
 >
     {#snippet dragTarget({onpointerdown})}
         <div
             class="character-viewport"
             style:--viewport-scale={store.camera.scalePxPerMeter}
-            style:--pos-x={store.camera.posMeters.x}
-            style:--pos-y={store.camera.posMeters.y}
+            style:--pos-x={store.camera.posMetersX}
+            style:--pos-y={store.camera.posMetersY}
             {onpointerdown}
             onwheel={event => {
                 const rect = event.currentTarget.getBoundingClientRect();
                 const mouseX = event.clientX - rect.left - store.camera.viewportDimsPx.width * 0.5;
                 const mouseY = event.clientY - rect.top - store.camera.viewportDimsPx.height * 0.5;
                 
-                const worldX = store.camera.posMeters.x + mouseX / store.camera.scalePxPerMeter;
-                const worldY = store.camera.posMeters.y - mouseY / store.camera.scalePxPerMeter;
+                const worldX = store.camera.posMetersX + mouseX / store.camera.scalePxPerMeter;
+                const worldY = store.camera.posMetersY - mouseY / store.camera.scalePxPerMeter;
                 
                 const scaleFac = 2 ** (-event.deltaY * 0.0005);
-                store.camera.scalePxPerMeter *= scaleFac;
+                store.camera.setScalePxPerMeter(store.camera.scalePxPerMeter * scaleFac);
                 
-                store.camera.posMeters.x = worldX - mouseX / store.camera.scalePxPerMeter;
-                store.camera.posMeters.y = worldY + mouseY / store.camera.scalePxPerMeter;
+                store.camera.setPosMetersX(worldX - mouseX / store.camera.scalePxPerMeter);
+                store.camera.setPosMetersY(worldY + mouseY / store.camera.scalePxPerMeter);
             }}
 
             bind:clientWidth={null, width => store.camera.viewportDimsPx.width = width!}

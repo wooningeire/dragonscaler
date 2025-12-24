@@ -3,7 +3,7 @@ import { DatabaseStore } from "./DatabaseStore.svelte";
 import { Camera2d } from "./Camera2d.svelte";
 
 
-const CENTER_PADDING_FAC = 1.1;
+const CENTER_PADDING_FAC = 1.5;
 /**
  * Storage for global application state.
  */
