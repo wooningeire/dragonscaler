@@ -1,8 +1,7 @@
 <script lang="ts">
 import type { Point } from "$lib/types/Point";
 import type { Baseline } from "$lib/types/Baseline.svelte";
-import Draggable from "../generic/Draggable.svelte";
-import { store } from "$lib/types/Store.svelte";
+import {Draggable} from "@vaie/hui";
 
 let {
     baseline,

@@ -16,7 +16,7 @@
 	},
 	"dependencies": {
 		"@sveltejs/adapter-static": "^3.0.10",
-		"@vaie/hui": "^0.0.0",
+		"@vaie/hui": "^0.1.0",
 		"pocketbase": "^0.26.5"
 	},
 	"devDependencies": {

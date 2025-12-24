@@ -7,7 +7,7 @@
     "npm:@sveltejs/vite-plugin-svelte@^6.2.1": "6.2.1_svelte@5.43.6__acorn@8.15.0_vite@7.2.2__sass@1.94.0__picomatch@4.0.3_sass@1.94.0",
     "npm:@testing-library/jest-dom@^6.9.1": "6.9.1",
     "npm:@testing-library/svelte@^5.2.8": "5.2.8_svelte@5.43.6__acorn@8.15.0_vite@7.2.2__sass@1.94.0__picomatch@4.0.3_vitest@4.0.8__jsdom@27.1.0__vite@7.2.2___sass@1.94.0___picomatch@4.0.3__sass@1.94.0_sass@1.94.0_jsdom@27.1.0",
-    "npm:@vaie/hui@^0.0.0": "0.0.0_svelte@5.43.6__acorn@8.15.0_sass@1.94.0_typescript@5.9.3",
+    "npm:@vaie/hui@0.1": "0.1.0_svelte@5.43.6__acorn@8.15.0_sass@1.94.0_typescript@5.9.3",
     "npm:jsdom@^27.1.0": "27.1.0",
     "npm:pocketbase@~0.26.5": "0.26.5",
     "npm:sass@^1.94.0": "1.94.0",
@@ -573,8 +573,8 @@
     "@types/estree@1.0.8": {
       "integrity": "sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w=="
     },
-    "@vaie/hui@0.0.0_svelte@5.43.6__acorn@8.15.0_sass@1.94.0_typescript@5.9.3": {
-      "integrity": "sha512-dIF/lBAlo5QL2Bm18Gby/QVp21GO4I7dSmya5JE+4Upc38cVyEXE/VME6lGGzHwTECBi96SPaLRf5FCIk0yB2w==",
+    "@vaie/hui@0.1.0_svelte@5.43.6__acorn@8.15.0_sass@1.94.0_typescript@5.9.3": {
+      "integrity": "sha512-TA9c3lpiX3R0xZdoW/EmFfFUzYJwxpN5MCEu/QhXIlkcyAAumqohpkxkLhjpmP4YQIZzAa/XC267aPcL8IQCPg==",
       "dependencies": [
         "svelte",
         "svelte-preprocess"
@@ -1323,7 +1323,7 @@
         "npm:@sveltejs/vite-plugin-svelte@^6.2.1",
         "npm:@testing-library/jest-dom@^6.9.1",
         "npm:@testing-library/svelte@^5.2.8",
-        "npm:@vaie/hui@^0.0.0",
+        "npm:@vaie/hui@0.1",
         "npm:jsdom@^27.1.0",
         "npm:pocketbase@~0.26.5",
         "npm:sass@^1.94.0",

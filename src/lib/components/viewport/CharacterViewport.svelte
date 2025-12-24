@@ -1,7 +1,7 @@
 <script lang="ts">
 import { untrack } from "svelte";
 import { store } from "$lib/types/Store.svelte";
-import Draggable from "../generic/Draggable.svelte";
+import {Draggable} from "@vaie/hui";
 import CharacterDisplay from "./CharacterDisplay.svelte";
 import DynamicGrid from "./DynamicGrid.svelte";
 
