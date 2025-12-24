@@ -1,8 +1,24 @@
 <script lang="ts">
+import { untrack } from "svelte";
 import { store } from "$lib/types/Store.svelte";
 import Draggable from "../generic/Draggable.svelte";
 import CharacterDisplay from "./CharacterDisplay.svelte";
 import DynamicGrid from "./DynamicGrid.svelte";
+
+$effect(() => {
+    const selected = store.characterManager.selectedCharacter;
+    untrack(() => {
+        if (selected) {
+            const index = store.characterManager.characters.indexOf(selected);
+            if (index !== -1) {
+                const pos = store.centeredCameraPosition(index);
+                store.camera.posMeters.x = pos.x;
+                store.camera.posMeters.y = pos.y;
+                store.camera.scalePxPerMeter = pos.scalePxPerMeter;
+            }
+        }
+    });
+});
 
 </script>
 

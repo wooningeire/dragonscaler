@@ -35,7 +35,7 @@ let {
 <style lang="scss">
     .slider-container {
         display: flex;
-        flex-direction: column;
+        align-items: center;
         gap: 0.5rem;
         
         font-family: var(--font-body);

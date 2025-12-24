@@ -124,9 +124,8 @@ $dock-bg-col: oklch(0.8 0.05 140 / 0.5);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    min-width: 12rem;
 
-    padding: 1rem;
+    padding: 0.5rem 1rem;
     background: $dock-bg-col;
     border-radius: 1rem;
     
