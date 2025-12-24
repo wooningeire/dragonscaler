@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { Point } from "$lib/types/Point";
-import Draggable from "$lib/components/generic/Draggable.svelte";
+import {Draggable} from "@vaie/hui";
 import { clamp } from "$lib/util/math";
 
 const {
