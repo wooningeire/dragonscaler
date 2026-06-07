@@ -7,7 +7,7 @@ const SCALE_EXP = 8;
 const SCALE_EXP_LOG = Math.log2(SCALE_EXP);
 
 export class Camera2d {
-    private readonly scalePxPerMeterTween = new Tween(Math.log2(144) / SCALE_EXP_LOG, {duration: 0});
+    private readonly scalePxPerMeterTween = new Tween(Math.log2(72) / SCALE_EXP_LOG, {duration: 0});
     readonly scalePxPerMeter = $derived(SCALE_EXP ** this.scalePxPerMeterTween.current);
 
     setScalePxPerMeterWithEase(scalePxPerMeter: number) {
@@ -18,7 +18,7 @@ export class Camera2d {
     }
 
     private readonly posMetersXTween = new Tween(0, {duration: 0});
-    private readonly posMetersYTween = new Tween(0, {duration: 0});
+    private readonly posMetersYTween = new Tween(2, {duration: 0});
     /**
      * (0, 0) => origin at center of viewport
      */
@@ -40,6 +40,7 @@ export class Camera2d {
     }
 
     viewportDimsPx = $state({width: 0, height: 0});
+    viewportPositionPx = $state({x: 0, y: 0});
     readonly screenBoundsMeters = $derived({
         left: this.posMetersX - this.viewportDimsPx.width * 0.5 / this.scalePxPerMeter,
         right: this.posMetersX + this.viewportDimsPx.width * 0.5 / this.scalePxPerMeter,
@@ -48,14 +49,14 @@ export class Camera2d {
     });
 
     xMetersAsScreenPx(xMeters: number) {
-        return this.viewportDimsPx.width / 2 + (xMeters - this.posMetersX) * this.scalePxPerMeter;
+        return this.viewportPositionPx.x + (xMeters - this.posMetersX) * this.scalePxPerMeter;
     }
 
     yMetersAsScreenPx(yMeters: number) {
         // if pos = (0, 0):
         // 0 -> viewport.height / 2
-        // 1 -> viewport.height / 2 + scalePxPerMeter
+        // 1 -> viewport.height / 2 - scalePxPerMeter (World Up -> Screen Up/Top)
 
-        return this.viewportDimsPx.height / 2 + (yMeters - this.posMetersY) * this.scalePxPerMeter;
+        return this.viewportPositionPx.y - (yMeters - this.posMetersY) * this.scalePxPerMeter;
     }
 }

@@ -35,11 +35,12 @@ $effect(() => {
             style:--viewport-scale={store.camera.scalePxPerMeter}
             style:--pos-x={store.camera.posMetersX}
             style:--pos-y={store.camera.posMetersY}
+            style:--center-x={store.camera.viewportPositionPx.x}
+            style:--center-y={store.camera.viewportPositionPx.y}
             {onpointerdown}
             onwheel={event => {
-                const rect = event.currentTarget.getBoundingClientRect();
-                const mouseX = event.clientX - rect.left - store.camera.viewportDimsPx.width * 0.5;
-                const mouseY = event.clientY - rect.top - store.camera.viewportDimsPx.height * 0.5;
+                const mouseX = event.clientX - store.camera.viewportPositionPx.x;
+                const mouseY = event.clientY - store.camera.viewportPositionPx.y;
                 
                 const worldX = store.camera.posMetersX + mouseX / store.camera.scalePxPerMeter;
                 const worldY = store.camera.posMetersY - mouseY / store.camera.scalePxPerMeter;
@@ -50,9 +51,6 @@ $effect(() => {
                 store.camera.setPosMetersX(worldX - mouseX / store.camera.scalePxPerMeter);
                 store.camera.setPosMetersY(worldY + mouseY / store.camera.scalePxPerMeter);
             }}
-
-            bind:clientWidth={null, width => store.camera.viewportDimsPx.width = width!}
-            bind:clientHeight={null, height => store.camera.viewportDimsPx.height = height!}
         >
             <DynamicGrid />
 
@@ -87,7 +85,7 @@ $effect(() => {
 }
 
 .viewport {
-    transform: translate(calc(var(--pos-x) * var(--viewport-scale) * -1px), calc(var(--pos-y) * var(--viewport-scale) * 1px)) translate(50vw, 50vh);
+    transform: translate(calc(var(--pos-x) * var(--viewport-scale) * -1px), calc(var(--pos-y) * var(--viewport-scale) * 1px)) translate(calc(var(--center-x) * 1px), calc(var(--center-y) * 1px));
     transform-origin: 50% 50%;
 }
 </style>

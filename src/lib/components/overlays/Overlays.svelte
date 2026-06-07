@@ -5,6 +5,21 @@ import { store } from "$lib/types/Store.svelte";
 import Button from "../generic/Button.svelte";
 import Slider from "../generic/Slider.svelte";
 import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
+
+let dummyWidth = $state(0);
+let dummyHeight = $state(0);
+let dummyEl: HTMLDivElement | undefined = $state();
+
+$effect(() => {
+    dummyWidth; dummyHeight;
+    if (dummyEl) {
+        const rect = dummyEl.getBoundingClientRect();
+        store.camera.viewportDimsPx.width = rect.width;
+        store.camera.viewportDimsPx.height = rect.height;
+        store.camera.viewportPositionPx.x = rect.left + rect.width / 2;
+        store.camera.viewportPositionPx.y = rect.top + rect.height / 2;
+    }
+});
 </script>
 
 <div class="overlays">
@@ -55,6 +70,13 @@ import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
     
         <CharacterCarousel />
     </div>
+
+    <div
+        class="viewport-dummy"
+        bind:this={dummyEl}
+        bind:clientWidth={dummyWidth}
+        bind:clientHeight={dummyHeight}
+    ></div>
 </div>
 
 <style lang="scss">
@@ -69,6 +91,11 @@ $dock-bg-col: oklch(0.8 0.05 140 / 0.5);
     grid-template-rows: 1fr 40vh;
     
     pointer-events: none;
+}
+
+.viewport-dummy {
+    grid-area: 1/1;
+    visibility: hidden;
 }
 
 .gizmos {

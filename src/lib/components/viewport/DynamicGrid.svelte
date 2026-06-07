@@ -85,17 +85,17 @@ const gridlinesY = $derived.by(() => {
     }
 
     &.y {
-        bottom: var(--offset);
+        top: var(--offset);
         height: var(--stroke-weight);
 
-        transform: translateY(50%);
+        transform: translateY(-50%);
     }
 }
 
 .gridline-label-y {
     padding: 0.5rem;
     position: absolute;
-    bottom: var(--offset);
+    top: var(--offset);
 
 }
 </style>
