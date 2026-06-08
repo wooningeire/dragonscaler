@@ -4,7 +4,8 @@ import CharacterCarousel from "./CharacterCarousel.svelte";
 import { store } from "$lib/types/Store.svelte";
 import Button from "../generic/Button.svelte";
 import Slider from "../generic/Slider.svelte";
-import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
+import { Collections } from "$lib/types/PocketBaseTypes";
+import { getPocketbaseFileUrl } from "$lib/util/pocketbase";
 
 let dummyWidth = $state(0);
 let dummyHeight = $state(0);
@@ -31,7 +32,11 @@ $effect(() => {
                     buttonStyle="icon"
                 >
                     <img
-                        src="{PUBLIC__POCKETBASE_URL}/api/files/users/{store.databaseStore.userRecord!.id}/{store.databaseStore.userRecord!.avatar}"
+                        src={getPocketbaseFileUrl({
+                            collection: Collections.Users,
+                            recordId: store.databaseStore.userRecord!.id,
+                            filename: store.databaseStore.userRecord!.avatar,
+                        })}
                         alt="{store.databaseStore.userRecord!.username} icon"
                         class="user-icon"
                     />

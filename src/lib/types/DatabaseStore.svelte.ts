@@ -1,9 +1,9 @@
 import PocketBase, { type RecordModel, type AuthRecord } from "pocketbase";
 import { Character } from "./Character.svelte";
-import { Collections, type CharacterRecord, type BaselineRecord, type UserRecord } from "./PocketbaseTypes";
-import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
+import { Collections, type CharacterRecord, type BaselineRecord, type UserRecord } from "./PocketBaseTypes";
 import { CharacterImage } from "./CharacterImage.svelte";
 import { Baseline } from "./Baseline.svelte";
+import { getPocketbaseFileUrl, pocketbaseUrl } from "$lib/util/pocketbase";
 
 
 export class DatabaseStore {
@@ -12,7 +12,7 @@ export class DatabaseStore {
 
 
     constructor() {
-        this.pb = new PocketBase(PUBLIC__POCKETBASE_URL);
+        this.pb = new PocketBase(pocketbaseUrl);
     }
 
     loadUserRecord() {
@@ -40,14 +40,22 @@ export class DatabaseStore {
             const baseline = baselinesMap.get(characterData.id);
 
             characterPromises.push((async () => {
-                const characterImageUrl = `${PUBLIC__POCKETBASE_URL}/api/files/${Collections.Characters}/${characterData.id}/${characterData.image}`;
+                const characterImageUrl = getPocketbaseFileUrl({
+                    collection: Collections.Characters,
+                    recordId: characterData.id,
+                    filename: characterData.image,
+                });
 
                 
                 if (!seenUsers.has(characterData.owner_id)) {
                     seenUsers.set(characterData.owner_id, this.pb.collection(Collections.Users).getOne<UserRecord>(characterData.owner_id));
                 }
                 const owner = await seenUsers.get(characterData.owner_id)!;
-                const ownerAvatarImageUrl = `${PUBLIC__POCKETBASE_URL}/api/files/${Collections.Users}/${owner.id}/${owner.avatar}`;
+                const ownerAvatarImageUrl = getPocketbaseFileUrl({
+                    collection: Collections.Users,
+                    recordId: owner.id,
+                    filename: owner.avatar,
+                });
 
 
                 const character = new Character({
@@ -170,7 +178,11 @@ export class DatabaseStore {
         return {
             id: this.userRecord.id,
             name: this.userRecord.username,
-            avatarUrl: `${PUBLIC__POCKETBASE_URL}/api/files/users/${this.userRecord.id}/${this.userRecord.avatar}`,
+            avatarUrl: getPocketbaseFileUrl({
+                collection: Collections.Users,
+                recordId: this.userRecord.id,
+                filename: this.userRecord.avatar,
+            }),
         };
     }
 }
