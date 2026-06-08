@@ -15,12 +15,12 @@
 		"test:e2e": "playwright test"
 	},
 	"dependencies": {
-		"@sveltejs/adapter-static": "^3.0.10",
 		"@vaie/hui": "^0.2.1",
 		"pocketbase": "^0.27.0"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.60.0",
+		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.63.1",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@testing-library/jest-dom": "^6.9.1",

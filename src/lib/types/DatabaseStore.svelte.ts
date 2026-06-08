@@ -22,10 +22,16 @@ export class DatabaseStore {
 
     constructor() {
         this.pb = new PocketBase(pocketbaseUrl);
+        this.syncClientAuthCookie();
     }
 
     loadUserRecord() {
-        this.pb.authStore.loadFromCookie(document.cookie);
+        this.loadClientAuthCookieFallback();
+
+        if (!this.pb.authStore.isValid) {
+            this.pb.authStore.clear();
+        }
+
         this.userRecord = this.pb.authStore.record;
     }
 
@@ -270,6 +276,36 @@ export class DatabaseStore {
             && error !== null
             && "status" in error
             && (error as {status?: number}).status === 404;
+    }
+
+    private syncClientAuthCookie() {
+        if (typeof document === "undefined") return;
+
+        this.pb.authStore.onChange(() => this.writeClientAuthCookie());
+
+        if (this.pb.authStore.token !== "") {
+            this.writeClientAuthCookie();
+        }
+    }
+
+    private writeClientAuthCookie() {
+        document.cookie = this.pb.authStore.exportToCookie({
+            httpOnly: false,
+            sameSite: "lax",
+            secure: window.location.protocol === "https:",
+        });
+    }
+
+    private loadClientAuthCookieFallback() {
+        if (
+            typeof document === "undefined"
+            || this.pb.authStore.record !== null
+            || !document.cookie.includes("pb_auth=")
+        ) {
+            return;
+        }
+
+        this.pb.authStore.loadFromCookie(document.cookie);
     }
 
     private collectAccountIds(
