@@ -1,0 +1,36 @@
+import { describe, expect, test } from "vitest";
+import {
+    Collections,
+    type CharacterFormRecord,
+    type CharacterRecord,
+    type IdentityRecord,
+} from "./PocketBaseTypes";
+
+
+describe("PocketBase data model types", () => {
+    test("names the relationship collections", () => {
+        expect(Collections.Accounts).toBe("users");
+        expect(Collections.Identities).toBe("dragonscaler_identities");
+        expect(Collections.CharacterForms).toBe("dragonscaler_character_forms");
+        expect(Collections.ReferenceImages).toBe("dragonscaler_reference_images");
+    });
+
+    test("supports the requested many-to-many relationship fields", () => {
+        const identity = {
+            account_ids: ["account-1", "account-2"],
+        } satisfies Partial<IdentityRecord>;
+        const character = {
+            owner_identity_ids: ["identity-1", "identity-2"],
+            sona_identity_ids: ["identity-2"],
+        } satisfies Partial<CharacterRecord>;
+        const form = {
+            character_id: "character-1",
+            reference_image_ids: ["reference-1", "reference-2"],
+        } satisfies Partial<CharacterFormRecord>;
+
+        expect(identity.account_ids).toHaveLength(2);
+        expect(character.owner_identity_ids).toEqual(["identity-1", "identity-2"]);
+        expect(character.sona_identity_ids).toEqual(["identity-2"]);
+        expect(form.reference_image_ids).toHaveLength(2);
+    });
+});

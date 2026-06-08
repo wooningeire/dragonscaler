@@ -1,4 +1,5 @@
 import { Character } from "./Character.svelte";
+import type { IdentitySummary } from "./Identity";
 
 export class CharacterManager {
     characters = $state<Character[]>([]);
@@ -37,9 +38,9 @@ export class CharacterManager {
         this.characters.push(character);
     }
 
-    beginNewCharacter(owner: {id: string, name: string, avatarUrl: string}) {
+    beginNewCharacter(ownerIdentity: IdentitySummary) {
         const newCharacter = new Character({
-            owner,
+            ownerIdentities: [ownerIdentity],
             uploaded: false,
         });
         this.addCharacter(newCharacter);

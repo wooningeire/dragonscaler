@@ -1,9 +1,14 @@
 import { defineConfig } from "@playwright/test";
 
+const port = Number(process.env.PLAYWRIGHT_PORT ?? 4173);
+
 export default defineConfig({
+    use: {
+        baseURL: `http://127.0.0.1:${port}`,
+    },
     webServer: {
-        command: "npm run build && npm run preview",
-        port: 4173,
+        command: `npm run build && npm run preview -- --host 127.0.0.1 --port ${port} --strictPort`,
+        port,
     },
     testDir: "e2e",
 });

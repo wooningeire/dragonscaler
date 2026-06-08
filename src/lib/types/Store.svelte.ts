@@ -16,8 +16,8 @@ export class Store {
         this.characterManager.characters = await this.databaseStore.loadCharacterData();
     }
 
-    beginNewCharacter() {
-        this.characterManager.beginNewCharacter(this.databaseStore.createOwnerObject());
+    async beginNewCharacter() {
+        this.characterManager.beginNewCharacter(await this.databaseStore.createOwnerIdentityObject());
     }
 
     centeredCameraPosition(index: number) {

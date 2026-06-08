@@ -1,4 +1,5 @@
 import type { CharacterImage } from "./CharacterImage.svelte";
+import type { IdentitySummary } from "./Identity";
 import type { Point } from "./Point";
 import { Baseline } from "./Baseline.svelte";
 
@@ -9,17 +10,16 @@ export class Character {
     name: string = $state()!;
     center: Point = $state()!; // in image [0, 1] uv coordinates
     readonly baseline: Baseline;
+    formId: string | null = $state(null);
+    referenceImageIds: string[] = $state([]);
 
     readonly aspect = $derived.by(() => this.image?.aspect ?? 1);
     readonly viewportWidth = $derived.by(() => this.baseline.scaleFac * this.aspect);
 
-    owner = $state<{
-        id: string,
-        name: string,
-        avatarUrl: string,
-    } | null>(null);
+    ownerIdentities: IdentitySummary[] = $state([]);
+    sonaIdentities: IdentitySummary[] = $state([]);
 
-    uploaded: boolean = $state()!
+    uploaded: boolean = $state()!;
 
     constructor({
         id = null,
@@ -27,7 +27,10 @@ export class Character {
         name = "",
         center = {x: 0.5, y: 0},
         baseline = new Baseline(),
-        owner = null,
+        formId = null,
+        referenceImageIds = [],
+        ownerIdentities = [],
+        sonaIdentities = [],
         uploaded = false,
     }: {
         id?: string | null,
@@ -35,11 +38,10 @@ export class Character {
         name?: string,
         center?: Point,
         baseline?: Baseline,
-        owner?: {
-            id: string,
-            name: string,
-            avatarUrl: string,
-        } | null,
+        formId?: string | null,
+        referenceImageIds?: string[],
+        ownerIdentities?: IdentitySummary[],
+        sonaIdentities?: IdentitySummary[],
         uploaded?: boolean,
     } = {}) {
         this.id = id;
@@ -47,7 +49,10 @@ export class Character {
         this.name = name;
         this.center = center;
         this.baseline = baseline;
-        this.owner = owner;
+        this.formId = formId;
+        this.referenceImageIds = referenceImageIds;
+        this.ownerIdentities = ownerIdentities;
+        this.sonaIdentities = sonaIdentities;
         this.uploaded = uploaded;
     }
 
@@ -58,7 +63,10 @@ export class Character {
             name: this.name,
             center: {...this.center},
             baseline: this.baseline.clone(),
-            owner: this.owner === null ? null : {...this.owner},
+            formId: this.formId,
+            referenceImageIds: [...this.referenceImageIds],
+            ownerIdentities: this.ownerIdentities.map(identity => ({...identity})),
+            sonaIdentities: this.sonaIdentities.map(identity => ({...identity})),
             uploaded: this.uploaded,
         });
     }
@@ -69,7 +77,10 @@ export class Character {
         this.name = character.name;
         this.center = character.center;
         this.baseline.copy(character.baseline);
-        this.owner = character.owner;
+        this.formId = character.formId;
+        this.referenceImageIds = [...character.referenceImageIds];
+        this.ownerIdentities = character.ownerIdentities.map(identity => ({...identity}));
+        this.sonaIdentities = character.sonaIdentities.map(identity => ({...identity}));
         this.uploaded = character.uploaded;
     }
 }

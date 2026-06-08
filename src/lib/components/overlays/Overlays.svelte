@@ -4,12 +4,12 @@ import CharacterCarousel from "./CharacterCarousel.svelte";
 import { store } from "$lib/types/Store.svelte";
 import Button from "../generic/Button.svelte";
 import Slider from "../generic/Slider.svelte";
-import { Collections } from "$lib/types/PocketBaseTypes";
-import { getPocketbaseFileUrl } from "$lib/util/pocketbase";
 
 let dummyWidth = $state(0);
 let dummyHeight = $state(0);
 let dummyEl: HTMLDivElement | undefined = $state();
+const currentAccountName = $derived(store.databaseStore.currentAccountName());
+const currentAccountAvatarUrl = $derived(store.databaseStore.currentAccountAvatarUrl());
 
 $effect(() => {
     dummyWidth; dummyHeight;
@@ -31,19 +31,19 @@ $effect(() => {
                     onclick={() => store.databaseStore.logout()}
                     buttonStyle="icon"
                 >
-                    <img
-                        src={getPocketbaseFileUrl({
-                            collection: Collections.Users,
-                            recordId: store.databaseStore.userRecord!.id,
-                            filename: store.databaseStore.userRecord!.avatar,
-                        })}
-                        alt="{store.databaseStore.userRecord!.username} icon"
-                        class="user-icon"
-                    />
+                    {#if currentAccountAvatarUrl !== null}
+                        <img
+                            src={currentAccountAvatarUrl}
+                            alt="{currentAccountName} icon"
+                            class="user-icon"
+                        />
+                    {:else}
+                        {currentAccountName}
+                    {/if}
                 </Button>
             {:else}
                 <Button
-                    onclick={() => store.databaseStore.promptDiscordLogin()}
+                    onclick={() => void store.databaseStore.promptDiscordLogin()}
                     buttonStyle="icon"
                 >
                     Sign in with Discord
@@ -51,7 +51,7 @@ $effect(() => {
             {/if}
 
             <Button
-                onclick={() => store.beginNewCharacter()}
+                onclick={() => void store.beginNewCharacter()}
                 disabled={store.characterManager.selectedCharacter !== null || store.databaseStore.userRecord === null}
                 buttonStyle="icon"
             >Add character</Button>
