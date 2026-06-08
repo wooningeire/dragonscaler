@@ -45,7 +45,7 @@ $effect(() => {
                 const worldX = store.camera.posMetersX + mouseX / store.camera.scalePxPerMeter;
                 const worldY = store.camera.posMetersY - mouseY / store.camera.scalePxPerMeter;
                 
-                const scaleFac = 2 ** (-event.deltaY * 0.0005);
+                const scaleFac = 2 ** (-event.deltaY * 0.001);
                 store.camera.setScalePxPerMeter(store.camera.scalePxPerMeter * scaleFac);
                 
                 store.camera.setPosMetersX(worldX - mouseX / store.camera.scalePxPerMeter);

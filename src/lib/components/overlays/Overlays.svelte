@@ -52,7 +52,7 @@ $effect(() => {
 
             <Button
                 onclick={() => void store.beginNewCharacter()}
-                disabled={store.characterManager.selectedCharacter !== null || store.databaseStore.userRecord === null}
+                disabled={store.characterManager.editingCharacter !== null || store.databaseStore.userRecord === null}
                 buttonStyle="icon"
             >Add character</Button>
         </div>
@@ -69,7 +69,7 @@ $effect(() => {
     </div>
 
     <div class="bottom-dock">
-        {#if store.characterManager.selectedCharacter !== null}
+        {#if store.characterManager.editingCharacter !== null}
             <CharacterEditMenu />
         {/if}
     

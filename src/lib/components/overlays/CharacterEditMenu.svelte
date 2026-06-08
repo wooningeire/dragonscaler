@@ -4,14 +4,16 @@ import TextEntry from "$lib/components/generic/TextEntry.svelte";
 import { CharacterImage } from "$lib/types/CharacterImage.svelte";
 import Button from "../generic/Button.svelte";
 import { store } from "$lib/types/Store.svelte";
-    import { onMount, untrack } from "svelte";
+import { untrack } from "svelte";
 
-const characterBeingEdited = $derived(store.characterManager.selectedCharacter!);
+const characterBeingEdited = $derived(store.characterManager.editingCharacter);
 
-let fileInput: HTMLInputElement;
+let fileInput: HTMLInputElement = $state()!;
 
 let loading = $state(false);
 const loadFile = async () => {
+    if (characterBeingEdited === null) return;
+
     if (fileInput.files === null || fileInput.files.length === 0) return;
 
     if (loading) return;
@@ -28,6 +30,8 @@ const loadFile = async () => {
 };
 
 const submit = async () => {
+    if (characterBeingEdited === null) return;
+
     if (characterBeingEdited.image === null) return;
 
     if (characterBeingEdited.uploaded) {
@@ -39,98 +43,113 @@ const submit = async () => {
         characterBeingEdited.id = createResult.id;
     }
 
-    originalCharacter = characterBeingEdited.clone()
+    originalCharacter = characterBeingEdited.clone();
+    store.characterManager.stopEditingCharacter();
 };
 
 
 let originalCharacter: Character;
 $effect(() => {
+    if (characterBeingEdited === null) return;
+
     void characterBeingEdited.id;
 
     untrack(() => originalCharacter = characterBeingEdited.clone());
 });
 
 const cancel = () => {
+    if (characterBeingEdited === null) return;
+
     if (characterBeingEdited.uploaded) {
         characterBeingEdited.copy(originalCharacter);
     } else {
         store.characterManager.characters.splice(store.characterManager.characters.indexOf(characterBeingEdited), 1);
+
+        if (store.characterManager.selectedCharacter === characterBeingEdited) {
+            store.characterManager.selectedCharacter = null;
+        }
     }
 
-    store.characterManager.selectedCharacter = null;
+    store.characterManager.stopEditingCharacter();
 };
 
-const canSubmit = $derived(characterBeingEdited.image !== null && characterBeingEdited.name !== "");
+const canSubmit = $derived(
+    characterBeingEdited !== null
+    && characterBeingEdited.image !== null
+    && characterBeingEdited.name !== "",
+);
 </script>
 
-<div class="add-character-menu">
-    <div class="character-image-container">
-        <Button
-            onclick={() => fileInput.click()}
-            disabled={loading}
-            displayClass="character-image"
-            buttonStyle="image"
-        >
-            {#if characterBeingEdited.image !== null}
-                <img
-                    src={characterBeingEdited.image.src}
-                    alt={characterBeingEdited.name}
-                />
-            {/if}
-        </Button>
+{#if characterBeingEdited !== null}
+    <div class="add-character-menu">
+        <div class="character-image-container">
+            <Button
+                onclick={() => fileInput.click()}
+                disabled={loading}
+                displayClass="character-image"
+                buttonStyle="image"
+            >
+                {#if characterBeingEdited.image !== null}
+                    <img
+                        src={characterBeingEdited.image.src}
+                        alt={characterBeingEdited.name}
+                    />
+                {/if}
+            </Button>
 
 
-        <input
-            type="file"
-            bind:this={fileInput}
-            oninput={loadFile}
-        />
-    </div>
-
-    <div class="character-form-inputs">
-        <label>
-            Name
-
-            <TextEntry
-                value={characterBeingEdited.name}
-                onValueChange={value => characterBeingEdited.name = value}
-                placeholderText="Name"
-            />
-        </label>
-
-        <div>
-            Baseline
-
-            <TextEntry
-                value={characterBeingEdited.baseline.targetLength.toString()}
-                onValueChange={value => characterBeingEdited.baseline.targetLength = Number(value)}
-                placeholderText="Target length"
-            />
-
-            <TextEntry
-                value={characterBeingEdited.baseline.descriptor}
-                onValueChange={value => characterBeingEdited.baseline.descriptor = value}
-                placeholderText="to the shoulder"
+            <input
+                type="file"
+                bind:this={fileInput}
+                oninput={loadFile}
             />
         </div>
+
+        <div class="character-form-inputs">
+            <label>
+                Name
+
+                <TextEntry
+                    value={characterBeingEdited.name}
+                    onValueChange={value => characterBeingEdited.name = value}
+                    placeholderText="Name"
+                />
+            </label>
+
+            <div>
+                Baseline
+
+                <TextEntry
+                    value={characterBeingEdited.baseline.targetLength.toString()}
+                    onValueChange={value => characterBeingEdited.baseline.targetLength = Number(value)}
+                    placeholderText="Target length"
+                />
+
+                <TextEntry
+                    value={characterBeingEdited.baseline.descriptor}
+                    onValueChange={value => characterBeingEdited.baseline.descriptor = value}
+                    placeholderText="to the shoulder"
+                />
+            </div>
+        </div>
+
+
+
+        <div class="buttons">
+            <Button onclick={submit} disabled={!canSubmit}>
+                {#if characterBeingEdited.uploaded}
+                    Update
+                {:else}
+                    Create
+                {/if}
+            </Button>
+
+            <Button onclick={cancel}>
+                Cancel
+            </Button>
+        </div>
     </div>
-
-
-
-    <div class="buttons">
-        <Button onclick={submit} disabled={!canSubmit}>
-            {#if characterBeingEdited.uploaded}
-                Update
-            {:else}
-                Create
-            {/if}
-        </Button>
-
-        <Button onclick={cancel}>
-            Cancel
-        </Button>
-    </div>
-</div>
+{/if}
 
 <style lang="scss">
 $image-size: 12rem;

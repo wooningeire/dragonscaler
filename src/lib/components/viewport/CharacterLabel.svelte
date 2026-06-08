@@ -4,12 +4,17 @@ import type { Character } from "$lib/types/Character.svelte";
 
 let {
     character,
+    hasBg = false,
 }: {
     character: Character,
+    hasBg?: boolean,
 } = $props();
 </script>
 
-<div class="character-label">
+<div
+    class="character-label"
+    class:has-bg={hasBg}
+>
     <div class="character-name">
         {character.name}
     </div>
@@ -32,7 +37,17 @@ let {
     flex-direction: column;
     gap: 0.25rem;
 
+
     text-align: left;
+
+    &.has-bg {
+        padding: 1em;
+        
+        background: oklch(0.95 0.05 130 / 0.75);
+        border-radius: 1em;
+
+        backdrop-filter: blur(16px);
+    }
 }
 
 .character-name {

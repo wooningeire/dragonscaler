@@ -15,13 +15,18 @@ let {
     y: number,
 } = $props();
 
-const editing = $derived(character === store.characterManager.selectedCharacter);
+const editing = $derived(character === store.characterManager.editingCharacter);
+const mutedByEditMode = $derived(
+    store.characterManager.editingCharacter !== null
+    && store.characterManager.editingCharacter !== character,
+);
 const characterViewportScale = $derived(store.camera.scalePxPerMeter * character.baseline.scaleFac);
 const overlayOpacity = $derived(Math.exp(-((Math.log(characterViewportScale / 256)) ** 2)));
 </script>
 
 <div
     class="character-display"
+    class:edit-muted={mutedByEditMode}
     style:--x={x}
     style:--y={y}
     style:--height={character.baseline.scaleFac}
@@ -65,7 +70,10 @@ const overlayOpacity = $derived(Math.exp(-((Math.log(characterViewportScale / 25
         style:opacity={overlayOpacity}
         style:pointer-events={overlayOpacity < 0.3333333 ? "none" : "auto"}
     >
-        <CharacterLabel character={character} />
+        <CharacterLabel
+            character={character}
+            hasBg
+        />
     </div>
 </div>
 
@@ -79,6 +87,8 @@ const overlayOpacity = $derived(Math.exp(-((Math.log(characterViewportScale / 25
     transform: translateY(/* calc(var(--center-x) * -100%),  */calc(var(--center-y) * 100%)) translateY(-100%);
     display: grid;
 
+    transition: opacity 0.2s ease-in-out;
+
     > :global(*) {
         grid-area: 1/1;
     }
@@ -87,6 +97,11 @@ const overlayOpacity = $derived(Math.exp(-((Math.log(characterViewportScale / 25
     > img,
     > .image-placeholder {
         height: calc(var(--character-scale) * 1px);
+    }
+
+    &.edit-muted {
+        opacity: 0.3333333;
+        pointer-events: none;
     }
 }
 

@@ -4,6 +4,7 @@ import type { IdentitySummary } from "./Identity";
 export class CharacterManager {
     characters = $state<Character[]>([]);
     selectedCharacter = $state<Character | null>(null);
+    editingCharacter = $state<Character | null>(null);
 
             
     // 0 spacing: aligned by center (at x=0) -> pos = -centerOffset
@@ -34,16 +35,29 @@ export class CharacterManager {
         });
     }
 
-    addCharacter(character: Character) {
+    addCharacter = (character: Character) => {
         this.characters.push(character);
-    }
+    };
 
-    beginNewCharacter(ownerIdentity: IdentitySummary) {
+    selectCharacter = (character: Character) => {
+        this.selectedCharacter = character;
+    };
+
+    editCharacter = (character: Character) => {
+        this.selectCharacter(character);
+        this.editingCharacter = character;
+    };
+
+    stopEditingCharacter = () => {
+        this.editingCharacter = null;
+    };
+
+    beginNewCharacter = (ownerIdentity: IdentitySummary) => {
         const newCharacter = new Character({
             ownerIdentities: [ownerIdentity],
             uploaded: false,
         });
         this.addCharacter(newCharacter);
-        this.selectedCharacter = newCharacter;
-    }
+        this.editCharacter(newCharacter);
+    };
 }

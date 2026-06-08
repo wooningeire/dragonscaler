@@ -81,9 +81,9 @@ export class DatabaseStore {
                 identitiesById,
                 accountsById,
             );
-            const legacyOwner = characterData.owner_id === undefined
-                ? null
-                : accountsById.get(characterData.owner_id) ?? null;
+            const legacyOwner = this.isRecordId(characterData.owner_id)
+                ? accountsById.get(characterData.owner_id) ?? null
+                : null;
             const sonaIdentities = this.resolveCharacterIdentities(
                 characterData.sona_identity_ids ?? [],
                 identitiesById,
@@ -170,7 +170,7 @@ export class DatabaseStore {
     }
 
     async updateCharacter(character: Character) {
-        if (character.id === null) throw new Error("character has no id");
+        if (!this.isRecordId(character.id)) throw new Error("character has no id");
 
         const ownerIdentityIds = await this.resolveOwnerIdentityIds(character);
         await this.pb.collection(Collections.Characters).update(character.id, {
@@ -181,7 +181,7 @@ export class DatabaseStore {
 
         const referenceImageId = await this.saveReferenceImage(character);
 
-        if (character.formId !== null) {
+        if (this.isRecordId(character.formId)) {
             await this.pb.collection(Collections.CharacterForms).update(character.formId, {
                 name: "Default",
                 is_default: true,
@@ -315,12 +315,12 @@ export class DatabaseStore {
         const accountIds = new Set<string>();
 
         for (const character of characters) {
-            if (character.owner_id !== undefined) accountIds.add(character.owner_id);
+            if (this.isRecordId(character.owner_id)) accountIds.add(character.owner_id);
         }
 
         for (const identity of identities) {
             for (const accountId of identity.account_ids ?? []) {
-                accountIds.add(accountId);
+                if (this.isRecordId(accountId)) accountIds.add(accountId);
             }
         }
 
@@ -412,14 +412,15 @@ export class DatabaseStore {
         identity: IdentityRecord,
         accountsById: Map<string, AccountRecord>,
     ): IdentitySummary {
-        const fallbackAccount = (identity.account_ids ?? [])
+        const accountIds = (identity.account_ids ?? []).filter(this.isRecordId);
+        const fallbackAccount = accountIds
             .map(accountId => accountsById.get(accountId) ?? null)
             .find(account => account !== null) ?? null;
 
         return {
             id: identity.id,
             identityId: identity.id,
-            accountId: fallbackAccount?.id ?? identity.account_ids?.[0] ?? null,
+            accountId: fallbackAccount?.id ?? accountIds[0] ?? null,
             name: identity.display_name,
             avatarUrl: identity.avatar === undefined || identity.avatar === ""
                 ? this.accountAvatarUrl(fallbackAccount)
@@ -451,6 +452,12 @@ export class DatabaseStore {
         });
     }
 
+    private isRecordId = (recordId: string | null | undefined): recordId is string => {
+        return recordId !== null
+            && recordId !== undefined
+            && recordId !== "";
+    };
+
     private getLegacyImageSource(characterData: CharacterRecord) {
         if (characterData.image === undefined || characterData.image === "") return null;
 
@@ -464,7 +471,7 @@ export class DatabaseStore {
     private async resolveOwnerIdentityIds(character: Character) {
         const ownerIdentityIds = character.ownerIdentities
             .map(identity => identity.identityId)
-            .filter(identityId => identityId !== null);
+            .filter(this.isRecordId);
         const legacyCurrentAccountIndex = character.ownerIdentities.findIndex(identity => (
             identity.identityId === null
             && identity.accountId === this.userRecord?.id
@@ -486,7 +493,7 @@ export class DatabaseStore {
 
         const existingReferenceImageId = character.referenceImageIds[0];
 
-        if (existingReferenceImageId !== undefined) {
+        if (this.isRecordId(existingReferenceImageId)) {
             if (character.image.hasObjectUrl) {
                 await this.pb.collection(Collections.ReferenceImages).update(existingReferenceImageId, {
                     image: character.image.file,
@@ -519,7 +526,7 @@ export class DatabaseStore {
             length_meters: character.baseline.targetLength,
         };
 
-        if (character.baseline.id !== null) {
+        if (this.isRecordId(character.baseline.id)) {
             return await this.pb.collection(Collections.Baselines).update<BaselineRecord>(
                 character.baseline.id,
                 baselineData,
