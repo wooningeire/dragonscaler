@@ -48,7 +48,11 @@ let {
     display: grid;
     place-items: stretch;
 
-    box-shadow: 0 0.0625rem 0.125rem oklch(0 0 0 / 0.1);
+    background: oklch(1 0 0 / 0.75);
+
+    box-shadow:
+        0 0.25rem 1rem 0.5rem oklch(0.75 0.05 140 / 0.5),
+        0 0.25rem 1rem oklch(0.75 0.05 140 / 0.5) inset;
     border: 0.0625rem solid oklch(0 0 0 / 0.25);
 
     &,

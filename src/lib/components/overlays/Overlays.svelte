@@ -1,9 +1,11 @@
 <script lang="ts">
-import CharacterEditMenu from "./CharacterEditMenu.svelte";
 import CharacterCarousel from "./CharacterCarousel.svelte";
 import { store } from "$lib/types/Store.svelte";
 import Button from "../generic/Button.svelte";
 import Slider from "../generic/Slider.svelte";
+import type { TransitionConfig } from "svelte/transition";
+import { cubicOut } from "svelte/easing";
+import CharacterEditMenu from "./CharacterEditMenu.svelte";
 
 let dummyWidth = $state(0);
 let dummyHeight = $state(0);
@@ -21,9 +23,32 @@ $effect(() => {
         store.camera.viewportPositionPx.y = rect.top + rect.height / 2;
     }
 });
+
+const grow = (
+    node: HTMLElement,
+    params: {
+        delay?: number,
+        duration?: number,
+        easing?: (t: number) => number,
+    } = {},
+): TransitionConfig => {
+    const height = node.getBoundingClientRect().height;
+
+    return {
+        delay: params.delay ?? 0,
+        duration: params.duration ?? 200,
+        easing: params.easing ?? cubicOut,
+        css: t => `\
+height: ${height * t}px;
+opacity: ${t};
+--scale: ${t};
+pointer-events: none;
+user-select: none;`,
+    };
+};
 </script>
 
-<div class="overlays">
+<overlays-panel>
     <div class="gizmos">
         <div class="gizmos-bottom-left">
             {#if store.databaseStore.userRecord !== null}
@@ -68,13 +93,15 @@ $effect(() => {
         </div>
     </div>
 
-    <div class="bottom-dock">
+    <overlays-bottom-dock>
         {#if store.characterManager.editingCharacter !== null}
-            <CharacterEditMenu />
+            <character-edit-menu-container transition:grow>
+                <CharacterEditMenu />
+            </character-edit-menu-container>
         {/if}
-    
+
         <CharacterCarousel />
-    </div>
+    </overlays-bottom-dock>
 
     <div
         class="viewport-dummy"
@@ -82,13 +109,13 @@ $effect(() => {
         bind:clientWidth={dummyWidth}
         bind:clientHeight={dummyHeight}
     ></div>
-</div>
+</overlays-panel>
 
 <style lang="scss">
 $dock-bg-col: oklch(0.8 0.05 140 / 0.5);
 
 
-.overlays {
+overlays-panel {
     grid-area: 1/1;
     position: relative;
 
@@ -126,19 +153,28 @@ $dock-bg-col: oklch(0.8 0.05 140 / 0.5);
     }
 }
 
-.bottom-dock {
+overlays-bottom-dock {
     grid-area: 2/1;
 
     display: flex;
     flex-direction: column;
-    align-items: center;
-    padding: 1rem;
+    align-items: stretch;
+    padding: 1em;
 
     pointer-events: auto;
 
     overflow: hidden;
 
     background: $dock-bg-col;
+}
+
+character-edit-menu-container {
+    --scale: 1;
+
+    display: flex;
+    justify-content: center;
+
+    margin-bottom: calc(2em * var(--scale));
 }
 
 .user-icon {

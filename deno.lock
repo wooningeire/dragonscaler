@@ -9,6 +9,7 @@
     "npm:@testing-library/svelte@^5.3.1": "5.3.1_svelte@5.56.3_vite@8.0.16__sass@1.100.0_vitest@4.1.8__jsdom@29.1.1__vite@8.0.16___sass@1.100.0__sass@1.100.0_jsdom@29.1.1_sass@1.100.0",
     "npm:@vaie/hui@~0.2.1": "0.2.1_svelte@5.56.3_sass@1.100.0_typescript@6.0.3",
     "npm:jsdom@^29.1.1": "29.1.1",
+    "npm:playwright@1.60.0": "1.60.0",
     "npm:pocketbase@0.27": "0.27.0",
     "npm:sass@^1.100.0": "1.100.0",
     "npm:svelte-check@^4.6.0": "4.6.0_svelte@5.56.3_typescript@6.0.3",
