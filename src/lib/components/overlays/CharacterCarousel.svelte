@@ -3,14 +3,14 @@ import CharacterCard from "./CharacterCard.svelte";
 import { store } from "$lib/types/Store.svelte";
 </script>
 
-<div class="character-carousel">
+<character-carousel>
     {#each store.characterManager.characters as character}
         <CharacterCard {character} />
     {/each}
-</div>
+</character-carousel>
 
 <style lang="scss">
-.character-carousel {
+character-carousel {
     display: flex;
 
     gap: 1.5rem;

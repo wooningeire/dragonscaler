@@ -25,45 +25,45 @@ const characterName = $derived(character.name === "" ? "unnamed character" : cha
 const editLabel = $derived(`Edit ${characterName}`);
 </script>
 
-<div
-    class="character-card"
+<character-card
     class:selected
     class:edit-muted={mutedByEditMode}
 >
-    <Button
-        class="character-select-button"
-        onclick={() => store.characterManager.selectCharacter(character)}
-    >
-        <div class="character-card-image-container">
-            {#if character.image !== null}
-                <img
-                    src={character.image.src}
-                    alt={character.name}
-                />
-            {:else}
-                <div class="image-placeholder"></div>
-            {/if}
-        </div>
-        
-        <CharacterLabel {character} />
-    </Button>
+    <character-select-button>
+        <Button
+            onclick={() => store.characterManager.selectCharacter(character)}
+        >
+            <character-card-image-container>
+                {#if character.image !== null}
+                    <img
+                        src={character.image.src}
+                        alt={character.name}
+                    />
+                {:else}
+                    <character-card-image-placeholder></character-card-image-placeholder>
+                {/if}
+            </character-card-image-container>
+            
+            <CharacterLabel {character} />
+        </Button>
+    </character-select-button>
 
     {#if canEdit && !editing}
-        <div class="edit-overlay">
+        <character-edit-overlay>
             <Button
                 onclick={() => store.characterManager.editCharacter(character)}
                 aria-label={editLabel}
             >
                 Edit
             </Button>
-        </div>
+        </character-edit-overlay>
     {/if}
-</div>
+</character-card>
 
 <style lang="scss">
 $image-size: 10rem;
 
-.character-card {
+character-card {
     display: grid;
 
     transition:
@@ -78,23 +78,20 @@ $image-size: 10rem;
         opacity: 0.3333333;
         pointer-events: none;
     }
+
+    > * {
+        grid-area: 1/1;
+    }
 }
 
-.character-card > :global(.character-select-button) {
-    grid-area: 1 / 1;
-}
-
-.edit-overlay {
-    grid-area: 1 / 1;
-
+character-edit-overlay {
     align-self: start;
     justify-self: end;
 
-    transform: translate(0.75rem, -0.75rem);
-    z-index: 1;
+    transform: translate(-0.5em, 0.5em);
 }
 
-.character-card-image-container {
+character-card-image-container {
     width: $image-size;
     aspect-ratio: 1/1;
     display: grid;
@@ -110,7 +107,8 @@ img {
     object-fit: contain;
 }
 
-.image-placeholder {
+character-card-image-placeholder {
     background: oklch(0.9 0 0);
+    border-radius: 0.5em;
 }
 </style>
