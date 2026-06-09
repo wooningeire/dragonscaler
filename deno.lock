@@ -2,8 +2,8 @@
   "version": "5",
   "specifiers": {
     "npm:@playwright/test@^1.60.0": "1.60.0",
-    "npm:@sveltejs/adapter-node@^5.5.4": "5.5.4_@sveltejs+kit@2.63.1__@sveltejs+vite-plugin-svelte@7.1.2___svelte@5.56.3___vite@8.0.16____sass@1.100.0___sass@1.100.0__svelte@5.56.3__typescript@6.0.3__vite@8.0.16___sass@1.100.0__sass@1.100.0",
-    "npm:@sveltejs/kit@^2.63.1": "2.63.1_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.56.3__vite@8.0.16___sass@1.100.0__sass@1.100.0_svelte@5.56.3_typescript@6.0.3_vite@8.0.16__sass@1.100.0_sass@1.100.0",
+    "npm:@sveltejs/adapter-node@^5.5.4": "5.5.4_@sveltejs+kit@2.64.0__@sveltejs+vite-plugin-svelte@7.1.2___svelte@5.56.3___vite@8.0.16____sass@1.100.0___sass@1.100.0__svelte@5.56.3__typescript@6.0.3__vite@8.0.16___sass@1.100.0_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.56.3__vite@8.0.16___sass@1.100.0__sass@1.100.0_svelte@5.56.3_typescript@6.0.3_vite@8.0.16__sass@1.100.0",
+    "npm:@sveltejs/kit@^2.64.0": "2.64.0_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.56.3__vite@8.0.16___sass@1.100.0__sass@1.100.0_svelte@5.56.3_typescript@6.0.3_vite@8.0.16__sass@1.100.0",
     "npm:@sveltejs/vite-plugin-svelte@^7.1.2": "7.1.2_svelte@5.56.3_vite@8.0.16__sass@1.100.0_sass@1.100.0",
     "npm:@testing-library/jest-dom@^6.9.1": "6.9.1",
     "npm:@testing-library/svelte@^5.3.1": "5.3.1_svelte@5.56.3_vite@8.0.16__sass@1.100.0_vitest@4.1.8__jsdom@29.1.1__vite@8.0.16___sass@1.100.0__sass@1.100.0_jsdom@29.1.1_sass@1.100.0",
@@ -533,7 +533,7 @@
         "acorn"
       ]
     },
-    "@sveltejs/adapter-node@5.5.4_@sveltejs+kit@2.63.1__@sveltejs+vite-plugin-svelte@7.1.2___svelte@5.56.3___vite@8.0.16____sass@1.100.0___sass@1.100.0__svelte@5.56.3__typescript@6.0.3__vite@8.0.16___sass@1.100.0__sass@1.100.0": {
+    "@sveltejs/adapter-node@5.5.4_@sveltejs+kit@2.64.0__@sveltejs+vite-plugin-svelte@7.1.2___svelte@5.56.3___vite@8.0.16____sass@1.100.0___sass@1.100.0__svelte@5.56.3__typescript@6.0.3__vite@8.0.16___sass@1.100.0_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.56.3__vite@8.0.16___sass@1.100.0__sass@1.100.0_svelte@5.56.3_typescript@6.0.3_vite@8.0.16__sass@1.100.0": {
       "integrity": "sha512-45X92CXW+2J8ZUzPv3eLlKWEzINKiiGeFWTjyER4ZN4sGgNoaoeSkCY/QYNxHpPXy71QPsctwccBo9jJs0ySPQ==",
       "dependencies": [
         "@rollup/plugin-commonjs",
@@ -543,8 +543,8 @@
         "rollup"
       ]
     },
-    "@sveltejs/kit@2.63.1_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.56.3__vite@8.0.16___sass@1.100.0__sass@1.100.0_svelte@5.56.3_typescript@6.0.3_vite@8.0.16__sass@1.100.0_sass@1.100.0": {
-      "integrity": "sha512-bL8ch7WDjJTRMjViXZAN3luH6O8gk3RoCaBB8yacNKCRdzGCHlryGpGk/Hpm/STXN0ls9/NJ+VrrxP3m/S2bIg==",
+    "@sveltejs/kit@2.64.0_@sveltejs+vite-plugin-svelte@7.1.2__svelte@5.56.3__vite@8.0.16___sass@1.100.0__sass@1.100.0_svelte@5.56.3_typescript@6.0.3_vite@8.0.16__sass@1.100.0": {
+      "integrity": "sha512-24MXA/xyugUqJd09DD4v4bLd4k7FaYhdBck/pTXiu3XFtDBcwXYpJc1SO1+lqdjkNBUo1r4eek5FS7cfzBQUmA==",
       "dependencies": [
         "@standard-schema/spec",
         "@sveltejs/acorn-typescript",
@@ -1502,7 +1502,7 @@
       "dependencies": [
         "npm:@playwright/test@^1.60.0",
         "npm:@sveltejs/adapter-node@^5.5.4",
-        "npm:@sveltejs/kit@^2.63.1",
+        "npm:@sveltejs/kit@^2.64.0",
         "npm:@sveltejs/vite-plugin-svelte@^7.1.2",
         "npm:@testing-library/jest-dom@^6.9.1",
         "npm:@testing-library/svelte@^5.3.1",
