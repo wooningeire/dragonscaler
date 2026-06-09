@@ -4,7 +4,7 @@ import { store } from "$lib/types/Store.svelte";
 import Button from "../generic/Button.svelte";
 import Slider from "../generic/Slider.svelte";
 import type { TransitionConfig } from "svelte/transition";
-import { cubicOut } from "svelte/easing";
+import { bounceOut, circOut, cubicOut, elasticOut } from "svelte/easing";
 import CharacterEditMenu from "./CharacterEditMenu.svelte";
 
 let dummyWidth = $state(0);
@@ -37,7 +37,7 @@ const grow = (
     return {
         delay: params.delay ?? 0,
         duration: params.duration ?? 200,
-        easing: params.easing ?? cubicOut,
+        easing: params.easing ?? circOut,
         css: t => `\
 height: ${height * t}px;
 opacity: ${t};

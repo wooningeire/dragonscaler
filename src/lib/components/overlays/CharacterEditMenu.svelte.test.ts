@@ -28,6 +28,7 @@ describe("CharacterEditMenu", () => {
         store.characterManager.characters = [];
         store.characterManager.selectedCharacter = null;
         store.characterManager.editingCharacter = null;
+        store.characterManager.setBaselineEditMode("curve");
         vi.restoreAllMocks();
     });
 
@@ -48,5 +49,18 @@ describe("CharacterEditMenu", () => {
             expect(store.characterManager.editingCharacter).toBeNull();
         });
         expect(store.characterManager.selectedCharacter).toBe(character);
+    });
+
+    test("changes the reference curve editing mode", async () => {
+        const character = makeCharacter();
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+
+        render(CharacterEditMenu);
+
+        await fireEvent.click(screen.getByRole("button", {name: "Line"}));
+
+        expect(store.characterManager.baselineEditMode).toBe("line");
+        expect(screen.getByRole("button", {name: "Line"})).toHaveAttribute("aria-pressed", "true");
     });
 });

@@ -2,36 +2,39 @@
 import type { Point } from "$lib/types/Point";
 import type { Baseline } from "$lib/types/Baseline.svelte";
 import {Draggable} from "@vaie/hui";
+import {
+    buildBaselinePoints,
+    clampBaselinePoint,
+    pointsToPathD,
+    type BaselineEditMode,
+} from "$lib/util/baselineGeometry";
 
 let {
     baseline,
     aspect,
+    groundY = 0,
     editable = false,
+    editMode = "curve",
     onDraw,
 }: {
     baseline: Baseline,
     aspect: number,
+    groundY?: number,
     editable?: boolean,
+    editMode?: BaselineEditMode,
     onDraw?: (points: Point[]) => void,
 } = $props();
 
-const dFromPoints = (points: Point[]) => {
-    if (points.length === 0) return "";
+const d = $derived(pointsToPathD(baseline.points));
 
-    let d = `M${points[0].x},${points[0].y}`;
-
-    for (let i = 1; i < points.length; i++) {
-        d += `L${points[i].x},${points[i].y}`;
-    }
-
-    return d;
-};
-
-const d = $derived(dFromPoints(baseline.points));
-
-let newPoints = $state<Point[]>([]);
+let rawDrawPoints = $state<Point[]>([]);
 let editing = $state(false);
-const dNew = $derived(dFromPoints(newPoints));
+const previewPoints = $derived(buildBaselinePoints(
+    editMode,
+    rawDrawPoints,
+    {groundY},
+));
+const dNew = $derived(pointsToPathD(previewPoints));
 
 let svg: SVGElement = $state()!;
 const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
@@ -39,7 +42,10 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
     const x = (event.clientX - rect.left) / rect.width * aspect;
     const y = 1 - (event.clientY - rect.top) / rect.height;
     
-    return { x, y };
+    return clampBaselinePoint(
+        { x, y },
+        aspect,
+    );
 };
 </script>
 
@@ -71,22 +77,29 @@ const getCoordinatesFromEvent = (event: PointerEvent): Point | null => {
             if (!coords) return;
             
             editing = true;
-            newPoints.push(coords);
+            rawDrawPoints = [coords];
         }}
         onDrag={({pointerEvent}) => {
             if (!editing) return;
             const coords = getCoordinatesFromEvent(pointerEvent);
             if (!coords) return;
             
-            newPoints.push(coords);
+            rawDrawPoints = [
+                ...rawDrawPoints,
+                coords,
+            ];
         }}
         onUp={() => {
             if (!editing) return;
 
-            onDraw?.(newPoints);
+            onDraw?.(buildBaselinePoints(
+                editMode,
+                rawDrawPoints,
+                {groundY},
+            ));
 
             editing = false;
-            newPoints = [];
+            rawDrawPoints = [];
         }}
     >
         {#snippet dragTarget({onpointerdown})}

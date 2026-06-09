@@ -45,7 +45,9 @@ const overlayOpacity = $derived(Math.exp(-((Math.log(characterViewportScale / 25
     <BaselineView
         baseline={character.baseline}
         aspect={character.aspect}
+        groundY={character.center.y}
         editable={editing}
+        editMode={store.characterManager.baselineEditMode}
         onDraw={points => {
             const oldPoints = character.baseline.points;
             character.baseline.points = points;

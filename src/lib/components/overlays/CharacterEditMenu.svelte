@@ -5,6 +5,7 @@ import { CharacterImage } from "$lib/types/CharacterImage.svelte";
 import Button from "../generic/Button.svelte";
 import { store } from "$lib/types/Store.svelte";
 import { untrack } from "svelte";
+import { baselineEditModes } from "$lib/util/baselineGeometry";
 
 const characterBeingEdited = $derived(store.characterManager.editingCharacter);
 
@@ -116,8 +117,25 @@ const canSubmit = $derived(
                 />
             </label>
 
-            <div>
-                Baseline
+            <div class="baseline-editor">
+                <span>Baseline</span>
+
+                <div
+                    class="baseline-mode-control"
+                    role="group"
+                    aria-label="Reference curve mode"
+                >
+                    {#each baselineEditModes as mode}
+                        <button
+                            type="button"
+                            class:active={store.characterManager.baselineEditMode === mode.id}
+                            aria-pressed={store.characterManager.baselineEditMode === mode.id}
+                            onclick={() => store.characterManager.setBaselineEditMode(mode.id)}
+                        >
+                            {mode.label}
+                        </button>
+                    {/each}
+                </div>
 
                 <TextEntry
                     value={characterBeingEdited.baseline.targetLength.toString()}
@@ -156,8 +174,10 @@ $image-size: 12rem;
 
 .add-character-menu {
     display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
     align-items: center;
+    max-width: min(72rem, 100%);
 }
 
 .character-form-inputs {
@@ -165,6 +185,40 @@ $image-size: 12rem;
     flex-direction: column;
     gap: 0.5rem;
     min-width: 20rem;
+}
+
+.baseline-editor {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.baseline-mode-control {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.125rem;
+    padding: 0.125rem;
+
+    border-radius: 0.5rem;
+    background: oklch(0.98 0.02 135 / 0.8);
+
+    button {
+        display: grid;
+        place-items: center;
+        padding: 0.375rem 0.5rem;
+        min-width: 0;
+
+        border-radius: 0.375rem;
+        color: oklch(0.28 0.06 145);
+        font: inherit;
+
+        cursor: pointer;
+        user-select: none;
+
+        &.active {
+            background: oklch(0.86 0.08 145 / 0.9);
+            box-shadow: 0 0.125rem 0.5rem oklch(0.45 0.08 145 / 0.2);
+        }
+    }
 }
 
 :global(.character-image) {
