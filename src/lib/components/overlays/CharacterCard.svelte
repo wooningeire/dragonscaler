@@ -64,6 +64,8 @@ const editLabel = $derived(`Edit ${characterName}`);
 $image-size: 10rem;
 
 character-card {
+    flex-shrink: 0;
+
     display: grid;
 
     transition:

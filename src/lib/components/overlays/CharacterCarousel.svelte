@@ -12,8 +12,17 @@ import { store } from "$lib/types/Store.svelte";
 <style lang="scss">
 character-carousel {
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
+    justify-content: safe center;
 
-    gap: 1.5rem;
+    gap: 1.5em;
+
+    width: 100%;
+    min-width: 0;
+    padding: 2em 4em;
+
+    overflow-x: auto;
+    overflow-y: hidden;
 }
+
 </style>
