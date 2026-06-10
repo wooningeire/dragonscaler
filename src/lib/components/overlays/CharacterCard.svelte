@@ -3,6 +3,8 @@ import type { Character } from "$lib/types/Character.svelte";
 import Button from "../generic/Button.svelte";
 import CharacterLabel from "../viewport/CharacterLabel.svelte";
 import { store } from "$lib/types/Store.svelte";
+    import { fade } from "svelte/transition";
+    import { cubicInOut } from "svelte/easing";
 
 let {
     character,
@@ -26,7 +28,6 @@ const editLabel = $derived(`Edit ${characterName}`);
 </script>
 
 <character-card
-    class="character-card"
     class:selected
     class:edit-muted={mutedByEditMode}
 >
@@ -50,7 +51,7 @@ const editLabel = $derived(`Edit ${characterName}`);
     </character-select-button>
 
     {#if canEdit && !editing}
-        <character-edit-overlay class="edit-overlay">
+        <character-edit-overlay transition:fade={{duration: 200, easing: cubicInOut}}>
             <Button
                 onclick={() => store.characterManager.editCharacter(character)}
                 aria-label={editLabel}
