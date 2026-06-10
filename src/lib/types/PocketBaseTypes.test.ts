@@ -4,6 +4,7 @@ import {
     type CharacterFormRecord,
     type CharacterRecord,
     type IdentityRecord,
+    type ReferenceImageRecord,
 } from "./PocketBaseTypes";
 
 
@@ -13,6 +14,7 @@ describe("PocketBase data model types", () => {
         expect(Collections.Identities).toBe("dragonscaler_identities");
         expect(Collections.CharacterForms).toBe("dragonscaler_character_forms");
         expect(Collections.ReferenceImages).toBe("dragonscaler_reference_images");
+        expect(Object.values(Collections)).not.toContain("dragonscaler_baselines");
     });
 
     test("supports the requested many-to-many relationship fields", () => {
@@ -26,11 +28,27 @@ describe("PocketBase data model types", () => {
         const form = {
             character_id: "character-1",
             reference_image_ids: ["reference-1", "reference-2"],
+            length_meters: 2,
         } satisfies Partial<CharacterFormRecord>;
+        const referenceImage = {
+            anchor_point: {
+                x: 0.5,
+                y: 0,
+            },
+            baseline_points: [
+                {x: 0.5, y: 0},
+                {x: 0.5, y: 1},
+            ],
+            baseline_descriptor: "to the shoulder",
+        } satisfies Partial<ReferenceImageRecord>;
 
         expect(identity.account_ids).toHaveLength(2);
         expect(character.owner_identity_ids).toEqual(["identity-1", "identity-2"]);
         expect(character.sona_identity_ids).toEqual(["identity-2"]);
         expect(form.reference_image_ids).toHaveLength(2);
+        expect(form.length_meters).toBe(2);
+        expect(referenceImage.anchor_point?.y).toBe(0);
+        expect(referenceImage.baseline_points).toHaveLength(2);
+        expect(referenceImage.baseline_descriptor).toBe("to the shoulder");
     });
 });

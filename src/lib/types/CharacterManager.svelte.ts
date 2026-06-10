@@ -8,32 +8,39 @@ import {
 
 const BASELINE_EDIT_MODE_STORAGE_KEY = "dragonscaler:baseline-edit-mode";
 
+type CharacterSpacingInput = {
+    viewportWidth: number,
+};
+
+export const computeCharacterPositionsX = (
+    characters: CharacterSpacingInput[],
+    spacingFac: number,
+) => {
+    const positions: number[] = [];
+    let currentStackedX = 0;
+
+    for (const character of characters) {
+        positions.push(currentStackedX * spacingFac);
+
+        currentStackedX += character.viewportWidth;
+    }
+
+    return positions;
+};
+
 export class CharacterManager {
     characters = $state<Character[]>([]);
     selectedCharacter = $state<Character | null>(null);
     editingCharacter = $state<Character | null>(null);
     baselineEditMode: BaselineEditMode = $state(readBaselineEditMode());
 
-            
-    // 0 spacing: aligned by center (at x=0) -> pos = -centerOffset
-    // 1 spacing: stacked side-by-side -> pos = currentStackX
-    overlapFac = $state(0);
+    // 0 spacing: left-aligned by image left edge; 1 spacing: one after another.
+    spacingFac = $state(0);
 
-    positionsX = $derived.by(() => {
-        const positions: number[] = [];
-        let currentStackedX = 0;
-
-        for (const character of this.characters) {
-            const centeredX = -character.center.x * character.viewportWidth;
-            const stackedX = currentStackedX;
-
-            positions.push(centeredX + (stackedX - centeredX) * this.overlapFac);
-
-            currentStackedX += character.viewportWidth;
-        }
-
-        return positions;
-    });
+    positionsX = $derived.by(() => computeCharacterPositionsX(
+        this.characters,
+        this.spacingFac,
+    ));
     
     constructor() {
         $effect.root(() => {

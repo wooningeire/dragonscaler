@@ -41,6 +41,12 @@ export class Camera2d {
 
     viewportDimsPx = $state({width: 0, height: 0});
     viewportPositionPx = $state({x: 0, y: 0});
+    viewportInsetsPx = $state({
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+    });
     readonly screenBoundsMeters = $derived({
         left: this.posMetersX - this.viewportDimsPx.width * 0.5 / this.scalePxPerMeter,
         right: this.posMetersX + this.viewportDimsPx.width * 0.5 / this.scalePxPerMeter,

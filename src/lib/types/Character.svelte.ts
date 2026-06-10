@@ -8,7 +8,7 @@ export class Character {
 
     image: CharacterImage | null = $state()!;
     name: string = $state()!;
-    center: Point = $state()!; // in image [0, 1] uv coordinates
+    anchor: Point = $state()!; // in image [0, 1] uv coordinates
     readonly baseline: Baseline;
     formId: string | null = $state(null);
     referenceImageIds: string[] = $state([]);
@@ -25,7 +25,8 @@ export class Character {
         id = null,
         image = null,
         name = "",
-        center = {x: 0.5, y: 0},
+        anchor,
+        center,
         baseline = new Baseline(),
         formId = null,
         referenceImageIds = [],
@@ -36,6 +37,8 @@ export class Character {
         id?: string | null,
         image?: CharacterImage | null,
         name?: string,
+        anchor?: Point,
+        /** @deprecated Use anchor. Kept for PocketBase center_point compatibility. */
         center?: Point,
         baseline?: Baseline,
         formId?: string | null,
@@ -47,7 +50,7 @@ export class Character {
         this.id = id;
         this.image = image;
         this.name = name;
-        this.center = center;
+        this.anchor = anchor ?? center ?? {x: 0.5, y: 0};
         this.baseline = baseline;
         this.formId = formId;
         this.referenceImageIds = referenceImageIds;
@@ -61,7 +64,7 @@ export class Character {
             id: this.id,
             image: this.image,
             name: this.name,
-            center: {...this.center},
+            anchor: {...this.anchor},
             baseline: this.baseline.clone(),
             formId: this.formId,
             referenceImageIds: [...this.referenceImageIds],
@@ -75,12 +78,20 @@ export class Character {
         this.id = character.id;
         this.image = character.image;
         this.name = character.name;
-        this.center = character.center;
+        this.anchor = character.anchor;
         this.baseline.copy(character.baseline);
         this.formId = character.formId;
         this.referenceImageIds = [...character.referenceImageIds];
         this.ownerIdentities = character.ownerIdentities.map(identity => ({...identity}));
         this.sonaIdentities = character.sonaIdentities.map(identity => ({...identity}));
         this.uploaded = character.uploaded;
+    }
+
+    get center() {
+        return this.anchor;
+    }
+
+    set center(center: Point) {
+        this.anchor = center;
     }
 }

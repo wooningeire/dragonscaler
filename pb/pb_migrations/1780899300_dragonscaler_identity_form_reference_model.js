@@ -473,6 +473,9 @@ const referenceImagesCollection = () => baseCollection({
             },
         ),
         textField("ref_caption", "caption"),
+        jsonField("ref_anchor", "anchor_point"),
+        jsonField("ref_baseline_points", "baseline_points"),
+        textField("ref_baseline_descriptor", "baseline_descriptor"),
     ],
 });
 
@@ -496,7 +499,13 @@ const characterFormsCollection = () => baseCollection({
         ),
         textField("form_name", "name"),
         boolField("form_default", "is_default"),
-        jsonField("form_center", "center_point"),
+        numberField(
+            "form_length_meters",
+            "length_meters",
+            {
+                required: true,
+            },
+        ),
         relationField(
             "form_refs",
             "reference_image_ids",
@@ -511,6 +520,7 @@ const characterFormsCollection = () => baseCollection({
 
 const charactersCollection = ({
     includeNewFields,
+    includeCenterField,
     imageRequired,
     centerRequired,
     ownerRequired,
@@ -535,14 +545,14 @@ const charactersCollection = ({
                 required: imageRequired,
             },
         ),
-        jsonField(
+        ...(includeCenterField ? [jsonField(
             "jkic8j70",
             "center_point",
             {
                 required: centerRequired,
                 maxSize: 10240,
             },
-        ),
+        )] : []),
         relationField(
             "ankqpwtw",
             "owner_id",
@@ -629,6 +639,7 @@ migrate((app) => {
         referenceImagesCollection(),
         charactersCollection({
             includeNewFields: true,
+            includeCenterField: false,
             imageRequired: false,
             centerRequired: false,
             ownerRequired: false,
@@ -639,19 +650,12 @@ migrate((app) => {
             },
         }),
         characterFormsCollection(),
-        baselinesCollection({
-            includeCharacterForm: true,
-            rules: {
-                createRule: baselineOwnerRules,
-                updateRule: baselineOwnerRules,
-                deleteRule: baselineOwnerRules,
-            },
-        }),
     ], false);
 }, (app) => {
     app.importCollections([
         charactersCollection({
             includeNewFields: false,
+            includeCenterField: true,
             imageRequired: true,
             centerRequired: true,
             ownerRequired: true,

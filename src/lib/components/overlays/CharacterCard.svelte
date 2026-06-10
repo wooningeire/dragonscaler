@@ -26,6 +26,7 @@ const editLabel = $derived(`Edit ${characterName}`);
 </script>
 
 <character-card
+    class="character-card"
     class:selected
     class:edit-muted={mutedByEditMode}
 >
@@ -49,7 +50,7 @@ const editLabel = $derived(`Edit ${characterName}`);
     </character-select-button>
 
     {#if canEdit && !editing}
-        <character-edit-overlay>
+        <character-edit-overlay class="edit-overlay">
             <Button
                 onclick={() => store.characterManager.editCharacter(character)}
                 aria-label={editLabel}

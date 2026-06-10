@@ -2,11 +2,12 @@ import PocketBase, { type AuthRecord } from "pocketbase";
 import { Character } from "./Character.svelte";
 import {
     Collections,
+    LEGACY_BASELINES_COLLECTION,
     type AccountRecord,
-    type BaselineRecord,
     type CharacterFormRecord,
     type CharacterRecord,
     type IdentityRecord,
+    type LegacyBaselineRecord,
     type ReferenceImageRecord,
 } from "./PocketBaseTypes";
 import { CharacterImage } from "./CharacterImage.svelte";
@@ -37,20 +38,20 @@ export class DatabaseStore {
 
     async loadCharacterData() {
         const characterDataResultPromise = this.pb.collection(Collections.Characters).getFullList<CharacterRecord>();
-        const baselinesResultPromise = this.pb.collection(Collections.Baselines).getFullList<BaselineRecord>();
+        const legacyBaselinesResultPromise = this.loadOptionalRecords<LegacyBaselineRecord>(LEGACY_BASELINES_COLLECTION);
         const characterFormsResultPromise = this.loadOptionalRecords<CharacterFormRecord>(Collections.CharacterForms);
         const referenceImagesResultPromise = this.loadOptionalRecords<ReferenceImageRecord>(Collections.ReferenceImages);
         const identitiesResultPromise = this.loadOptionalRecords<IdentityRecord>(Collections.Identities);
 
         const [
             characterDataResult,
-            baselinesResult,
+            legacyBaselinesResult,
             characterFormsResult,
             referenceImagesResult,
             identitiesResult,
         ] = await Promise.all([
             characterDataResultPromise,
-            baselinesResultPromise,
+            legacyBaselinesResultPromise,
             characterFormsResultPromise,
             referenceImagesResultPromise,
             identitiesResultPromise,
@@ -63,13 +64,13 @@ export class DatabaseStore {
         const identitiesById = new Map(identitiesResult.map(identity => [identity.id, identity]));
         const referenceImagesById = new Map(referenceImagesResult.map(referenceImage => [referenceImage.id, referenceImage]));
         const formsByCharacterId = this.groupByCharacterId(characterFormsResult);
-        const baselinesByCharacterId = this.groupByCharacterId(baselinesResult);
         const characterPromises: Promise<Character>[] = [];
 
         for (const characterData of characterDataResult) {
             const form = this.selectDefaultForm(formsByCharacterId.get(characterData.id) ?? []);
-            const baseline = this.selectDefaultBaseline(
-                baselinesByCharacterId.get(characterData.id) ?? [],
+            const legacyBaseline = this.selectLegacyBaseline(
+                legacyBaselinesResult,
+                characterData.id,
                 form?.id ?? null,
             );
             const referenceImage = this.selectReferenceImage(
@@ -98,14 +99,17 @@ export class DatabaseStore {
                 id: characterData.id,
                 image: null,
                 name: characterData.name,
-                center: form?.center_point ?? characterData.center_point ?? {x: 0.5, y: 0},
+                anchor:
+                    referenceImage?.anchor_point
+                    ?? form?.center_point
+                    ?? characterData.center_point
+                    ?? {x: 0.5, y: 0},
                 formId: form?.id ?? null,
                 referenceImageIds: form?.reference_image_ids ?? [],
                 baseline: new Baseline({
-                    id: baseline?.id ?? null,
-                    points: baseline?.points,
-                    descriptor: baseline?.descriptor,
-                    targetLength: baseline?.length_meters,
+                    points: referenceImage?.baseline_points ?? legacyBaseline?.points,
+                    descriptor: referenceImage?.baseline_descriptor ?? legacyBaseline?.descriptor,
+                    targetLength: form?.length_meters ?? legacyBaseline?.length_meters,
                 }),
                 ownerIdentities,
                 sonaIdentities,
@@ -151,20 +155,12 @@ export class DatabaseStore {
             character_id: charRecord.id,
             name: "Default",
             is_default: true,
-            center_point: character.center,
+            length_meters: character.baseline.targetLength,
             reference_image_ids: [referenceImageId],
         });
 
         character.formId = formRecord.id;
         character.referenceImageIds = [referenceImageId];
-
-        const baselineRecord = await this.saveBaseline(
-            character,
-            charRecord.id,
-            formRecord.id,
-        );
-
-        character.baseline.id = baselineRecord.id;
 
         return charRecord;
     }
@@ -185,7 +181,7 @@ export class DatabaseStore {
             await this.pb.collection(Collections.CharacterForms).update(character.formId, {
                 name: "Default",
                 is_default: true,
-                center_point: character.center,
+                length_meters: character.baseline.targetLength,
                 reference_image_ids: [referenceImageId],
             });
         } else {
@@ -193,7 +189,7 @@ export class DatabaseStore {
                 character_id: character.id,
                 name: "Default",
                 is_default: true,
-                center_point: character.center,
+                length_meters: character.baseline.targetLength,
                 reference_image_ids: [referenceImageId],
             });
 
@@ -202,11 +198,7 @@ export class DatabaseStore {
 
         character.referenceImageIds = [referenceImageId];
 
-        return await this.saveBaseline(
-            character,
-            character.id,
-            character.formId,
-        );
+        return character;
     }
 
     async promptDiscordLogin() {
@@ -261,7 +253,7 @@ export class DatabaseStore {
         return this.userRecord as AccountRecord | null;
     }
 
-    private async loadOptionalRecords<RecordType>(collection: Collections) {
+    private async loadOptionalRecords<RecordType>(collection: string) {
         try {
             return await this.pb.collection(collection).getFullList<RecordType>();
         } catch (error) {
@@ -363,8 +355,9 @@ export class DatabaseStore {
             ?? null;
     }
 
-    private selectDefaultBaseline(
-        baselines: BaselineRecord[],
+    private selectLegacyBaseline(
+        baselines: LegacyBaselineRecord[],
+        characterId: string,
         formId: string | null,
     ) {
         if (formId !== null) {
@@ -376,11 +369,13 @@ export class DatabaseStore {
             if (formBaseline !== undefined) return formBaseline;
         }
 
-        return baselines.find(baseline => (
+        const characterBaselines = baselines.filter(baseline => baseline.character_id === characterId);
+
+        return characterBaselines.find(baseline => (
             baseline.is_default
             && baseline.character_form_id === undefined
-        )) ?? baselines.find(baseline => baseline.is_default)
-            ?? baselines[0]
+        )) ?? characterBaselines.find(baseline => baseline.is_default)
+            ?? characterBaselines[0]
             ?? null;
     }
 
@@ -492,52 +487,36 @@ export class DatabaseStore {
         if (character.image === null) throw new Error("character has no image");
 
         const existingReferenceImageId = character.referenceImageIds[0];
+        const referenceImageData = {
+            anchor_point: character.anchor,
+            baseline_points: character.baseline.points,
+            baseline_descriptor: character.baseline.descriptor,
+        };
 
         if (this.isRecordId(existingReferenceImageId)) {
             if (character.image.hasObjectUrl) {
                 await this.pb.collection(Collections.ReferenceImages).update(existingReferenceImageId, {
+                    ...referenceImageData,
                     image: character.image.file,
                 });
+            } else {
+                await this.pb.collection(Collections.ReferenceImages).update(
+                    existingReferenceImageId,
+                    referenceImageData,
+                );
             }
 
             return existingReferenceImageId;
         }
 
         const referenceImage = await this.pb.collection(Collections.ReferenceImages).create<ReferenceImageRecord>({
+            ...referenceImageData,
             image: character.image.file,
         });
 
         character.referenceImageIds = [referenceImage.id];
 
         return referenceImage.id;
-    }
-
-    private async saveBaseline(
-        character: Character,
-        characterId: string,
-        formId: string | null,
-    ) {
-        const baselineData = {
-            character_id: characterId,
-            character_form_id: formId,
-            is_default: true,
-            points: character.baseline.points,
-            descriptor: character.baseline.descriptor,
-            length_meters: character.baseline.targetLength,
-        };
-
-        if (this.isRecordId(character.baseline.id)) {
-            return await this.pb.collection(Collections.Baselines).update<BaselineRecord>(
-                character.baseline.id,
-                baselineData,
-            );
-        }
-
-        const baselineRecord = await this.pb.collection(Collections.Baselines).create<BaselineRecord>(baselineData);
-
-        character.baseline.id = baselineRecord.id;
-
-        return baselineRecord;
     }
 
     private async getDefaultIdentityForCurrentAccount() {

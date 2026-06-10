@@ -4,24 +4,15 @@ import { store } from "$lib/types/Store.svelte";
 import Button from "../generic/Button.svelte";
 import Slider from "../generic/Slider.svelte";
 import type { TransitionConfig } from "svelte/transition";
-import { bounceOut, circOut, cubicOut, elasticOut } from "svelte/easing";
+import { circOut } from "svelte/easing";
 import CharacterEditMenu from "./CharacterEditMenu.svelte";
 
-let dummyWidth = $state(0);
-let dummyHeight = $state(0);
-let dummyEl: HTMLDivElement | undefined = $state();
 const currentAccountName = $derived(store.databaseStore.currentAccountName());
 const currentAccountAvatarUrl = $derived(store.databaseStore.currentAccountAvatarUrl());
+let bottomDockHeightPx = $state(0);
 
 $effect(() => {
-    dummyWidth; dummyHeight;
-    if (dummyEl) {
-        const rect = dummyEl.getBoundingClientRect();
-        store.camera.viewportDimsPx.width = rect.width;
-        store.camera.viewportDimsPx.height = rect.height;
-        store.camera.viewportPositionPx.x = rect.left + rect.width / 2;
-        store.camera.viewportPositionPx.y = rect.top + rect.height / 2;
-    }
+    store.camera.viewportInsetsPx.bottom = bottomDockHeightPx;
 });
 
 const grow = (
@@ -88,12 +79,12 @@ user-select: none;`,
                 min={0}
                 max={1}
                 step={0.01}
-                bind:value={store.characterManager.overlapFac}
+                bind:value={store.characterManager.spacingFac}
             />
         </div>
     </div>
 
-    <overlays-bottom-dock>
+    <overlays-bottom-dock bind:clientHeight={bottomDockHeightPx}>
         {#if store.characterManager.editingCharacter !== null}
             <character-edit-menu-container transition:grow>
                 <CharacterEditMenu />
@@ -103,12 +94,6 @@ user-select: none;`,
         <CharacterCarousel />
     </overlays-bottom-dock>
 
-    <div
-        class="viewport-dummy"
-        bind:this={dummyEl}
-        bind:clientWidth={dummyWidth}
-        bind:clientHeight={dummyHeight}
-    ></div>
 </overlays-panel>
 
 <style lang="scss">
@@ -123,11 +108,6 @@ overlays-panel {
     grid-template-rows: 1fr 40vh;
     
     pointer-events: none;
-}
-
-.viewport-dummy {
-    grid-area: 1/1;
-    visibility: hidden;
 }
 
 .gizmos {
@@ -159,7 +139,7 @@ overlays-bottom-dock {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    padding: 1em;
+    padding: 1em 0;
 
     pointer-events: auto;
 
