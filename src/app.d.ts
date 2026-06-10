@@ -3,6 +3,11 @@
 import type PocketBase from "pocketbase";
 import type { AuthRecord } from "pocketbase";
 
+declare module "*.wgsl?raw" {
+    const source: string;
+    export default source;
+}
+
 
 declare global {
     namespace App {

@@ -33,3 +33,15 @@ Object.defineProperty(globalThis, "ResizeObserver", {
     enumerable: true,
     value: MockResizeObserver,
 });
+
+Object.defineProperty(Element.prototype, "animate", {
+    writable: true,
+    enumerable: true,
+    value: vi.fn().mockImplementation(() => ({
+        addEventListener: vi.fn(),
+        cancel: vi.fn(),
+        commitStyles: vi.fn(),
+        finished: Promise.resolve(),
+        play: vi.fn(),
+    })),
+});

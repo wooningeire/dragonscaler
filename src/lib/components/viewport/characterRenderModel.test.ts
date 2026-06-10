@@ -3,8 +3,10 @@ import { Character } from "$lib/types/Character.svelte";
 import { Baseline } from "$lib/types/Baseline.svelte";
 import { buildCharacterRenderFrame } from "./characterRenderModel";
 import {
+    characterLabelPanelRectPx,
     characterLabelRectPx,
     characterLabelScale,
+    characterLabelTextureSizePx,
 } from "./WebGpuViewportRenderer";
 
 
@@ -130,14 +132,47 @@ describe("buildCharacterRenderFrame", () => {
         const item = frame.items[0];
         const labelRect = characterLabelRectPx(
             item,
-            {
-                widthPx: 80,
-                heightPx: 32,
-            },
+            characterLabelTextureSizePx(item),
             1,
         );
+        const panelRect = characterLabelPanelRectPx(item, 1);
 
-        expect(labelRect.x + labelRect.width).toBe(item.rectPx.x + item.rectPx.width);
+        expect(labelRect.width).toBeGreaterThan(panelRect.width);
+        expect(panelRect.x + panelRect.width).toBeCloseTo(
+            item.rectPx.x + item.rectPx.width,
+            0,
+        );
+        expect(panelRect.y).toBeCloseTo(
+            item.rectPx.y
+            + item.rectPx.height
+            + 8 * characterLabelScale(item),
+            0,
+        );
+    });
+
+    test("uses compact nameplate textures for short labels", () => {
+        const character = makeCharacter("A", 1);
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 256,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+        });
+
+        expect(characterLabelTextureSizePx(frame.items[0])).toEqual({
+            widthPx: 140,
+            heightPx: 68,
+        });
     });
 
     test("mutes non-edited characters before the canvas render", () => {

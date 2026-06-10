@@ -35,18 +35,19 @@ let {
 .character-label {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
-
+    gap: 0.2rem;
 
     text-align: left;
 
     &.has-bg {
-        padding: 1em;
-        
-        background: oklch(0.95 0.05 130 / 0.75);
-        border-radius: 1em;
+        padding: 0.5em 0.625em;
+        border-radius: 0.625em;
+        overflow: hidden;
 
-        backdrop-filter: blur(16px);
+        background: oklch(0.95 0.05 130 / 0.75);
+        box-shadow: 0 0.375rem 1rem oklch(0.22 0.04 130 / 0.22);
+
+        backdrop-filter: blur(1rem);
     }
 }
 
