@@ -12,6 +12,7 @@ const characterBeingEdited = $derived(store.characterManager.editingCharacter);
 let fileInput: HTMLInputElement = $state()!;
 
 let loading = $state(false);
+let saving = $state(false);
 const loadFile = async () => {
     if (characterBeingEdited === null) return;
 
@@ -35,17 +36,22 @@ const submit = async () => {
 
     if (characterBeingEdited.image === null) return;
 
-    if (characterBeingEdited.uploaded) {
-        await store.databaseStore.updateCharacter(characterBeingEdited);
-    } else {
-        const createResult = await store.databaseStore.createCharacter(characterBeingEdited);
-        characterBeingEdited.uploaded = true;
+    if (saving) return;
 
-        characterBeingEdited.id = createResult.id;
+    saving = true;
+
+    try {
+        if (characterBeingEdited.uploaded) {
+            await store.databaseStore.updateCharacter(characterBeingEdited);
+        } else {
+            await store.databaseStore.createCharacter(characterBeingEdited);
+        }
+
+        originalCharacter = characterBeingEdited.clone();
+        store.characterManager.stopEditingCharacter();
+    } finally {
+        saving = false;
     }
-
-    originalCharacter = characterBeingEdited.clone();
-    store.characterManager.stopEditingCharacter();
 };
 
 
@@ -77,7 +83,8 @@ const cancel = () => {
 const canSubmit = $derived(
     characterBeingEdited !== null
     && characterBeingEdited.image !== null
-    && characterBeingEdited.name !== "",
+    && characterBeingEdited.name !== ""
+    && !saving,
 );
 </script>
 

@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import type { AuthRecord } from "pocketbase";
+import { Character } from "./Character.svelte";
+import { CharacterImage } from "./CharacterImage.svelte";
+import { Baseline } from "./Baseline.svelte";
 import { DatabaseStore } from "./DatabaseStore.svelte";
+import { Collections } from "./PocketBaseTypes";
 import type {
+    AccountRecord,
     CharacterRecord,
     IdentityRecord,
     PocketbaseCommonRecord,
 } from "./PocketBaseTypes";
+import type { IdentitySummary } from "./Identity";
 
 
 const createToken = () => {
@@ -50,6 +56,204 @@ const collectAccountIds = (
     return testStore.collectAccountIds(characters, identities);
 };
 
+const makePocketBaseError = (
+    status: number,
+    response: Record<string, unknown>,
+) => ({
+    status,
+    response,
+});
+
+const makeDuplicateRecordIdError = () => makePocketBaseError(
+    400,
+    {
+        data: {
+            id: {
+                code: "validation_not_unique",
+                message: "The record id must be unique.",
+            },
+        },
+    },
+);
+
+const makeMissingRecordError = () => makePocketBaseError(
+    404,
+    {
+        data: {},
+    },
+);
+
+class FakeCollection {
+    readonly createCalls: Record<string, unknown>[] = [];
+    readonly updateCalls: {
+        id: string,
+        data: Record<string, unknown>,
+    }[] = [];
+    readonly records = new Map<string, PocketbaseCommonRecord & Record<string, unknown>>();
+
+    createFailure: unknown = null;
+
+    constructor(readonly name: string) {}
+
+    async getOne<RecordType = PocketbaseCommonRecord & Record<string, unknown>>(id: string) {
+        const record = this.records.get(id);
+        if (record === undefined) throw makeMissingRecordError();
+
+        return record as RecordType;
+    }
+
+    async getFullList<RecordType = PocketbaseCommonRecord & Record<string, unknown>>() {
+        return [...this.records.values()] as RecordType[];
+    }
+
+    async create<RecordType = PocketbaseCommonRecord & Record<string, unknown>>(
+        data: Record<string, unknown>,
+    ) {
+        this.createCalls.push(data);
+
+        if (this.createFailure !== null) {
+            const error = this.createFailure;
+            this.createFailure = null;
+            throw error;
+        }
+
+        const id = typeof data.id === "string"
+            ? data.id
+            : `auto-${this.records.size + 1}`;
+
+        if (this.records.has(id)) throw makeDuplicateRecordIdError();
+
+        const record = {
+            id,
+            created: "",
+            updated: "",
+            collectionId: this.name,
+            collectionName: this.name,
+            ...data,
+        } as PocketbaseCommonRecord & Record<string, unknown>;
+        this.records.set(
+            id,
+            record,
+        );
+
+        return record as RecordType;
+    }
+
+    async update<RecordType = PocketbaseCommonRecord & Record<string, unknown>>(
+        id: string,
+        data: Record<string, unknown>,
+    ) {
+        this.updateCalls.push({
+            id,
+            data,
+        });
+
+        const record = this.records.get(id);
+        if (record === undefined) throw makeMissingRecordError();
+
+        const updatedRecord = {
+            ...record,
+            ...data,
+        };
+        this.records.set(
+            id,
+            updatedRecord,
+        );
+
+        return updatedRecord as RecordType;
+    }
+}
+
+class FakePocketBase {
+    readonly collections = new Map<string, FakeCollection>();
+
+    readonly authStore = {
+        isValid: false,
+        record: null,
+        token: "",
+        clear: () => {},
+        onChange: () => () => {},
+    };
+
+    collection(name: string) {
+        let collection = this.collections.get(name);
+
+        if (collection === undefined) {
+            collection = new FakeCollection(name);
+            this.collections.set(
+                name,
+                collection,
+            );
+        }
+
+        return collection;
+    }
+
+    filter(filterText: string) {
+        return filterText;
+    }
+}
+
+const installFakePocketBase = (databaseStore: DatabaseStore) => {
+    const fakePocketBase = new FakePocketBase();
+    const testStore = databaseStore as unknown as {
+        pb: FakePocketBase,
+        createRecordId: () => string,
+    };
+    const recordIds = [
+        "character000001",
+        "reference000001",
+        "form00000000001",
+    ];
+
+    testStore.pb = fakePocketBase;
+    testStore.createRecordId = () => {
+        const id = recordIds.shift();
+        if (id === undefined) throw new Error("missing test record id");
+
+        return id;
+    };
+
+    return fakePocketBase;
+};
+
+const makeOwnerIdentity = (): IdentitySummary => ({
+    id: "identity-1",
+    identityId: "identity-1",
+    accountId: "account-1",
+    name: "Owner",
+    avatarUrl: null,
+});
+
+const makeCharacterImage = () => new CharacterImage({
+    src: "blob:dragon",
+    file: new File(
+        ["dragon"],
+        "dragon.png",
+        {type: "image/png"},
+    ),
+    dimensions: {
+        width: 1,
+        height: 1,
+    },
+    hasObjectUrl: true,
+});
+
+const makeNewCharacter = () => new Character({
+    name: "Test Dragon",
+    image: makeCharacterImage(),
+    baseline: new Baseline({
+        targetLength: 4,
+        descriptor: "to the shoulder",
+        points: [
+            {x: 0.5, y: 0},
+            {x: 0.5, y: 1},
+        ],
+    }),
+    ownerIdentities: [makeOwnerIdentity()],
+    uploaded: false,
+});
+
 
 describe("DatabaseStore auth persistence", () => {
     beforeEach(() => {
@@ -83,6 +287,92 @@ describe("DatabaseStore auth persistence", () => {
 
         expect(databaseStore.userRecord?.id).toBe("user-1");
         expect(localStorage.getItem("pocketbase_auth")).toContain("user-1");
+    });
+});
+
+describe("DatabaseStore write idempotency", () => {
+    beforeEach(() => {
+        localStorage.clear();
+        clearAuthCookie();
+    });
+
+    test("deduplicates concurrent creates for the same character object", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+
+        await Promise.all([
+            databaseStore.createCharacter(character),
+            databaseStore.createCharacter(character),
+        ]);
+
+        expect(character).toMatchObject({
+            id: "character000001",
+            formId: "form00000000001",
+            referenceImageIds: ["reference000001"],
+            uploaded: true,
+        });
+        expect(fakePocketBase.collection(Collections.Characters).createCalls).toHaveLength(1);
+        expect(fakePocketBase.collection(Collections.ReferenceImages).createCalls).toHaveLength(1);
+        expect(fakePocketBase.collection(Collections.CharacterForms).createCalls).toHaveLength(1);
+    });
+
+    test("retries partial creates against the same record ids", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+        fakePocketBase.collection(Collections.ReferenceImages).createFailure = new Error("network");
+
+        await expect(databaseStore.createCharacter(character)).rejects.toThrow("network");
+
+        expect(character.id).toBe("character000001");
+        expect(character.referenceImageIds).toEqual(["reference000001"]);
+        expect(character.uploaded).toBe(false);
+
+        await databaseStore.createCharacter(character);
+
+        expect(character).toMatchObject({
+            id: "character000001",
+            formId: "form00000000001",
+            referenceImageIds: ["reference000001"],
+            uploaded: true,
+        });
+        expect(fakePocketBase.collection(Collections.Characters).records.size).toBe(1);
+        expect(fakePocketBase.collection(Collections.ReferenceImages).records.size).toBe(1);
+        expect(fakePocketBase.collection(Collections.CharacterForms).records.size).toBe(1);
+        expect(fakePocketBase.collection(Collections.Characters).updateCalls).toEqual([
+            expect.objectContaining({
+                id: "character000001",
+            }),
+        ]);
+    });
+
+    test("uses the account id as the default identity create id", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        databaseStore.userRecord = {
+            ...commonRecord("account-1"),
+            username: "Owner",
+            avatar: "",
+        } as AccountRecord;
+        fakePocketBase.collection(Collections.Accounts).records.set(
+            "account-1",
+            {
+                ...commonRecord("account-1"),
+                username: "Owner",
+                avatar: "",
+            },
+        );
+
+        const identity = await databaseStore.createOwnerIdentityObject();
+
+        expect(identity.identityId).toBe("account-1");
+        expect(fakePocketBase.collection(Collections.Identities).createCalls).toEqual([
+            expect.objectContaining({
+                id: "account-1",
+                account_ids: ["account-1"],
+            }),
+        ]);
     });
 });
 

@@ -11,28 +11,40 @@ let {
 } = $props();
 </script>
 
-<div
-    class="character-label"
+<character-label
     class:has-bg={hasBg}
 >
-    <div class="character-name">
+    <character-label-name>
         {character.name}
-    </div>
-        
-    {#if character.ownerIdentities.length > 0}
-        <div class="character-owners">
-            {#each character.ownerIdentities as ownerIdentity (ownerIdentity.id)}
+    </character-label-name>
+
+    {#if character.sonaIdentities.length > 0}
+        <character-label-identity-list>
+            Sona of
+            {#each character.sonaIdentities as identity (identity.id)}
                 <AuthorBadge
-                    name={ownerIdentity.name}
-                    avatarUrl={ownerIdentity.avatarUrl}
+                    name={identity.name}
+                    avatarUrl={identity.avatarUrl}
                 />
             {/each}
-        </div>
+        </character-label-identity-list>
     {/if}
-</div>
+        
+    {#if character.ownerIdentities.length > 0}
+        <character-label-identity-list>
+            Owned by
+            {#each character.ownerIdentities as identity (identity.id)}
+                <AuthorBadge
+                    name={identity.name}
+                    avatarUrl={identity.avatarUrl}
+                />
+            {/each}
+        </character-label-identity-list>
+    {/if}
+</character-label>
 
 <style lang="scss">
-.character-label {
+character-label {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
@@ -51,13 +63,13 @@ let {
     }
 }
 
-.character-name {
-    font-size: 1.5rem;
+character-label-name {
+    font-size: 1.5em;
 }
 
-.character-owners {
+character-label-identity-list {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
+    flex-direction: column;
+    gap: 0.375em;
 }
 </style>
