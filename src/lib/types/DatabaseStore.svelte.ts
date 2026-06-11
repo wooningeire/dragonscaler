@@ -237,6 +237,79 @@ export class DatabaseStore {
         });
     }
 
+    async deleteCharacter(character: Character) {
+        return await this.runExclusiveCharacterWrite(character, async () => {
+            if (!this.isRecordId(character.id)) throw new Error("character has no id");
+
+            const characterId = character.id;
+            const characterForms = await this.loadOptionalRecords<CharacterFormRecord>(
+                Collections.CharacterForms,
+                {
+                    filter: this.pb.filter(
+                        "character_id = {:characterId}",
+                        {characterId},
+                    ),
+                },
+            );
+            const characterFormIds = new Set(
+                characterForms
+                    .map(form => form.id)
+                    .filter(this.isRecordId),
+            );
+            const referenceImageIds = new Set(
+                character.referenceImageIds.filter(this.isRecordId),
+            );
+            const legacyBaselines = await this.loadOptionalRecords<LegacyBaselineRecord>(
+                LEGACY_BASELINES_COLLECTION,
+            );
+
+            if (this.isRecordId(character.formId)) {
+                characterFormIds.add(character.formId);
+            }
+
+            for (const form of characterForms) {
+                for (const referenceImageId of form.reference_image_ids ?? []) {
+                    if (this.isRecordId(referenceImageId)) {
+                        referenceImageIds.add(referenceImageId);
+                    }
+                }
+            }
+
+            const legacyBaselineIds = legacyBaselines
+                .filter(baseline => (
+                    baseline.character_id === characterId
+                    || (
+                        this.isRecordId(baseline.character_form_id)
+                        && characterFormIds.has(baseline.character_form_id)
+                    )
+                ))
+                .map(baseline => baseline.id)
+                .filter(this.isRecordId);
+
+            await Promise.all(legacyBaselineIds.map(id => this.deleteRecordIfExists(
+                LEGACY_BASELINES_COLLECTION,
+                id,
+            )));
+            await Promise.all([...characterFormIds].map(id => this.deleteRecordIfExists(
+                Collections.CharacterForms,
+                id,
+            )));
+            await Promise.all([...referenceImageIds].map(id => this.deleteRecordIfExists(
+                Collections.ReferenceImages,
+                id,
+            )));
+            await this.deleteRecordIfExists(
+                Collections.Characters,
+                characterId,
+            );
+
+            character.id = null;
+            character.formId = null;
+            character.referenceImageIds = [];
+            character.uploaded = false;
+        });
+    }
+
     async promptDiscordLogin() {
         const authResult = await this.pb.collection(Collections.Accounts).authWithOAuth2({
             provider: "discord",
@@ -293,9 +366,15 @@ export class DatabaseStore {
         return this.userRecord as AccountRecord | null;
     }
 
-    private async loadOptionalRecords<RecordType>(collection: string) {
+    private async loadOptionalRecords<RecordType>(
+        collection: string,
+        options: {
+            filter?: string,
+            sort?: string,
+        } = {},
+    ) {
         try {
-            return await this.pb.collection(collection).getFullList<RecordType>();
+            return await this.pb.collection(collection).getFullList<RecordType>(options);
         } catch (error) {
             if (this.isMissingCollectionError(error)) return [];
 
@@ -775,6 +854,27 @@ export class DatabaseStore {
                 createData,
                 updateData,
             );
+        }
+    }
+
+    private async deleteRecordIfExists(
+        collection: string,
+        id: string,
+    ) {
+        try {
+            await this.pb.collection(collection).delete(
+                id,
+                POCKETBASE_WRITE_OPTIONS,
+            );
+        } catch (error) {
+            if (
+                this.isMissingCollectionError(error)
+                || this.isMissingRecordError(error)
+            ) {
+                return;
+            }
+
+            throw error;
         }
     }
 

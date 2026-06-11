@@ -7,9 +7,11 @@ import { DatabaseStore } from "./DatabaseStore.svelte";
 import { Collections } from "./PocketBaseTypes";
 import type {
     AccountRecord,
+    CharacterFormRecord,
     CharacterRecord,
     IdentityRecord,
     PocketbaseCommonRecord,
+    ReferenceImageRecord,
 } from "./PocketBaseTypes";
 import type { IdentitySummary } from "./Identity";
 
@@ -89,6 +91,7 @@ class FakeCollection {
         id: string,
         data: Record<string, unknown>,
     }[] = [];
+    readonly deleteCalls: string[] = [];
     readonly records = new Map<string, PocketbaseCommonRecord & Record<string, unknown>>();
 
     createFailure: unknown = null;
@@ -102,8 +105,30 @@ class FakeCollection {
         return record as RecordType;
     }
 
-    async getFullList<RecordType = PocketbaseCommonRecord & Record<string, unknown>>() {
-        return [...this.records.values()] as RecordType[];
+    async getFullList<RecordType = PocketbaseCommonRecord & Record<string, unknown>>(
+        options: {
+            filter?: {
+                filterText: string,
+                params: Record<string, string>,
+            },
+        } = {},
+    ) {
+        const records = [...this.records.values()];
+
+        if (options.filter?.filterText === "character_id = {:characterId}") {
+            return records.filter(record => (
+                record.character_id === options.filter?.params.characterId
+            )) as RecordType[];
+        }
+
+        if (options.filter?.filterText === "account_ids.id = {:accountId}") {
+            return records.filter(record => (
+                Array.isArray(record.account_ids)
+                && record.account_ids.includes(options.filter?.params.accountId)
+            )) as RecordType[];
+        }
+
+        return records as RecordType[];
     }
 
     async create<RecordType = PocketbaseCommonRecord & Record<string, unknown>>(
@@ -162,6 +187,14 @@ class FakeCollection {
 
         return updatedRecord as RecordType;
     }
+
+    async delete(id: string) {
+        this.deleteCalls.push(id);
+
+        if (!this.records.delete(id)) throw makeMissingRecordError();
+
+        return true;
+    }
 }
 
 class FakePocketBase {
@@ -189,8 +222,14 @@ class FakePocketBase {
         return collection;
     }
 
-    filter(filterText: string) {
-        return filterText;
+    filter(
+        filterText: string,
+        params: Record<string, string> = {},
+    ) {
+        return {
+            filterText,
+            params,
+        };
     }
 }
 
@@ -373,6 +412,66 @@ describe("DatabaseStore write idempotency", () => {
                 account_ids: ["account-1"],
             }),
         ]);
+    });
+
+    test("deletes characters with their dependent form and reference image records", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = new Character({
+            id: "character-1",
+            formId: "form-1",
+            referenceImageIds: ["reference-1"],
+            uploaded: true,
+        });
+        fakePocketBase.collection(Collections.Characters).records.set(
+            "character-1",
+            {
+                ...commonRecord("character-1"),
+                name: "Scale Wing",
+            } satisfies CharacterRecord,
+        );
+        fakePocketBase.collection(Collections.CharacterForms).records.set(
+            "form-1",
+            {
+                ...commonRecord("form-1"),
+                character_id: "character-1",
+                reference_image_ids: ["reference-1"],
+            } satisfies CharacterFormRecord,
+        );
+        fakePocketBase.collection(Collections.ReferenceImages).records.set(
+            "reference-1",
+            {
+                ...commonRecord("reference-1"),
+                image: "scale-wing.png",
+            } satisfies ReferenceImageRecord,
+        );
+
+        await databaseStore.deleteCharacter(character);
+
+        expect(fakePocketBase.collection(Collections.CharacterForms).deleteCalls).toEqual([
+            "form-1",
+        ]);
+        expect(fakePocketBase.collection(Collections.ReferenceImages).deleteCalls).toEqual([
+            "reference-1",
+        ]);
+        expect(fakePocketBase.collection(Collections.Characters).deleteCalls).toEqual([
+            "character-1",
+        ]);
+        expect(fakePocketBase.collection(Collections.CharacterForms).records.has("form-1")).toBe(
+            false,
+        );
+        expect(fakePocketBase.collection(Collections.ReferenceImages).records.has("reference-1")).toBe(
+            false,
+        );
+        expect(fakePocketBase.collection(Collections.Characters).records.has("character-1")).toBe(
+            false,
+        );
+        expect(character).toMatchObject({
+            id: null,
+            formId: null,
+            referenceImageIds: [],
+            uploaded: false,
+        });
     });
 });
 

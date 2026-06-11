@@ -7,12 +7,14 @@ let {
     keyHeld = false,
     displayClass,
     buttonStyle = "text",
+    red = false,
     ...buttonProps
 }: {
     children: Snippet,
     keyHeld?: boolean,
     buttonStyle?: "text" | "image" | "icon",
     displayClass?: string,
+    red?: boolean,
 } & HTMLButtonAttributes = $props();
 </script>
 
@@ -21,6 +23,7 @@ let {
         class:key-held={keyHeld}
         class:text-button={buttonStyle === "text"}
         class:icon-button={buttonStyle === "icon"}
+        class:red
         class={displayClass}
     >
         {@render children?.()}
@@ -30,7 +33,7 @@ let {
 <style lang="scss">
 $bg-col: oklch(1 0 0 / 0.75);
 $bg-stripe-col: oklch(0.975 0.02 120 / 0.75);
-$inset-box-shadow: 0 1rem 4rem 2rem oklch(0.6 0.1 120 / 0.125) inset;
+$inset-box-shadow: 0 1em 2em oklch(0.8 0.1 120 / 0.25) inset;
 
 
 button {
@@ -45,11 +48,19 @@ button {
     cursor: pointer;
 
 
+    --bg-col: #{$bg-col};
+
+    
+    &[disabled] {
+        pointer-events: none;
+        opacity: 0.3;
+    }
+
     button-display {
         display: block;
 
         border-radius: 1rem;
-        background: $bg-col;
+        background: var(--bg-col);
         box-shadow:
             0 0.25rem 1rem 0.5rem oklch(0.75 0.05 140 / 0.5),
             $inset-box-shadow;
@@ -63,6 +74,10 @@ button {
             transform 0.25s cubic-bezier(0,2.75,.47,1),
             box-shadow 0.1s cubic-bezier(0,1,.47,1),
             filter 0.25s ease;
+
+        &.red {
+            --bg-col: oklch(0.99 0.15 350 / 0.75);
+        }
 
         &.text-button {
             padding: 0.25rem 1rem;
@@ -102,11 +117,6 @@ button {
     &:active > button-display,
     button-display.key-held {
         transform: translateY(0.0625rem) scale(0.95);
-    }
-
-    &[disabled] {
-        pointer-events: none;
-        opacity: 0.3;
     }
 }
 </style>

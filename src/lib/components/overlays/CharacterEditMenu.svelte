@@ -6,6 +6,7 @@ import Button from "../generic/Button.svelte";
 import { store } from "$lib/types/Store.svelte";
 import { untrack } from "svelte";
 import { baselineEditModes } from "$lib/util/baselineGeometry";
+import Separator from "../generic/Separator.svelte";
 
 const characterBeingEdited = $derived(store.characterManager.editingCharacter);
 
@@ -13,6 +14,7 @@ let fileInput: HTMLInputElement = $state()!;
 
 let loading = $state(false);
 let saving = $state(false);
+let deleting = $state(false);
 const loadFile = async () => {
     if (characterBeingEdited === null) return;
 
@@ -36,7 +38,7 @@ const submit = async () => {
 
     if (characterBeingEdited.image === null) return;
 
-    if (saving) return;
+    if (saving || deleting) return;
 
     saving = true;
 
@@ -67,29 +69,49 @@ $effect(() => {
 const cancel = () => {
     if (characterBeingEdited === null) return;
 
+    if (saving || deleting) return;
+
     if (characterBeingEdited.uploaded) {
         characterBeingEdited.copy(originalCharacter);
     } else {
-        store.characterManager.characters.splice(store.characterManager.characters.indexOf(characterBeingEdited), 1);
-
-        if (store.characterManager.selectedCharacter === characterBeingEdited) {
-            store.characterManager.selectedCharacter = null;
-        }
+        store.characterManager.removeCharacter(characterBeingEdited);
+        return;
     }
 
     store.characterManager.stopEditingCharacter();
+};
+
+const del = async () => {
+    if (characterBeingEdited === null) return;
+
+    if (saving || deleting) return;
+
+    const character = characterBeingEdited;
+    deleting = true;
+
+    try {
+        if (character.uploaded) {
+            await store.databaseStore.deleteCharacter(character);
+        }
+
+        store.characterManager.removeCharacter(character);
+    } finally {
+        deleting = false;
+    }
 };
 
 const canSubmit = $derived(
     characterBeingEdited !== null
     && characterBeingEdited.image !== null
     && characterBeingEdited.name !== ""
-    && !saving,
+    && !saving
+    && !deleting,
 );
+const canLeave = $derived(!saving && !deleting);
 </script>
 
 {#if characterBeingEdited !== null}
-    <div class="add-character-menu">
+    <character-edit-menu>
         <div class="character-image-container">
             <Button
                 onclick={() => fileInput.click()}
@@ -161,7 +183,10 @@ const canSubmit = $derived(
 
 
         <div class="buttons">
-            <Button onclick={submit} disabled={!canSubmit}>
+            <Button
+                onclick={submit}
+                disabled={!canSubmit}
+            >
                 {#if characterBeingEdited.uploaded}
                     Update
                 {:else}
@@ -169,17 +194,30 @@ const canSubmit = $derived(
                 {/if}
             </Button>
 
-            <Button onclick={cancel}>
+            <Button
+                onclick={cancel}
+                disabled={!canLeave}
+            >
                 Cancel
             </Button>
+
+            <Separator />
+
+            <Button
+                onclick={del}
+                disabled={!canLeave}
+                red
+            >
+                Delete
+            </Button>
         </div>
-    </div>
+    </character-edit-menu>
 {/if}
 
 <style lang="scss">
 $image-size: 12rem;
 
-.add-character-menu {
+character-edit-menu {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
@@ -253,6 +291,7 @@ input[type="file"] {
 .buttons {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    align-items: stretch;
+    gap: 0.5em;
 }
 </style>

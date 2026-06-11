@@ -18,7 +18,7 @@ const makeImage = () => new CharacterImage({
 const makeCharacter = () => new Character({
     id: "character-1",
     image: makeImage(),
-    name: "Scale Wing",
+    name: "Pret",
     uploaded: true,
 });
 
@@ -62,5 +62,26 @@ describe("CharacterEditMenu", () => {
 
         expect(store.characterManager.baselineEditMode).toBe("line");
         expect(screen.getByRole("button", {name: "Line"})).toHaveAttribute("aria-pressed", "true");
+    });
+
+    test("deletes an uploaded character from the database and local manager", async () => {
+        const character = makeCharacter();
+        store.characterManager.characters = [character];
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+        const deleteCharacter = vi
+            .spyOn(store.databaseStore, "deleteCharacter")
+            .mockResolvedValue();
+
+        render(CharacterEditMenu);
+
+        await fireEvent.click(screen.getByRole("button", {name: "Delete"}));
+
+        await waitFor(() => {
+            expect(deleteCharacter).toHaveBeenCalledWith(character);
+            expect(store.characterManager.characters).toEqual([]);
+            expect(store.characterManager.selectedCharacter).toBeNull();
+            expect(store.characterManager.editingCharacter).toBeNull();
+        });
     });
 });

@@ -113,4 +113,29 @@ describe("computeCharacterPositionsX", () => {
             3,
         ]);
     });
+
+    test("removes characters and clears matching selection/edit state", () => {
+        const removed = makeCharacter(
+            "Removed",
+            1,
+        );
+        const remaining = makeCharacter(
+            "Remaining",
+            2,
+        );
+        const manager = new CharacterManager();
+
+        manager.characters = [
+            removed,
+            remaining,
+        ];
+        manager.selectedCharacter = removed;
+        manager.editingCharacter = removed;
+
+        manager.removeCharacter(removed);
+
+        expect(manager.characters).toEqual([remaining]);
+        expect(manager.selectedCharacter).toBeNull();
+        expect(manager.editingCharacter).toBeNull();
+    });
 });

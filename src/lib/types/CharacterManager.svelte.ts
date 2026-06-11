@@ -74,6 +74,25 @@ export class CharacterManager {
         this.editingCharacter = null;
     };
 
+    removeCharacter = (character: Character) => {
+        const characterIndex = this.characters.indexOf(character);
+
+        if (characterIndex >= 0) {
+            this.characters.splice(
+                characterIndex,
+                1,
+            );
+        }
+
+        if (this.selectedCharacter === character) {
+            this.selectedCharacter = null;
+        }
+
+        if (this.editingCharacter === character) {
+            this.editingCharacter = null;
+        }
+    };
+
     setBaselineEditMode = (baselineEditMode: BaselineEditMode) => {
         this.baselineEditMode = baselineEditMode;
     };
