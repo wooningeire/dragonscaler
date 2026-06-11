@@ -8,6 +8,7 @@ export class CharacterImage {
     readonly file: File;
     readonly dimensions: Dimensions;
     readonly hasObjectUrl: boolean;
+    readonly flippedHorizontally: boolean;
     
     get aspect() {
         return this.dimensions.width / this.dimensions.height;
@@ -18,16 +19,19 @@ export class CharacterImage {
         file,
         dimensions,
         hasObjectUrl = false,
+        flippedHorizontally = false,
     }: {
         src: string,
         file: File,
         dimensions: Dimensions,
         hasObjectUrl?: boolean,
+        flippedHorizontally?: boolean,
     }) {
         this.src = src;
         this.file = file;
         this.dimensions = dimensions;
         this.hasObjectUrl = hasObjectUrl;
+        this.flippedHorizontally = flippedHorizontally;
     }
 
     static fromFile(file: File) {
@@ -50,7 +54,15 @@ export class CharacterImage {
         });
     }
 
-    static fromUrl(url: string, filename: string) {
+    static fromUrl(
+        url: string,
+        filename: string,
+        {
+            flippedHorizontally = false,
+        }: {
+            flippedHorizontally?: boolean,
+        } = {},
+    ) {
         return new Promise<CharacterImage>(async resolve => {
             const response = await fetch(url);
             const blob = await response.blob();
@@ -66,9 +78,20 @@ export class CharacterImage {
                         height: img.height,
                     },
                     hasObjectUrl: false,
+                    flippedHorizontally,
                 }));
             });
             img.src = url;
+        });
+    }
+
+    withFlippedHorizontally(flippedHorizontally: boolean) {
+        return new CharacterImage({
+            src: this.src,
+            file: this.file,
+            dimensions: this.dimensions,
+            hasObjectUrl: this.hasObjectUrl,
+            flippedHorizontally,
         });
     }
 }

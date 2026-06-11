@@ -264,6 +264,7 @@ export class WebGpuViewportRenderer {
                 item.image === null
                     ? withOpacity(PLACEHOLDER_COLOR, item.opacity)
                     : withOpacity(IMAGE_TINT, item.opacity),
+                item.flippedHorizontally,
             );
         }
 

@@ -14,6 +14,7 @@ export type RectPx = {
 export type CharacterRenderItem = {
     character: Character,
     image: CharacterImage | null,
+    flippedHorizontally: boolean,
     name: string,
     owners: IdentitySummary[],
     rectPx: RectPx,
@@ -95,6 +96,7 @@ export const buildCharacterRenderFrame = ({
         return {
             character,
             image: character.image,
+            flippedHorizontally: character.image?.flippedHorizontally ?? false,
             name: character.name,
             owners: character.ownerIdentities,
             rectPx: {

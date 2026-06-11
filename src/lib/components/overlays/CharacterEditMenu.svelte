@@ -33,6 +33,30 @@ const loadFile = async () => {
     loading = false;
 };
 
+const mirrorReferenceGeometry = (character: Character) => {
+    const image = character.image;
+    if (image === null) return;
+
+    character.anchor = {
+        ...character.anchor,
+        x: 1 - character.anchor.x,
+    };
+    character.baseline.points = character.baseline.points.map(point => ({
+        x: image.aspect - point.x,
+        y: point.y,
+    }));
+};
+
+const flipImage = () => {
+    if (characterBeingEdited === null) return;
+
+    const image = characterBeingEdited.image;
+    if (image === null) return;
+
+    mirrorReferenceGeometry(characterBeingEdited);
+    characterBeingEdited.image = image.withFlippedHorizontally(!image.flippedHorizontally);
+};
+
 const submit = async () => {
     if (characterBeingEdited === null) return;
 
@@ -123,9 +147,20 @@ const canLeave = $derived(!saving && !deleting);
                     <img
                         src={characterBeingEdited.image.src}
                         alt={characterBeingEdited.name}
+                        class:flipped-horizontally={characterBeingEdited.image.flippedHorizontally}
                     />
                 {/if}
             </Button>
+
+            <div class="image-tools">
+                <Button
+                    onclick={flipImage}
+                    disabled={characterBeingEdited.image === null || loading || saving || deleting}
+                    aria-pressed={characterBeingEdited.image?.flippedHorizontally ?? false}
+                >
+                    Flip
+                </Button>
+            </div>
 
 
             <input
@@ -215,21 +250,34 @@ const canLeave = $derived(!saving && !deleting);
 {/if}
 
 <style lang="scss">
-$image-size: 12rem;
+$image-size: clamp(7rem, 18vw, 12rem);
 
 character-edit-menu {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: $image-size minmax(16rem, 1fr) max-content;
     gap: 1rem;
     align-items: center;
+    width: min(72rem, calc(100% - 2rem));
     max-width: min(72rem, 100%);
+}
+
+.character-image-container {
+    display: grid;
+    gap: 0.5rem;
+    width: $image-size;
+}
+
+.image-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
 }
 
 .character-form-inputs {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    min-width: 20rem;
+    min-width: 0;
 }
 
 .baseline-editor {
@@ -282,6 +330,12 @@ character-edit-menu {
 
 img {
     object-fit: contain;
+
+    transition: transform 0.16s ease;
+
+    &.flipped-horizontally {
+        transform: scaleX(-1);
+    }
 }
 
 input[type="file"] {
@@ -293,5 +347,24 @@ input[type="file"] {
     flex-direction: column;
     align-items: stretch;
     gap: 0.5em;
+}
+
+@media (max-width: 48rem) {
+    character-edit-menu {
+        grid-template-columns: $image-size minmax(0, 1fr);
+        align-items: start;
+        gap: 0.75rem;
+    }
+
+    .buttons {
+        grid-column: 1 / -1;
+
+        flex-direction: row;
+        flex-wrap: wrap;
+
+        > :global(*) {
+            flex: 1 1 5rem;
+        }
+    }
 }
 </style>

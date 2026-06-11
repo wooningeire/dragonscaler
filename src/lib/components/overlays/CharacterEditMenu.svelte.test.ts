@@ -10,7 +10,7 @@ const makeImage = () => new CharacterImage({
     src: "data:image/png;base64,",
     file: new File([""], "character.png", {type: "image/png"}),
     dimensions: {
-        width: 1,
+        width: 2,
         height: 1,
     },
 });
@@ -62,6 +62,35 @@ describe("CharacterEditMenu", () => {
 
         expect(store.characterManager.baselineEditMode).toBe("line");
         expect(screen.getByRole("button", {name: "Line"})).toHaveAttribute("aria-pressed", "true");
+    });
+
+    test("flips the image and mirrors existing reference geometry", async () => {
+        const character = makeCharacter();
+        character.anchor = {
+            x: 0.25,
+            y: 0.1,
+        };
+        character.baseline.points = [
+            {x: 0.25, y: 0.1},
+            {x: 1.5, y: 0.9},
+        ];
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+
+        render(CharacterEditMenu);
+
+        await fireEvent.click(screen.getByRole("button", {name: "Flip"}));
+
+        expect(character.image?.flippedHorizontally).toBe(true);
+        expect(character.anchor).toEqual({
+            x: 0.75,
+            y: 0.1,
+        });
+        expect(character.baseline.points).toEqual([
+            {x: 1.75, y: 0.1},
+            {x: 0.5, y: 0.9},
+        ]);
+        expect(screen.getByRole("button", {name: "Flip"})).toHaveAttribute("aria-pressed", "true");
     });
 
     test("deletes an uploaded character from the database and local manager", async () => {

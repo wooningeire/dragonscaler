@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { Character } from "$lib/types/Character.svelte";
 import { Baseline } from "$lib/types/Baseline.svelte";
+import { CharacterImage } from "$lib/types/CharacterImage.svelte";
 import { buildCharacterRenderFrame } from "./characterRenderModel";
 import {
     characterLabelPanelRectPx,
@@ -23,6 +24,16 @@ const makeCharacter = (name: string, heightMeters: number) => new Character({
         x: 0.5,
         y: 0,
     },
+});
+
+const makeImage = (flippedHorizontally = false) => new CharacterImage({
+    src: "test.png",
+    file: new File([""], "test.png"),
+    dimensions: {
+        width: 1,
+        height: 1,
+    },
+    flippedHorizontally,
 });
 
 describe("buildCharacterRenderFrame", () => {
@@ -240,5 +251,29 @@ describe("buildCharacterRenderFrame", () => {
         });
 
         expect(frame.items[0].baselinePoints).toBe(previewPoints);
+    });
+
+    test("passes image flip state to render items", () => {
+        const character = makeCharacter("Flipped", 1);
+        character.image = makeImage(true);
+
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+        });
+
+        expect(frame.items[0].flippedHorizontally).toBe(true);
     });
 });

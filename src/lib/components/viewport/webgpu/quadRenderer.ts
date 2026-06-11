@@ -32,12 +32,14 @@ export class WebGpuQuadRenderer {
         rectPx: RectPx,
         texture: TextureResource,
         tint: ColorRgba,
+        flipX = false,
     ) {
         const uniform = this.writeQuadUniform(
             quadIndex,
             frame,
             rectPx,
             tint,
+            flipX,
         );
 
         pass.setPipeline(this.pipeline);
@@ -52,6 +54,7 @@ export class WebGpuQuadRenderer {
         frame: CharacterRenderFrame,
         rectPx: RectPx,
         tint: ColorRgba,
+        flipX: boolean,
     ) {
         const uniform = this.getQuadUniform(index);
         const data = new Float32Array(QUAD_UNIFORM_FLOAT_COUNT);
@@ -65,6 +68,10 @@ export class WebGpuQuadRenderer {
         data[9] = tint[1];
         data[10] = tint[2];
         data[11] = tint[3];
+        data[12] = flipX ? -1 : 1;
+        data[13] = 1;
+        data[14] = flipX ? 1 : 0;
+        data[15] = 0;
 
         this.device.queue.writeBuffer(
             uniform.buffer,

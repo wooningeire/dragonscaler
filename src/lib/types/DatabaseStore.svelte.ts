@@ -142,7 +142,13 @@ export class DatabaseStore {
                 characterPromises.push((async () => {
                     const characterImageUrl = getPocketbaseFileUrl(imageSource);
 
-                    CharacterImage.fromUrl(characterImageUrl, imageSource.filename)
+                    CharacterImage.fromUrl(
+                        characterImageUrl,
+                        imageSource.filename,
+                        {
+                            flippedHorizontally: referenceImage?.flipped_horizontally ?? false,
+                        },
+                    )
                         .then(image => character.image = image)
                         .catch(error => console.error(error));
 
@@ -695,6 +701,7 @@ export class DatabaseStore {
             anchor_point: character.anchor,
             baseline_points: character.baseline.points,
             baseline_descriptor: character.baseline.descriptor,
+            flipped_horizontally: character.image.flippedHorizontally,
         };
         const referenceImageCreateData = {
             ...referenceImageData,

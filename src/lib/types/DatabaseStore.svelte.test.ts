@@ -356,6 +356,21 @@ describe("DatabaseStore write idempotency", () => {
         expect(fakePocketBase.collection(Collections.CharacterForms).createCalls).toHaveLength(1);
     });
 
+    test("persists reference image flip metadata", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+        character.image = character.image?.withFlippedHorizontally(true) ?? null;
+
+        await databaseStore.createCharacter(character);
+
+        expect(fakePocketBase.collection(Collections.ReferenceImages).createCalls[0]).toEqual(
+            expect.objectContaining({
+                flipped_horizontally: true,
+            }),
+        );
+    });
+
     test("retries partial creates against the same record ids", async () => {
         const databaseStore = new DatabaseStore();
         const fakePocketBase = installFakePocketBase(databaseStore);

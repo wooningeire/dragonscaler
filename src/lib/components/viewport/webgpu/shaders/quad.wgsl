@@ -3,6 +3,7 @@ struct QuadParams {
     _padding0: vec2f,
     rectPx: vec4f,
     tint: vec4f,
+    uvTransform: vec4f,
 };
 
 struct VertexOutput {
@@ -35,7 +36,7 @@ fn vertex(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
 
     var output: VertexOutput;
     output.position = vec4f(clipPosition, 0, 1);
-    output.uv = uv;
+    output.uv = uv * params.uvTransform.xy + params.uvTransform.zw;
     output.tint = params.tint;
     return output;
 }

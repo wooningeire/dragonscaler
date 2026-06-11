@@ -1,7 +1,7 @@
 import type { ColorRgba } from "./types";
 
 export const QUAD_VERTEX_COUNT = 6;
-export const QUAD_UNIFORM_FLOAT_COUNT = 12;
+export const QUAD_UNIFORM_FLOAT_COUNT = 16;
 export const QUAD_UNIFORM_BYTE_COUNT = QUAD_UNIFORM_FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT;
 
 export const LINE_VERTEX_FLOAT_COUNT = 6;
