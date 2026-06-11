@@ -4,7 +4,7 @@ import { store } from "$lib/types/Store.svelte";
 </script>
 
 <character-carousel>
-    {#each store.characterManager.characters as character}
+    {#each store.characterManager.displayCharacters as character (character)}
         <CharacterCard {character} />
     {/each}
 </character-carousel>

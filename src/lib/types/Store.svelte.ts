@@ -89,7 +89,7 @@ export class Store {
 
     centeredCameraPosition(index: number) {
         return centeredCameraPositionForCharacter({
-            character: this.characterManager.characters[index],
+            character: this.characterManager.displayCharacters[index],
             positionX: this.characterManager.positionsX[index],
             viewportDimsPx: this.camera.viewportDimsPx,
             viewportInsetsPx: this.camera.viewportInsetsPx,

@@ -7,6 +7,8 @@ const COLLECTIONS = {
     referenceImages: "ds_ref_images",
 };
 
+const characterFormOwnerRules = "character_id.owner_identity_ids.account_ids.id = @request.auth.id";
+
 const numberField = (
     id,
     name,
@@ -263,6 +265,11 @@ migrate((app) => {
     app.save(referenceImages);
 
     const characterForms = app.findCollectionByNameOrId(COLLECTIONS.characterForms);
+    unmarshal({
+        createRule: characterFormOwnerRules,
+        deleteRule: characterFormOwnerRules,
+        updateRule: characterFormOwnerRules,
+    }, characterForms);
     characterForms.fields.add(numberField(
         "form_length_meters",
         "length_meters",

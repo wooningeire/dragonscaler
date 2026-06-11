@@ -28,6 +28,11 @@ export const computeCharacterPositionsX = (
     return positions;
 };
 
+export const compareCharactersByScale = (
+    a: Character,
+    b: Character,
+) => a.baseline.scaleFac - b.baseline.scaleFac;
+
 export class CharacterManager {
     characters = $state<Character[]>([]);
     selectedCharacter = $state<Character | null>(null);
@@ -37,17 +42,15 @@ export class CharacterManager {
     // 0 spacing: left-aligned by image left edge; 1 spacing: one after another.
     spacingFac = $state(0);
 
+    displayCharacters = $derived.by(() => this.characters.toSorted(compareCharactersByScale));
+
     positionsX = $derived.by(() => computeCharacterPositionsX(
-        this.characters,
+        this.displayCharacters,
         this.spacingFac,
     ));
     
     constructor() {
         $effect.root(() => {
-            $effect(() => {
-                this.characters.sort((a, b) => a.baseline.scaleFac - b.baseline.scaleFac);
-            });
-
             $effect(() => {
                 writeBaselineEditMode(this.baselineEditMode);
             });

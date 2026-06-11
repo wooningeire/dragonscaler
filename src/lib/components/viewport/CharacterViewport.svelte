@@ -62,6 +62,7 @@ const baselinePreview: BaselinePreview = $derived.by(() => {
         ),
     };
 });
+const displayCharacters = $derived(store.characterManager.displayCharacters);
 
 $effect(() => {
     viewportWidth;
@@ -79,7 +80,7 @@ $effect(() => {
 });
 
 const renderFrame = $derived(buildCharacterRenderFrame({
-    characters: store.characterManager.characters,
+    characters: displayCharacters,
     positionsX: store.characterManager.positionsX,
     camera: {
         posMetersX: store.camera.posMetersX,
@@ -108,7 +109,7 @@ $effect(() => {
     const selected = store.characterManager.selectedCharacter;
     if (selected === null) return;
 
-    const index = store.characterManager.characters.indexOf(selected);
+    const index = displayCharacters.indexOf(selected);
     if (index === -1) return;
 
     const positionX = store.characterManager.positionsX[index];
