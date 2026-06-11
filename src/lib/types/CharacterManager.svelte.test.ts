@@ -23,7 +23,7 @@ const makeCharacter = (
 
 
 describe("computeCharacterPositionsX", () => {
-    test("spaces left edges without reading character anchor points", () => {
+    test("spaces right edges without reading character anchor points", () => {
         const characters = [
             {
                 viewportWidth: 2,
@@ -47,21 +47,43 @@ describe("computeCharacterPositionsX", () => {
                 },
             },
         ];
+        const rightEdgesForSpacing = (spacingFac: number) => computeCharacterPositionsX(
+            characters,
+            spacingFac,
+        ).map((
+            positionX,
+            index,
+        ) => positionX + characters[index].viewportWidth);
 
         expect(computeCharacterPositionsX(characters, 0)).toEqual([
+            -2,
+            -1,
+            -3,
+        ]);
+        expect(rightEdgesForSpacing(0)).toEqual([
             0,
             0,
             0,
         ]);
         expect(computeCharacterPositionsX(characters, 1)).toEqual([
-            0,
-            2,
-            3,
-        ]);
-        expect(computeCharacterPositionsX(characters, 0.5)).toEqual([
+            -2,
             0,
             1,
-            1.5,
+        ]);
+        expect(rightEdgesForSpacing(1)).toEqual([
+            0,
+            1,
+            4,
+        ]);
+        expect(computeCharacterPositionsX(characters, 0.5)).toEqual([
+            -2,
+            -0.5,
+            -1,
+        ]);
+        expect(rightEdgesForSpacing(0.5)).toEqual([
+            0,
+            0.5,
+            2,
         ]);
 
         characters[0].anchor.x = 1;
@@ -69,9 +91,9 @@ describe("computeCharacterPositionsX", () => {
         characters[2].anchor.x = 0.25;
 
         expect(computeCharacterPositionsX(characters, 0.5)).toEqual([
-            0,
-            1,
-            1.5,
+            -2,
+            -0.5,
+            -1,
         ]);
     });
 
@@ -108,9 +130,9 @@ describe("computeCharacterPositionsX", () => {
             tall,
         ]);
         expect(manager.positionsX).toEqual([
+            -1,
             0,
-            1,
-            3,
+            2,
         ]);
     });
 

@@ -126,7 +126,7 @@ describe("CharacterViewport", () => {
 
         render(CharacterViewport);
 
-        await waitFor(() => expect(setPosMetersXWithEase).toHaveBeenCalledWith(1));
+        await waitFor(() => expect(setPosMetersXWithEase).toHaveBeenCalledWith(-1));
         setPosMetersXWithEase.mockClear();
 
         character.image = makeImage(
@@ -135,6 +135,6 @@ describe("CharacterViewport", () => {
         );
         await tick();
 
-        await waitFor(() => expect(setPosMetersXWithEase).toHaveBeenCalledWith(2));
+        await waitFor(() => expect(setPosMetersXWithEase).toHaveBeenCalledWith(-2));
     });
 });

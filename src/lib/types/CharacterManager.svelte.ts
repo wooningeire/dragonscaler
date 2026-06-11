@@ -17,12 +17,17 @@ export const computeCharacterPositionsX = (
     spacingFac: number,
 ) => {
     const positions: number[] = [];
-    let currentStackedX = 0;
+    let currentRightEdgeX = 0;
 
-    for (const character of characters) {
-        positions.push(currentStackedX * spacingFac);
+    for (const [
+        index,
+        character,
+    ] of characters.entries()) {
+        if (index > 0) {
+            currentRightEdgeX += character.viewportWidth * spacingFac;
+        }
 
-        currentStackedX += character.viewportWidth;
+        positions.push(currentRightEdgeX - character.viewportWidth);
     }
 
     return positions;
@@ -39,7 +44,7 @@ export class CharacterManager {
     editingCharacter = $state<Character | null>(null);
     baselineEditMode: BaselineEditMode = $state(readBaselineEditMode());
 
-    // 0 spacing: left-aligned by image left edge; 1 spacing: one after another.
+    // 0 spacing: right-aligned by image right edge; 1 spacing: one after another.
     spacingFac = $state(0);
 
     displayCharacters = $derived.by(() => this.characters.toSorted(compareCharactersByScale));
