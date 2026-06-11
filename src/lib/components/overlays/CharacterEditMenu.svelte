@@ -8,10 +8,12 @@ import { untrack } from "svelte";
 import { baselineEditModes } from "$lib/util/baselineGeometry";
 import {
     formatMeasurementValue,
+    isMeasurementUnit,
     measurementUnits,
     measurementUnitToMeters,
 } from "$lib/util/measurementUnits";
 import Separator from "../generic/Separator.svelte";
+import RadioGroup from "$lib/components/generic/RadioGroup.svelte";
 
 const characterBeingEdited = $derived(store.characterManager.editingCharacter);
 const targetLengthText = $derived(
@@ -80,6 +82,12 @@ const setTargetLength = (value: string) => {
         parsedValue,
         characterBeingEdited.baseline.measurementUnit,
     );
+};
+
+const setMeasurementUnit = (value: string) => {
+    if (characterBeingEdited === null || !isMeasurementUnit(value)) return;
+
+    characterBeingEdited.baseline.measurementUnit = value;
 };
 
 const submit = async () => {
@@ -220,22 +228,14 @@ const canLeave = $derived(!saving && !deleting);
 
                     <div
                         class="measurement-unit-control"
-                        role="radiogroup"
-                        aria-label="Measurement unit"
                     >
-                        {#each measurementUnits as unit}
-                            <label class:active={characterBeingEdited.baseline.measurementUnit === unit.id}>
-                                <input
-                                    type="radio"
-                                    name="reference-measurement-unit"
-                                    value={unit.id}
-                                    checked={characterBeingEdited.baseline.measurementUnit === unit.id}
-                                    onchange={() => characterBeingEdited.baseline.measurementUnit = unit.id}
-                                />
-
-                                <span>{unit.label}</span>
-                            </label>
-                        {/each}
+                        <RadioGroup
+                            ariaLabel="Measurement unit"
+                            name="reference-measurement-unit"
+                            options={measurementUnits}
+                            value={characterBeingEdited.baseline.measurementUnit}
+                            onValueChange={setMeasurementUnit}
+                        />
                     </div>
 
                     <label class="reference-label-input">
@@ -365,49 +365,7 @@ character-edit-menu {
 
 .measurement-unit-control {
     display: grid;
-    grid-template-columns: repeat(2, minmax(2.25rem, 1fr));
-    gap: 0.125rem;
-    padding: 0.125rem;
-
-    border-radius: 0.5rem;
-    background: oklch(0.98 0.02 135 / 0.8);
-
-    label {
-        display: grid;
-        grid-template-areas: "control";
-        min-width: 0;
-
-        cursor: pointer;
-        user-select: none;
-
-        input,
-        span {
-            grid-area: control;
-        }
-
-        input {
-            width: 100%;
-            height: 100%;
-
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        span {
-            display: grid;
-            place-items: center;
-            padding: 0.375rem 0.5rem;
-            min-width: 0;
-
-            border-radius: 0.375rem;
-            color: oklch(0.28 0.06 145);
-        }
-
-        &.active span {
-            background: oklch(0.86 0.08 145 / 0.9);
-            box-shadow: 0 0.125rem 0.5rem oklch(0.45 0.08 145 / 0.2);
-        }
-    }
+    min-width: 0;
 }
 
 .baseline-mode-control {
