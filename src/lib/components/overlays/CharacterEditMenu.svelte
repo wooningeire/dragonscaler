@@ -6,9 +6,22 @@ import Button from "../generic/Button.svelte";
 import { store } from "$lib/types/Store.svelte";
 import { untrack } from "svelte";
 import { baselineEditModes } from "$lib/util/baselineGeometry";
+import {
+    formatMeasurementValue,
+    measurementUnits,
+    measurementUnitToMeters,
+} from "$lib/util/measurementUnits";
 import Separator from "../generic/Separator.svelte";
 
 const characterBeingEdited = $derived(store.characterManager.editingCharacter);
+const targetLengthText = $derived(
+    characterBeingEdited === null
+        ? ""
+        : formatMeasurementValue(
+            characterBeingEdited.baseline.targetLength,
+            characterBeingEdited.baseline.measurementUnit,
+        ),
+);
 
 let fileInput: HTMLInputElement = $state()!;
 
@@ -55,6 +68,18 @@ const flipImage = () => {
 
     mirrorReferenceGeometry(characterBeingEdited);
     characterBeingEdited.image = image.withFlippedHorizontally(!image.flippedHorizontally);
+};
+
+const setTargetLength = (value: string) => {
+    if (characterBeingEdited === null) return;
+
+    const parsedValue = Number(value);
+    if (!Number.isFinite(parsedValue)) return;
+
+    characterBeingEdited.baseline.targetLength = measurementUnitToMeters(
+        parsedValue,
+        characterBeingEdited.baseline.measurementUnit,
+    );
 };
 
 const submit = async () => {
@@ -182,7 +207,47 @@ const canLeave = $derived(!saving && !deleting);
             </label>
 
             <div class="baseline-editor">
-                <span>Baseline</span>
+                <div class="reference-measurement-row">
+                    <label class="reference-measurement-input">
+                        <span>Reference curve</span>
+
+                        <TextEntry
+                            value={targetLengthText}
+                            onValueChange={setTargetLength}
+                            placeholderText="Length"
+                        />
+                    </label>
+
+                    <div
+                        class="measurement-unit-control"
+                        role="radiogroup"
+                        aria-label="Measurement unit"
+                    >
+                        {#each measurementUnits as unit}
+                            <label class:active={characterBeingEdited.baseline.measurementUnit === unit.id}>
+                                <input
+                                    type="radio"
+                                    name="reference-measurement-unit"
+                                    value={unit.id}
+                                    checked={characterBeingEdited.baseline.measurementUnit === unit.id}
+                                    onchange={() => characterBeingEdited.baseline.measurementUnit = unit.id}
+                                />
+
+                                <span>{unit.label}</span>
+                            </label>
+                        {/each}
+                    </div>
+
+                    <label class="reference-label-input">
+                        <span class="visually-hidden">Reference curve label</span>
+
+                        <TextEntry
+                            value={characterBeingEdited.baseline.descriptor}
+                            onValueChange={value => characterBeingEdited.baseline.descriptor = value}
+                            placeholderText="to the shoulder"
+                        />
+                    </label>
+                </div>
 
                 <div
                     class="baseline-mode-control"
@@ -200,18 +265,6 @@ const canLeave = $derived(!saving && !deleting);
                         </button>
                     {/each}
                 </div>
-
-                <TextEntry
-                    value={characterBeingEdited.baseline.targetLength.toString()}
-                    onValueChange={value => characterBeingEdited.baseline.targetLength = Number(value)}
-                    placeholderText="Target length"
-                />
-
-                <TextEntry
-                    value={characterBeingEdited.baseline.descriptor}
-                    onValueChange={value => characterBeingEdited.baseline.descriptor = value}
-                    placeholderText="to the shoulder"
-                />
             </div>
         </div>
 
@@ -285,6 +338,78 @@ character-edit-menu {
     gap: 0.5rem;
 }
 
+.reference-measurement-row {
+    display: grid;
+    grid-template-columns: minmax(13rem, max-content) max-content minmax(10rem, 1fr);
+    gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
+}
+
+.reference-measurement-input {
+    display: grid;
+    grid-template-columns: max-content minmax(5.5rem, 7rem);
+    gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
+
+    > span {
+        white-space: nowrap;
+    }
+}
+
+.reference-label-input {
+    display: grid;
+    min-width: 0;
+}
+
+.measurement-unit-control {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(2.25rem, 1fr));
+    gap: 0.125rem;
+    padding: 0.125rem;
+
+    border-radius: 0.5rem;
+    background: oklch(0.98 0.02 135 / 0.8);
+
+    label {
+        display: grid;
+        grid-template-areas: "control";
+        min-width: 0;
+
+        cursor: pointer;
+        user-select: none;
+
+        input,
+        span {
+            grid-area: control;
+        }
+
+        input {
+            width: 100%;
+            height: 100%;
+
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        span {
+            display: grid;
+            place-items: center;
+            padding: 0.375rem 0.5rem;
+            min-width: 0;
+
+            border-radius: 0.375rem;
+            color: oklch(0.28 0.06 145);
+        }
+
+        &.active span {
+            background: oklch(0.86 0.08 145 / 0.9);
+            box-shadow: 0 0.125rem 0.5rem oklch(0.45 0.08 145 / 0.2);
+        }
+    }
+}
+
 .baseline-mode-control {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -312,6 +437,15 @@ character-edit-menu {
             box-shadow: 0 0.125rem 0.5rem oklch(0.45 0.08 145 / 0.2);
         }
     }
+}
+
+.visually-hidden {
+    position: fixed;
+    width: 0.0625rem;
+    height: 0.0625rem;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 :global(.character-image) {
@@ -365,6 +499,26 @@ input[type="file"] {
         > :global(*) {
             flex: 1 1 5rem;
         }
+    }
+
+    .reference-measurement-row {
+        grid-template-columns: minmax(0, 1fr) max-content;
+    }
+
+    .reference-measurement-input {
+        grid-column: 1 / 2;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.25rem;
+    }
+
+    .measurement-unit-control {
+        grid-column: 2 / 3;
+        align-self: end;
+    }
+
+    .reference-label-input {
+        grid-column: 1 / -1;
+        min-width: 0;
     }
 }
 </style>

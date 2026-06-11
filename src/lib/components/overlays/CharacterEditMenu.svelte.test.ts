@@ -64,6 +64,25 @@ describe("CharacterEditMenu", () => {
         expect(screen.getByRole("button", {name: "Line"})).toHaveAttribute("aria-pressed", "true");
     });
 
+    test("switches the reference measurement display between meters and feet", async () => {
+        const character = makeCharacter();
+        character.baseline.targetLength = 1;
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+
+        render(CharacterEditMenu);
+
+        expect(screen.getByText("Reference curve")).toBeVisible();
+        expect(screen.getByRole("radiogroup", {name: "Measurement unit"})).toBeVisible();
+        expect(screen.getByRole("radio", {name: "m"})).toBeChecked();
+
+        await fireEvent.click(screen.getByRole("radio", {name: "ft"}));
+
+        expect(character.baseline.measurementUnit).toBe("ft");
+        expect(screen.getByRole("radio", {name: "ft"})).toBeChecked();
+        expect(screen.getByText("3.281")).toBeVisible();
+    });
+
     test("flips the image and mirrors existing reference geometry", async () => {
         const character = makeCharacter();
         character.anchor = {

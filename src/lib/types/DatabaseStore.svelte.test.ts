@@ -371,6 +371,22 @@ describe("DatabaseStore write idempotency", () => {
         );
     });
 
+    test("persists the selected reference measurement unit on the form", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+        character.baseline.measurementUnit = "ft";
+
+        await databaseStore.createCharacter(character);
+
+        expect(fakePocketBase.collection(Collections.CharacterForms).createCalls[0]).toEqual(
+            expect.objectContaining({
+                length_meters: 4,
+                length_unit: "ft",
+            }),
+        );
+    });
+
     test("retries partial creates against the same record ids", async () => {
         const databaseStore = new DatabaseStore();
         const fakePocketBase = installFakePocketBase(databaseStore);
@@ -487,6 +503,63 @@ describe("DatabaseStore write idempotency", () => {
             referenceImageIds: [],
             uploaded: false,
         });
+    });
+});
+
+describe("DatabaseStore character loading", () => {
+    test("loads the persisted reference measurement unit from the form", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        fakePocketBase.collection(Collections.Characters).records.set(
+            "character-1",
+            {
+                ...commonRecord("character-1"),
+                name: "Scale Wing",
+            } satisfies CharacterRecord,
+        );
+        fakePocketBase.collection(Collections.CharacterForms).records.set(
+            "form-1",
+            {
+                ...commonRecord("form-1"),
+                character_id: "character-1",
+                is_default: true,
+                length_meters: 2,
+                length_unit: "ft",
+                reference_image_ids: [],
+            } satisfies CharacterFormRecord,
+        );
+
+        const characters = await databaseStore.loadCharacterData();
+
+        expect(characters).toHaveLength(1);
+        expect(characters[0].baseline.targetLength).toBe(2);
+        expect(characters[0].baseline.measurementUnit).toBe("ft");
+    });
+
+    test("defaults old form records without units to meters", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        fakePocketBase.collection(Collections.Characters).records.set(
+            "character-1",
+            {
+                ...commonRecord("character-1"),
+                name: "Scale Wing",
+            } satisfies CharacterRecord,
+        );
+        fakePocketBase.collection(Collections.CharacterForms).records.set(
+            "form-1",
+            {
+                ...commonRecord("form-1"),
+                character_id: "character-1",
+                is_default: true,
+                length_meters: 2,
+                reference_image_ids: [],
+            } satisfies CharacterFormRecord,
+        );
+
+        const characters = await databaseStore.loadCharacterData();
+
+        expect(characters[0].baseline.measurementUnit).toBe("m");
     });
 });
 

@@ -155,6 +155,27 @@ const numberField = (
 });
 
 
+const selectField = (
+    id,
+    name,
+    values,
+    {
+        required = false,
+    } = {},
+) => ({
+    help: "",
+    hidden: false,
+    id,
+    maxSelect: 1,
+    name,
+    presentable: false,
+    required,
+    system: false,
+    type: "select",
+    values,
+});
+
+
 const relationField = (
     id,
     name,
@@ -502,6 +523,17 @@ const characterFormsCollection = () => baseCollection({
         numberField(
             "form_length_meters",
             "length_meters",
+            {
+                required: true,
+            },
+        ),
+        selectField(
+            "form_length_unit",
+            "length_unit",
+            [
+                "m",
+                "ft",
+            ],
             {
                 required: true,
             },

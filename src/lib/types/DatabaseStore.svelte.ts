@@ -124,6 +124,7 @@ export class DatabaseStore {
                     points: referenceImage?.baseline_points ?? legacyBaseline?.points,
                     descriptor: referenceImage?.baseline_descriptor ?? legacyBaseline?.descriptor,
                     targetLength: form?.length_meters ?? legacyBaseline?.length_meters,
+                    measurementUnit: form?.length_unit,
                 }),
                 ownerIdentities,
                 sonaIdentities,
@@ -689,6 +690,7 @@ export class DatabaseStore {
             name: "Default",
             is_default: true,
             length_meters: character.baseline.targetLength,
+            length_unit: character.baseline.measurementUnit,
             reference_image_ids: [referenceImageId],
         };
     }

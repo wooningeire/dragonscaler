@@ -1,4 +1,5 @@
 import type { Point } from "./Point";
+import type { MeasurementUnit } from "$lib/util/measurementUnits";
 
 export enum Collections {
     Accounts = "users",
@@ -44,6 +45,7 @@ export type CharacterFormRecord = {
     name?: string,
     is_default?: boolean,
     length_meters?: number,
+    length_unit?: MeasurementUnit,
     /** @deprecated Use ReferenceImageRecord.anchor_point. */
     center_point?: Point,
     reference_image_ids?: string[],

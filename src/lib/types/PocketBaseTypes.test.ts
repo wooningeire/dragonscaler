@@ -29,6 +29,7 @@ describe("PocketBase data model types", () => {
             character_id: "character-1",
             reference_image_ids: ["reference-1", "reference-2"],
             length_meters: 2,
+            length_unit: "ft",
         } satisfies Partial<CharacterFormRecord>;
         const referenceImage = {
             anchor_point: {
@@ -47,6 +48,7 @@ describe("PocketBase data model types", () => {
         expect(character.sona_identity_ids).toEqual(["identity-2"]);
         expect(form.reference_image_ids).toHaveLength(2);
         expect(form.length_meters).toBe(2);
+        expect(form.length_unit).toBe("ft");
         expect(referenceImage.anchor_point?.y).toBe(0);
         expect(referenceImage.baseline_points).toHaveLength(2);
         expect(referenceImage.baseline_descriptor).toBe("to the shoulder");
