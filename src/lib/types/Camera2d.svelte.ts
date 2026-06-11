@@ -2,7 +2,7 @@ import { quadInOut, sineInOut } from "svelte/easing";
 import { Tween } from "svelte/motion";
 
 
-const DURATION = 1_500;
+const DURATION = 500;
 const SCALE_EXP = 8;
 const SCALE_EXP_LOG = Math.log2(SCALE_EXP);
 

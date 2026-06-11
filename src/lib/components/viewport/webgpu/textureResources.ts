@@ -9,11 +9,19 @@ import type {
     TextureResource,
 } from "./types";
 
+type TextureCacheEntry = {
+    promise: Promise<TextureResource>,
+};
+
+const TEXT_TEXTURE_CACHE_LIMIT = 256;
+
 export class WebGpuTextureResources {
-    private readonly imageTextureCache = new WeakMap<CharacterImage, Promise<TextureResource>>();
-    private readonly textTextureCache = new Map<string, Promise<TextureResource>>();
+    private imageTextureCache = new WeakMap<CharacterImage, Promise<TextureResource>>();
+    private readonly textTextureCache = new Map<string, TextureCacheEntry>();
     private readonly avatarBitmapCache = new Map<string, Promise<ImageBitmap | null>>();
+    private readonly textures = new Set<GPUTexture>();
     private readonly placeholderTexture: TextureResource;
+    private destroyed = false;
 
     constructor(
         private readonly device: GPUDevice,
@@ -25,22 +33,38 @@ export class WebGpuTextureResources {
     }
 
     destroy() {
-        this.placeholderTexture.texture.destroy();
+        if (this.destroyed) return;
+
+        this.destroyed = true;
+        this.imageTextureCache = new WeakMap();
+        this.textTextureCache.clear();
 
         for (const avatarBitmapPromise of this.avatarBitmapCache.values()) {
             void avatarBitmapPromise.then(bitmap => bitmap?.close());
         }
 
         this.avatarBitmapCache.clear();
+
+        for (const texture of this.textures) {
+            texture.destroy();
+        }
+
+        this.textures.clear();
     }
 
     async getCharacterTextureResource(image: CharacterImage | null) {
+        this.assertActive();
+
         if (image === null) return this.placeholderTexture;
 
         const cachedTexture = this.imageTextureCache.get(image);
         if (cachedTexture !== undefined) return cachedTexture;
 
         const texturePromise = this.createImageTextureResource(image).catch(() => {
+            if (this.destroyed) {
+                throw new Error("WebGPU texture resources have been destroyed");
+            }
+
             return this.placeholderTexture;
         });
         this.imageTextureCache.set(image, texturePromise);
@@ -48,6 +72,7 @@ export class WebGpuTextureResources {
     }
 
     getAvatarBitmap(avatarUrl: string | null) {
+        if (this.destroyed) return Promise.resolve(null);
         if (avatarUrl === null) return Promise.resolve(null);
 
         const cachedBitmap = this.avatarBitmapCache.get(avatarUrl);
@@ -60,6 +85,12 @@ export class WebGpuTextureResources {
                 return response.blob();
             })
             .then(blob => createImageBitmap(blob))
+            .then(bitmap => {
+                if (!this.destroyed) return bitmap;
+
+                bitmap.close();
+                return null;
+            })
             .catch(() => null);
 
         this.avatarBitmapCache.set(avatarUrl, bitmapPromise);
@@ -67,22 +98,41 @@ export class WebGpuTextureResources {
     }
 
     getTextTexture(spec: TextTextureSpec) {
-        const cachedTexture = this.textTextureCache.get(spec.cacheKey);
-        if (cachedTexture !== undefined) return cachedTexture;
+        this.assertActive();
 
-        const texturePromise = this.createTextTextureResource(spec);
-        this.textTextureCache.set(spec.cacheKey, texturePromise);
-        return texturePromise;
+        const cachedTexture = this.textTextureCache.get(spec.cacheKey);
+        if (cachedTexture !== undefined) {
+            this.textTextureCache.delete(spec.cacheKey);
+            this.textTextureCache.set(spec.cacheKey, cachedTexture);
+            return cachedTexture.promise;
+        }
+
+        const entry: TextureCacheEntry = {
+            promise: this.createTextTextureResource(spec),
+        };
+
+        this.textTextureCache.set(spec.cacheKey, entry);
+        this.evictStaleTextTextures();
+
+        return entry.promise;
     }
 
     private async createImageTextureResource(image: CharacterImage) {
+        this.assertActive();
+
         const bitmap = await createImageBitmap(image.file);
-        const texture = this.createTextureFromBitmap(bitmap);
-        bitmap.close();
-        return texture;
+
+        try {
+            this.assertActive();
+            return this.createTextureFromBitmap(bitmap);
+        } finally {
+            bitmap.close();
+        }
     }
 
     private async createTextTextureResource(spec: TextTextureSpec) {
+        this.assertActive();
+
         const canvas = document.createElement("canvas");
         const widthPx = Math.max(1, Math.ceil(spec.widthPx * this.pixelRatio));
         const heightPx = Math.max(1, Math.ceil(spec.heightPx * this.pixelRatio));
@@ -93,6 +143,7 @@ export class WebGpuTextureResources {
 
         context.scale(this.pixelRatio, this.pixelRatio);
         await spec.draw(context);
+        this.assertActive();
 
         return this.createTextureFromCanvas(
             canvas,
@@ -102,7 +153,9 @@ export class WebGpuTextureResources {
     }
 
     private createTextureFromBitmap(bitmap: ImageBitmap): TextureResource {
-        const texture = this.device.createTexture({
+        this.assertActive();
+
+        const texture = this.trackTexture(this.device.createTexture({
             size: {
                 width: bitmap.width,
                 height: bitmap.height,
@@ -112,7 +165,7 @@ export class WebGpuTextureResources {
                 GPU_TEXTURE_USAGE.textureBinding
                 | GPU_TEXTURE_USAGE.copyDst
                 | GPU_TEXTURE_USAGE.renderAttachment,
-        });
+        }));
 
         this.device.queue.copyExternalImageToTexture(
             {
@@ -140,7 +193,9 @@ export class WebGpuTextureResources {
         widthPx: number,
         heightPx: number,
     ): TextureResource {
-        const texture = this.device.createTexture({
+        this.assertActive();
+
+        const texture = this.trackTexture(this.device.createTexture({
             size: {
                 width: canvas.width,
                 height: canvas.height,
@@ -150,7 +205,7 @@ export class WebGpuTextureResources {
                 GPU_TEXTURE_USAGE.textureBinding
                 | GPU_TEXTURE_USAGE.copyDst
                 | GPU_TEXTURE_USAGE.renderAttachment,
-        });
+        }));
 
         this.device.queue.copyExternalImageToTexture(
             {
@@ -174,7 +229,7 @@ export class WebGpuTextureResources {
     }
 
     private createSolidTexture(color: ColorRgba) {
-        const texture = this.device.createTexture({
+        const texture = this.trackTexture(this.device.createTexture({
             size: {
                 width: 1,
                 height: 1,
@@ -183,7 +238,7 @@ export class WebGpuTextureResources {
             usage:
                 GPU_TEXTURE_USAGE.textureBinding
                 | GPU_TEXTURE_USAGE.copyDst,
-        });
+        }));
         this.device.queue.writeTexture(
             {
                 texture,
@@ -204,6 +259,44 @@ export class WebGpuTextureResources {
             widthPx: 1,
             heightPx: 1,
         };
+    }
+
+    private evictStaleTextTextures() {
+        // Panning and zooming change label cache keys continuously; bounded LRU eviction
+        // keeps canvas text textures from growing for the lifetime of the page.
+        while (this.textTextureCache.size > TEXT_TEXTURE_CACHE_LIMIT) {
+            const staleEntry = this.textTextureCache.entries().next();
+            if (staleEntry.done) return;
+
+            const [cacheKey, entry] = staleEntry.value;
+            this.textTextureCache.delete(cacheKey);
+            void entry.promise.then(
+                resource => this.destroyTextureResource(resource),
+                () => {},
+            );
+        }
+    }
+
+    private destroyTextureResource(resource: TextureResource) {
+        if (!this.textures.delete(resource.texture)) return;
+
+        resource.texture.destroy();
+    }
+
+    private trackTexture(texture: GPUTexture) {
+        if (this.destroyed) {
+            texture.destroy();
+            throw new Error("WebGPU texture resources have been destroyed");
+        }
+
+        this.textures.add(texture);
+        return texture;
+    }
+
+    private assertActive() {
+        if (!this.destroyed) return;
+
+        throw new Error("WebGPU texture resources have been destroyed");
     }
 
     private createTextureBindGroup(texture: GPUTexture) {

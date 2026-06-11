@@ -57,6 +57,7 @@ export class WebGpuViewportRenderer {
     private configuredWidthPx = 0;
     private configuredHeightPx = 0;
     private readonly pixelRatio = window.devicePixelRatio || 1;
+    private destroyed = false;
 
     constructor(
         private readonly canvas: HTMLCanvasElement,
@@ -64,6 +65,8 @@ export class WebGpuViewportRenderer {
     ) {}
 
     async initialize() {
+        if (this.destroyed) return;
+
         this.setStatus("initializing");
 
         if (!("gpu" in navigator)) {
@@ -71,25 +74,36 @@ export class WebGpuViewportRenderer {
             return;
         }
 
+        let adapter: GPUAdapter | null = null;
         try {
-            this.adapter = await navigator.gpu.requestAdapter();
+            adapter = await navigator.gpu.requestAdapter();
         } catch {
             this.setStatus("unavailable");
             return;
         }
 
+        if (this.destroyed) return;
+
+        this.adapter = adapter;
         if (this.adapter === null) {
             this.setStatus("unavailable");
             return;
         }
 
+        let device: GPUDevice | null = null;
         try {
-            this.device = await this.adapter.requestDevice();
+            device = await this.adapter.requestDevice();
         } catch {
             this.setStatus("unavailable");
             return;
         }
 
+        if (this.destroyed) {
+            device.destroy();
+            return;
+        }
+
+        this.device = device;
         this.context = this.canvas.getContext("webgpu") as GPUCanvasContext | null;
         if (this.context === null) {
             this.setStatus("unavailable");
@@ -121,20 +135,41 @@ export class WebGpuViewportRenderer {
         );
 
         await loadTextFonts();
+        if (this.destroyed) return;
+
         this.setStatus("ready");
         this.queueLatestFrame();
     }
 
     render(frame: CharacterRenderFrame) {
+        if (this.destroyed) return;
+
         this.latestFrame = frame;
         this.queueLatestFrame();
     }
 
     destroy() {
+        if (this.destroyed) return;
+
+        this.destroyed = true;
+        this.status = "unavailable";
+        this.latestFrame = null;
         this.lineRenderer?.destroy();
         this.quadRenderer?.destroy();
         this.textureResources?.destroy();
-        this.latestFrame = null;
+        this.unconfigureContext();
+        this.device?.destroy();
+        this.adapter = null;
+        this.device = null;
+        this.context = null;
+        this.format = null;
+        this.pipelines = null;
+        this.sampler = null;
+        this.quadRenderer = null;
+        this.lineRenderer = null;
+        this.textureResources = null;
+        this.configuredWidthPx = 0;
+        this.configuredHeightPx = 0;
     }
 
     private queueLatestFrame() {
@@ -147,16 +182,23 @@ export class WebGpuViewportRenderer {
     }
 
     private async drawQueuedFrames() {
-        while (this.latestFrame !== null) {
+        while (!this.destroyed && this.latestFrame !== null) {
             const frame = this.latestFrame;
             this.latestFrame = null;
-            await this.draw(frame);
+
+            try {
+                await this.draw(frame);
+            } catch (error) {
+                if (!this.destroyed) throw error;
+            }
         }
 
         this.renderLoopRunning = false;
     }
 
     private async draw(frame: CharacterRenderFrame) {
+        if (this.destroyed) return;
+
         if (
             this.device === null
             || this.context === null
@@ -193,6 +235,9 @@ export class WebGpuViewportRenderer {
                 ));
             }),
         );
+
+        if (this.destroyed) return;
+
         const gridLineVertices = buildGridLineVertices(frame);
         const characterLineVertices = buildCharacterLineVertices(frame);
         const gridLineRange: LineVertexRange = {
@@ -323,7 +368,20 @@ export class WebGpuViewportRenderer {
         });
     }
 
+    private unconfigureContext() {
+        const context = this.context as (
+            GPUCanvasContext
+            & {
+                unconfigure?: () => void,
+            }
+        ) | null;
+
+        context?.unconfigure?.();
+    }
+
     private setStatus(status: WebGpuRendererStatus) {
+        if (this.destroyed) return;
+
         this.status = status;
         this.onStatusChange(status);
     }

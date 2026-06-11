@@ -1,6 +1,7 @@
 <script lang="ts">
 import AuthorBadge from "./AuthorBadge.svelte";
 import type { Character } from "$lib/types/Character.svelte";
+    import Separator from "../generic/Separator.svelte";
 
 let {
     character,
@@ -28,11 +29,12 @@ let {
                 />
             {/each}
         </character-label-identity-list>
+
+        <Separator />
     {/if}
         
     {#if character.ownerIdentities.length > 0}
         <character-label-identity-list>
-            Owned by
             {#each character.ownerIdentities as identity (identity.id)}
                 <AuthorBadge
                     name={identity.name}
