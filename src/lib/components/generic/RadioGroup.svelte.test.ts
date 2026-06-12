@@ -72,7 +72,7 @@ describe("RadioGroup", () => {
         await waitFor(() => {
             expect(highlight).toHaveClass("visible");
             expect(highlightStyle(highlight, "--radio-group-highlight-selected-index-percent")).toBe("0%");
-            expect(highlightStyle(highlight, "--radio-group-highlight-selected-gap-offset")).toBe("0rem");
+            expect(highlightStyle(highlight, "--radio-group-highlight-selected-gap-offset")).toBe("0em");
         });
 
         await rerender({
@@ -84,11 +84,11 @@ describe("RadioGroup", () => {
 
         await waitFor(() => {
             expect(highlightStyle(highlight, "--radio-group-highlight-selected-index-percent")).toBe("100%");
-            expect(highlightStyle(highlight, "--radio-group-highlight-selected-gap-offset")).toBe("0.125rem");
+            expect(highlightStyle(highlight, "--radio-group-highlight-selected-gap-offset")).toBe("0.125em");
             expect(highlightStyle(highlight, "--radio-group-highlight-motion-from-index-percent")).toBe("0%");
-            expect(highlightStyle(highlight, "--radio-group-highlight-motion-from-gap-offset")).toBe("0rem");
+            expect(highlightStyle(highlight, "--radio-group-highlight-motion-from-gap-offset")).toBe("0em");
             expect(highlightStyle(highlight, "--radio-group-highlight-motion-midpoint-index-percent")).toBe("50%");
-            expect(highlightStyle(highlight, "--radio-group-highlight-motion-midpoint-gap-offset")).toBe("0.0625rem");
+            expect(highlightStyle(highlight, "--radio-group-highlight-motion-midpoint-gap-offset")).toBe("0.0625em");
         });
         expect(ftSurface).not.toBe(surface);
 
@@ -103,11 +103,11 @@ describe("RadioGroup", () => {
 
         await waitFor(() => {
             expect(highlightStyle(highlight, "--radio-group-highlight-selected-index-percent")).toBe("0%");
-            expect(highlightStyle(highlight, "--radio-group-highlight-selected-gap-offset")).toBe("0rem");
+            expect(highlightStyle(highlight, "--radio-group-highlight-selected-gap-offset")).toBe("0em");
             expect(highlightStyle(highlight, "--radio-group-highlight-motion-from-index-percent")).toBe("100%");
-            expect(highlightStyle(highlight, "--radio-group-highlight-motion-from-gap-offset")).toBe("0.125rem");
+            expect(highlightStyle(highlight, "--radio-group-highlight-motion-from-gap-offset")).toBe("0.125em");
             expect(highlightStyle(highlight, "--radio-group-highlight-motion-midpoint-index-percent")).toBe("50%");
-            expect(highlightStyle(highlight, "--radio-group-highlight-motion-midpoint-gap-offset")).toBe("0.0625rem");
+            expect(highlightStyle(highlight, "--radio-group-highlight-motion-midpoint-gap-offset")).toBe("0.0625em");
         });
         expect(meterSurface).not.toBe(surface);
     });

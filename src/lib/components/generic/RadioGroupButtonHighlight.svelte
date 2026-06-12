@@ -1,9 +1,9 @@
 <script lang="ts">
 const transitionEasing = "cubic-bezier(0, 0.5, 0.5, 1)";
 const defaultTransitionDurationMs = 500;
-const optionGapRem = 0.125;
-const squashStretchRatio = 2;
-const recoilStretchRatio = 1.1;
+const optionGapEm = 0.125;
+const squashStretchRatio = 1.5;
+const recoilStretchRatio = 0.95;
 
 let {
     optionCount,
@@ -35,11 +35,11 @@ let motionToIndex = $state(initialSelectedIndex());
 
 const motionMidpointIndex = $derived((motionFromIndex + motionToIndex) / 2);
 const selectedIndexPercent = $derived(`${motionToIndex * 100}%`);
-const selectedGapOffset = $derived(`${motionToIndex * optionGapRem}rem`);
+const selectedGapOffset = $derived(`${motionToIndex * optionGapEm}em`);
 const motionFromIndexPercent = $derived(`${motionFromIndex * 100}%`);
-const motionFromGapOffset = $derived(`${motionFromIndex * optionGapRem}rem`);
+const motionFromGapOffset = $derived(`${motionFromIndex * optionGapEm}em`);
 const motionMidpointIndexPercent = $derived(`${motionMidpointIndex * 100}%`);
-const motionMidpointGapOffset = $derived(`${motionMidpointIndex * optionGapRem}rem`);
+const motionMidpointGapOffset = $derived(`${motionMidpointIndex * optionGapEm}em`);
 const transitionDuration = $derived(`${transitionDurationMs}ms`);
 const stretchScale = $derived(`${squashStretchRatio}`);
 const squashScale = $derived(`${1 / squashStretchRatio}`);
@@ -139,9 +139,11 @@ radio-group-button-highlight-surface {
     min-width: 0;
     height: 100%;
 
-    border-radius: 0.375rem;
-    background: oklch(0.86 0.08 145 / 0.9);
-    box-shadow: 0 0.125rem 0.5rem oklch(0.45 0.08 145 / 0.2);
+    border-radius: 0.375em;
+    background: oklch(0.75 0.15 150 / 0.5);
+    box-shadow: 0 0.125em 0.5em oklch(0.45 0.08 145 / 0.2);
+
+    backdrop-filter: blur(4px);
 
     scale: 1;
     transform-origin: center;

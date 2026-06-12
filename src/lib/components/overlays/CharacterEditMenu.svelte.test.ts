@@ -56,12 +56,16 @@ describe("CharacterEditMenu", () => {
         store.characterManager.selectedCharacter = character;
         store.characterManager.editingCharacter = character;
 
-        render(CharacterEditMenu);
+        const {container} = render(CharacterEditMenu);
 
-        await fireEvent.click(screen.getByRole("button", {name: "Line"}));
+        expect(screen.getByRole("radiogroup", {name: "Reference curve mode"})).toBeVisible();
+        expect(screen.getByRole("radio", {name: "Curve"})).toBeChecked();
+        expect(container.querySelector(".baseline-mode-control radio-group-button-highlight")).not.toBeNull();
+
+        await fireEvent.click(screen.getByRole("radio", {name: "Line"}));
 
         expect(store.characterManager.baselineEditMode).toBe("line");
-        expect(screen.getByRole("button", {name: "Line"})).toHaveAttribute("aria-pressed", "true");
+        expect(screen.getByRole("radio", {name: "Line"})).toBeChecked();
     });
 
     test("switches the reference measurement display between meters and feet", async () => {

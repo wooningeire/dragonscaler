@@ -5,7 +5,10 @@ import { CharacterImage } from "$lib/types/CharacterImage.svelte";
 import Button from "../generic/Button.svelte";
 import { store } from "$lib/types/Store.svelte";
 import { untrack } from "svelte";
-import { baselineEditModes } from "$lib/util/baselineGeometry";
+import {
+    baselineEditModes,
+    isBaselineEditMode,
+} from "$lib/util/baselineGeometry";
 import {
     formatMeasurementValue,
     isMeasurementUnit,
@@ -88,6 +91,12 @@ const setMeasurementUnit = (value: string) => {
     if (characterBeingEdited === null || !isMeasurementUnit(value)) return;
 
     characterBeingEdited.baseline.measurementUnit = value;
+};
+
+const setBaselineEditMode = (value: string) => {
+    if (!isBaselineEditMode(value)) return;
+
+    store.characterManager.setBaselineEditMode(value);
 };
 
 const submit = async () => {
@@ -251,19 +260,14 @@ const canLeave = $derived(!saving && !deleting);
 
                 <div
                     class="baseline-mode-control"
-                    role="group"
-                    aria-label="Reference curve mode"
                 >
-                    {#each baselineEditModes as mode}
-                        <button
-                            type="button"
-                            class:active={store.characterManager.baselineEditMode === mode.id}
-                            aria-pressed={store.characterManager.baselineEditMode === mode.id}
-                            onclick={() => store.characterManager.setBaselineEditMode(mode.id)}
-                        >
-                            {mode.label}
-                        </button>
-                    {/each}
+                    <RadioGroup
+                        ariaLabel="Reference curve mode"
+                        name="reference-curve-mode"
+                        options={baselineEditModes}
+                        value={store.characterManager.baselineEditMode}
+                        onValueChange={setBaselineEditMode}
+                    />
                 </div>
             </div>
         </div>
@@ -370,31 +374,7 @@ character-edit-menu {
 
 .baseline-mode-control {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.125rem;
-    padding: 0.125rem;
-
-    border-radius: 0.5rem;
-    background: oklch(0.98 0.02 135 / 0.8);
-
-    button {
-        display: grid;
-        place-items: center;
-        padding: 0.375rem 0.5rem;
-        min-width: 0;
-
-        border-radius: 0.375rem;
-        color: oklch(0.28 0.06 145);
-        font: inherit;
-
-        cursor: pointer;
-        user-select: none;
-
-        &.active {
-            background: oklch(0.86 0.08 145 / 0.9);
-            box-shadow: 0 0.125rem 0.5rem oklch(0.45 0.08 145 / 0.2);
-        }
-    }
+    min-width: 0;
 }
 
 .visually-hidden {
