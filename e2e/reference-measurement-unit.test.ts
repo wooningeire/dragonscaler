@@ -15,6 +15,13 @@ type ReferenceMeasurementSnapshot = {
     checkedUnit: string | null,
     horizontalOverflowPx: number,
     verticalOverflowPx: number,
+    highlightCenterOffsetPx: number | null,
+    highlightSizeOffsetPx: number | null,
+    highlightSurfaceMinSizePx: number | null,
+    highlightKnobAnimationDuration: string | null,
+    highlightKnobAnimationTimingFunction: string | null,
+    highlightSurfaceAnimationDuration: string | null,
+    highlightSurfaceAnimationTimingFunction: string | null,
     dockRect: RectSnapshot,
     menuRect: RectSnapshot,
     croppedSelectors: string[],
@@ -143,6 +150,31 @@ const snapshotReferenceMeasurement = async (page: Page): Promise<ReferenceMeasur
     const checkedInput = document.querySelector<HTMLInputElement>(
         "input[name=\"reference-measurement-unit\"]:checked",
     );
+    const highlightKnob = document.querySelector<HTMLElement>("radio-group-button-highlight-knob");
+    const highlightSurface = document.querySelector<HTMLElement>("radio-group-button-highlight-surface");
+    const checkedRect = checkedInput?.closest("label")?.getBoundingClientRect() ?? null;
+    const highlightRect = highlightKnob?.getBoundingClientRect() ?? null;
+    const highlightSurfaceRect = highlightSurface?.getBoundingClientRect() ?? null;
+    const highlightKnobStyle = highlightKnob === null ? null : getComputedStyle(highlightKnob);
+    const highlightSurfaceStyle = highlightSurface === null ? null : getComputedStyle(highlightSurface);
+    const highlightCenterOffsetPx = checkedRect === null || highlightRect === null
+        ? null
+        : Math.max(
+            Math.abs((highlightRect.left + highlightRect.width / 2) - (checkedRect.left + checkedRect.width / 2)),
+            Math.abs((highlightRect.top + highlightRect.height / 2) - (checkedRect.top + checkedRect.height / 2)),
+        );
+    const highlightSizeOffsetPx = checkedRect === null || highlightRect === null
+        ? null
+        : Math.max(
+            Math.abs(highlightRect.width - checkedRect.width),
+            Math.abs(highlightRect.height - checkedRect.height),
+        );
+    const highlightSurfaceMinSizePx = highlightSurfaceRect === null
+        ? null
+        : Math.min(
+            highlightSurfaceRect.width,
+            highlightSurfaceRect.height,
+        );
 
     return {
         measurementUnit: character.baseline.measurementUnit,
@@ -151,6 +183,13 @@ const snapshotReferenceMeasurement = async (page: Page): Promise<ReferenceMeasur
         checkedUnit: checkedInput?.value ?? null,
         horizontalOverflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         verticalOverflowPx: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        highlightCenterOffsetPx,
+        highlightSizeOffsetPx,
+        highlightSurfaceMinSizePx,
+        highlightKnobAnimationDuration: highlightKnobStyle?.animationDuration ?? null,
+        highlightKnobAnimationTimingFunction: highlightKnobStyle?.animationTimingFunction ?? null,
+        highlightSurfaceAnimationDuration: highlightSurfaceStyle?.animationDuration ?? null,
+        highlightSurfaceAnimationTimingFunction: highlightSurfaceStyle?.animationTimingFunction ?? null,
         dockRect: snapshotRect(dockRect),
         menuRect: snapshotRect(menuRect),
         croppedSelectors,
@@ -165,6 +204,15 @@ const expectStableRect = (
     expect(actual.y).toBeCloseTo(expected.y);
     expect(actual.width).toBeCloseTo(expected.width);
     expect(actual.height).toBeCloseTo(expected.height);
+};
+
+const expectSharedHighlightMotionTiming = (snapshot: ReferenceMeasurementSnapshot) => {
+    expect(snapshot.highlightKnobAnimationDuration).not.toBeNull();
+    expect(snapshot.highlightSurfaceAnimationDuration).not.toBeNull();
+    expect(snapshot.highlightKnobAnimationDuration).toBe(snapshot.highlightSurfaceAnimationDuration);
+    expect(snapshot.highlightKnobAnimationTimingFunction).not.toBeNull();
+    expect(snapshot.highlightSurfaceAnimationTimingFunction).not.toBeNull();
+    expect(snapshot.highlightKnobAnimationTimingFunction).toBe(snapshot.highlightSurfaceAnimationTimingFunction);
 };
 
 
@@ -198,6 +246,13 @@ test("reference measurement unit radio preserves layout and updates the edited f
         verticalOverflowPx: 0,
         croppedSelectors: [],
     });
+    expect(beforeSwitch.highlightCenterOffsetPx).not.toBeNull();
+    expect(beforeSwitch.highlightCenterOffsetPx).toBeLessThan(0.5);
+    expect(beforeSwitch.highlightSizeOffsetPx).not.toBeNull();
+    expect(beforeSwitch.highlightSizeOffsetPx).toBeLessThan(0.5);
+    expect(beforeSwitch.highlightSurfaceMinSizePx).not.toBeNull();
+    expect(beforeSwitch.highlightSurfaceMinSizePx).toBeGreaterThan(1);
+    expectSharedHighlightMotionTiming(beforeSwitch);
 
     await page.getByRole("radio", {name: "ft"}).click();
 
@@ -211,6 +266,16 @@ test("reference measurement unit radio preserves layout and updates the edited f
         verticalOverflowPx: 0,
         croppedSelectors: [],
     });
+
+    await page.waitForTimeout(550);
+    const afterSwitchSettled = await snapshotReferenceMeasurement(page);
+    expect(afterSwitchSettled.highlightCenterOffsetPx).not.toBeNull();
+    expect(afterSwitchSettled.highlightCenterOffsetPx).toBeLessThan(0.5);
+    expect(afterSwitchSettled.highlightSizeOffsetPx).not.toBeNull();
+    expect(afterSwitchSettled.highlightSizeOffsetPx).toBeLessThan(0.5);
+    expect(afterSwitchSettled.highlightSurfaceMinSizePx).not.toBeNull();
+    expect(afterSwitchSettled.highlightSurfaceMinSizePx).toBeGreaterThan(1);
+    expectSharedHighlightMotionTiming(afterSwitchSettled);
     expectStableRect(
         afterSwitch.dockRect,
         beforeSwitch.dockRect,
@@ -220,6 +285,29 @@ test("reference measurement unit radio preserves layout and updates the edited f
         beforeSwitch.menuRect,
     );
 
+    await page.getByRole("radio", {name: "m"}).click();
+
+    const afterReturn = await snapshotReferenceMeasurement(page);
+    expect(afterReturn).toMatchObject({
+        measurementUnit: "m",
+        targetLength: 1,
+        checkedUnit: "m",
+        lengthText: "1",
+        horizontalOverflowPx: 0,
+        verticalOverflowPx: 0,
+        croppedSelectors: [],
+    });
+
+    await page.waitForTimeout(550);
+    const afterReturnSettled = await snapshotReferenceMeasurement(page);
+    expect(afterReturnSettled.highlightCenterOffsetPx).not.toBeNull();
+    expect(afterReturnSettled.highlightCenterOffsetPx).toBeLessThan(0.5);
+    expect(afterReturnSettled.highlightSizeOffsetPx).not.toBeNull();
+    expect(afterReturnSettled.highlightSizeOffsetPx).toBeLessThan(0.5);
+    expect(afterReturnSettled.highlightSurfaceMinSizePx).not.toBeNull();
+    expect(afterReturnSettled.highlightSurfaceMinSizePx).toBeGreaterThan(1);
+    expectSharedHighlightMotionTiming(afterReturnSettled);
+
     await page.setViewportSize({
         width: 390,
         height: 844,
@@ -227,10 +315,17 @@ test("reference measurement unit radio preserves layout and updates the edited f
 
     const mobileSnapshot = await snapshotReferenceMeasurement(page);
     expect(mobileSnapshot).toMatchObject({
-        measurementUnit: "ft",
-        checkedUnit: "ft",
+        measurementUnit: "m",
+        checkedUnit: "m",
         horizontalOverflowPx: 0,
         verticalOverflowPx: 0,
         croppedSelectors: [],
     });
+    expect(mobileSnapshot.highlightCenterOffsetPx).not.toBeNull();
+    expect(mobileSnapshot.highlightCenterOffsetPx).toBeLessThan(0.5);
+    expect(mobileSnapshot.highlightSizeOffsetPx).not.toBeNull();
+    expect(mobileSnapshot.highlightSizeOffsetPx).toBeLessThan(0.5);
+    expect(mobileSnapshot.highlightSurfaceMinSizePx).not.toBeNull();
+    expect(mobileSnapshot.highlightSurfaceMinSizePx).toBeGreaterThan(1);
+    expectSharedHighlightMotionTiming(mobileSnapshot);
 });

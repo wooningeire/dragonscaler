@@ -6,6 +6,8 @@ export type RadioGroupOption = {
 </script>
 
 <script lang="ts">
+import RadioGroupButtonHighlight from "./RadioGroupButtonHighlight.svelte";
+
 let {
     ariaLabel,
     name,
@@ -19,6 +21,8 @@ let {
     value: string,
     onValueChange: (value: string) => void,
 } = $props();
+
+const selectedIndex = $derived(options.findIndex(option => option.id === value));
 </script>
 
 <radio-group
@@ -26,30 +30,44 @@ let {
     aria-label={ariaLabel}
     style:--radio-group-option-count={options.length}
 >
-    {#each options as option}
-        <label class:active={value === option.id}>
-            <input
-                type="radio"
-                {name}
-                value={option.id}
-                checked={value === option.id}
-                onchange={() => onValueChange(option.id)}
-            />
+    <RadioGroupButtonHighlight
+        optionCount={options.length}
+        {selectedIndex}
+    />
 
-            <span>{option.label}</span>
-        </label>
-    {/each}
+    <radio-group-options>
+        {#each options as option (option.id)}
+            <label class:active={value === option.id}>
+                <input
+                    type="radio"
+                    {name}
+                    value={option.id}
+                    checked={value === option.id}
+                    onchange={() => onValueChange(option.id)}
+                />
+
+                <span>{option.label}</span>
+            </label>
+        {/each}
+    </radio-group-options>
 </radio-group>
 
 <style lang="scss">
 radio-group {
     display: grid;
-    grid-template-columns: repeat(var(--radio-group-option-count, 2), minmax(2.25rem, 1fr));
-    gap: 0.125rem;
     padding: 0.125rem;
 
     border-radius: 0.5rem;
     background: oklch(0.98 0.02 135 / 0.8);
+}
+
+radio-group-options {
+    grid-area: 1/1;
+    z-index: 1;
+
+    display: grid;
+    grid-template-columns: repeat(var(--radio-group-option-count, 2), minmax(2.25rem, 1fr));
+    gap: 0.125rem;
 }
 
 label {
@@ -84,8 +102,12 @@ label {
     }
 
     &.active span {
-        background: oklch(0.86 0.08 145 / 0.9);
-        box-shadow: 0 0.125rem 0.5rem oklch(0.45 0.08 145 / 0.2);
+        color: oklch(0.22 0.08 145);
+    }
+
+    &:has(input:focus-visible) span {
+        outline: 0.125rem solid oklch(0.42 0.12 145 / 0.7);
+        outline-offset: -0.125rem;
     }
 }
 </style>
