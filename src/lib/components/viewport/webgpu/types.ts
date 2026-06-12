@@ -10,6 +10,14 @@ export type TextureResource = TextureSizePx & {
     bindGroup: GPUBindGroup,
 };
 
+export type UvTransform = readonly [number, number, number, number];
+
+export type QuadDrawOptions = {
+    flipX?: boolean,
+    uvTransform?: UvTransform,
+    shadowRadiusPx?: number,
+};
+
 export type QuadUniformResource = {
     buffer: GPUBuffer,
     bindGroup: GPUBindGroup,

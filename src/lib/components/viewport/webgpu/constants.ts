@@ -1,7 +1,7 @@
 import type { ColorRgba } from "./types";
 
 export const QUAD_VERTEX_COUNT = 6;
-export const QUAD_UNIFORM_FLOAT_COUNT = 16;
+export const QUAD_UNIFORM_FLOAT_COUNT = 20;
 export const QUAD_UNIFORM_BYTE_COUNT = QUAD_UNIFORM_FLOAT_COUNT * Float32Array.BYTES_PER_ELEMENT;
 
 export const LINE_VERTEX_FLOAT_COUNT = 6;
@@ -26,6 +26,8 @@ export const GPU_BUFFER_USAGE = {
 
 export const PLACEHOLDER_COLOR = [0.9, 0.9, 0.9, 1] as const satisfies ColorRgba;
 export const IMAGE_TINT = [1, 1, 1, 1] as const satisfies ColorRgba;
+export const CHARACTER_IMAGE_SHADOW_COLOR = [1, 1, 1, 0.56] as const satisfies ColorRgba;
+export const CHARACTER_IMAGE_SHADOW_RADIUS_PX = 24;
 export const GRIDLINE_LIGHT_COLOR = [0.76, 0.84, 0.68, 1] as const satisfies ColorRgba;
 export const GRIDLINE_STRONG_COLOR = [0.62, 0.75, 0.58, 1] as const satisfies ColorRgba;
 export const BASELINE_WHITE_COLOR = [1, 1, 1, 1] as const satisfies ColorRgba;

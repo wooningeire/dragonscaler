@@ -7,6 +7,7 @@ import quadShaderCode from "./shaders/quad.wgsl?raw";
 
 export type WebGpuPipelines = {
     quadPipeline: GPURenderPipeline,
+    shadowQuadPipeline: GPURenderPipeline,
     linePipeline: GPURenderPipeline,
 };
 
@@ -21,6 +22,54 @@ const alphaBlend: GPUBlendState = {
     },
 };
 
+const additiveBlend: GPUBlendState = {
+    color: {
+        srcFactor: "src-alpha",
+        dstFactor: "one",
+    },
+    alpha: {
+        srcFactor: "one",
+        dstFactor: "one-minus-src-alpha",
+    },
+};
+
+const createQuadPipeline = ({
+    device,
+    format,
+    module,
+    bindGroupLayouts,
+    fragmentEntryPoint,
+    blend,
+}: {
+    device: GPUDevice,
+    format: GPUTextureFormat,
+    module: GPUShaderModule,
+    bindGroupLayouts: GPUBindGroupLayout[],
+    fragmentEntryPoint: string,
+    blend: GPUBlendState,
+}) => device.createRenderPipeline({
+    layout: device.createPipelineLayout({
+        bindGroupLayouts,
+    }),
+    vertex: {
+        module,
+        entryPoint: "vertex",
+    },
+    fragment: {
+        module,
+        entryPoint: fragmentEntryPoint,
+        targets: [
+            {
+                format,
+                blend,
+            },
+        ],
+    },
+    primitive: {
+        topology: "triangle-list",
+    },
+});
+
 export const createWebGpuPipelines = (
     device: GPUDevice,
     format: GPUTextureFormat,
@@ -29,7 +78,9 @@ export const createWebGpuPipelines = (
         entries: [
             {
                 binding: 0,
-                visibility: GPU_SHADER_STAGE.vertex,
+                visibility:
+                    GPU_SHADER_STAGE.vertex
+                    | GPU_SHADER_STAGE.fragment,
                 buffer: {
                     type: "uniform",
                 },
@@ -60,32 +111,27 @@ export const createWebGpuPipelines = (
     const lineModule = device.createShaderModule({
         code: lineShaderCode,
     });
+    const quadBindGroupLayouts = [
+        quadBindGroupLayout,
+        textureBindGroupLayout,
+    ];
 
     return {
-        quadPipeline: device.createRenderPipeline({
-            layout: device.createPipelineLayout({
-                bindGroupLayouts: [
-                    quadBindGroupLayout,
-                    textureBindGroupLayout,
-                ],
-            }),
-            vertex: {
-                module: quadModule,
-                entryPoint: "vertex",
-            },
-            fragment: {
-                module: quadModule,
-                entryPoint: "fragment",
-                targets: [
-                    {
-                        format,
-                        blend: alphaBlend,
-                    },
-                ],
-            },
-            primitive: {
-                topology: "triangle-list",
-            },
+        quadPipeline: createQuadPipeline({
+            device,
+            format,
+            module: quadModule,
+            bindGroupLayouts: quadBindGroupLayouts,
+            fragmentEntryPoint: "fragment",
+            blend: alphaBlend,
+        }),
+        shadowQuadPipeline: createQuadPipeline({
+            device,
+            format,
+            module: quadModule,
+            bindGroupLayouts: quadBindGroupLayouts,
+            fragmentEntryPoint: "shadowFragment",
+            blend: additiveBlend,
         }),
         linePipeline: device.createRenderPipeline({
             layout: "auto",

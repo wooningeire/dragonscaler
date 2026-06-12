@@ -1,10 +1,16 @@
 import type { CharacterRenderFrame } from "./characterRenderModel";
 import {
+    CHARACTER_IMAGE_SHADOW_COLOR,
+    CHARACTER_IMAGE_SHADOW_RADIUS_PX,
     IMAGE_TINT,
     LINE_VERTEX_FLOAT_COUNT,
     PLACEHOLDER_COLOR,
     TRANSPARENT_CLEAR_COLOR,
 } from "./webgpu/constants";
+import {
+    characterImageShadowRectPx,
+    characterImageShadowUvTransform,
+} from "./webgpu/imageShadow";
 import {
     buildCharacterLineVertices,
     buildGridLineVertices,
@@ -22,7 +28,10 @@ import {
 } from "./webgpu/pipelines";
 import { WebGpuQuadRenderer } from "./webgpu/quadRenderer";
 import { WebGpuTextureResources } from "./webgpu/textureResources";
-import type { LineVertexRange } from "./webgpu/types";
+import type {
+    LineVertexRange,
+    TextureResource,
+} from "./webgpu/types";
 import {
     concatenateFloat32Arrays,
     withOpacity,
@@ -49,6 +58,7 @@ export class WebGpuViewportRenderer {
     private pipelines: WebGpuPipelines | null = null;
     private sampler: GPUSampler | null = null;
     private quadRenderer: WebGpuQuadRenderer | null = null;
+    private shadowQuadRenderer: WebGpuQuadRenderer | null = null;
     private lineRenderer: WebGpuLineRenderer | null = null;
     private textureResources: WebGpuTextureResources | null = null;
     private latestFrame: CharacterRenderFrame | null = null;
@@ -123,6 +133,10 @@ export class WebGpuViewportRenderer {
             this.device,
             this.pipelines.quadPipeline,
         );
+        this.shadowQuadRenderer = new WebGpuQuadRenderer(
+            this.device,
+            this.pipelines.shadowQuadPipeline,
+        );
         this.lineRenderer = new WebGpuLineRenderer(
             this.device,
             this.pipelines.linePipeline,
@@ -156,6 +170,7 @@ export class WebGpuViewportRenderer {
         this.latestFrame = null;
         this.lineRenderer?.destroy();
         this.quadRenderer?.destroy();
+        this.shadowQuadRenderer?.destroy();
         this.textureResources?.destroy();
         this.unconfigureContext();
         this.device?.destroy();
@@ -166,6 +181,7 @@ export class WebGpuViewportRenderer {
         this.pipelines = null;
         this.sampler = null;
         this.quadRenderer = null;
+        this.shadowQuadRenderer = null;
         this.lineRenderer = null;
         this.textureResources = null;
         this.configuredWidthPx = 0;
@@ -204,6 +220,7 @@ export class WebGpuViewportRenderer {
             || this.context === null
             || this.format === null
             || this.quadRenderer === null
+            || this.shadowQuadRenderer === null
             || this.lineRenderer === null
             || this.textureResources === null
         ) {
@@ -216,6 +233,7 @@ export class WebGpuViewportRenderer {
 
         const textureResources = this.textureResources;
         const quadRenderer = this.quadRenderer;
+        const shadowQuadRenderer = this.shadowQuadRenderer;
         const lineRenderer = this.lineRenderer;
         const characterTextures = await Promise.all(
             frame.items.map(item => textureResources.getCharacterTextureResource(item.image)),
@@ -271,6 +289,7 @@ export class WebGpuViewportRenderer {
             ],
         });
         let quadIndex = 0;
+        let shadowQuadIndex = 0;
 
         lineRenderer.drawRange(
             pass,
@@ -298,20 +317,18 @@ export class WebGpuViewportRenderer {
             );
         }
 
-        for (let index = 0; index < frame.items.length; index++) {
-            const item = frame.items[index];
-            quadIndex = quadRenderer.drawTextureQuad(
-                pass,
-                quadIndex,
-                frame,
-                item.rectPx,
-                characterTextures[index],
-                item.image === null
-                    ? withOpacity(PLACEHOLDER_COLOR, item.opacity)
-                    : withOpacity(IMAGE_TINT, item.opacity),
-                item.flippedHorizontally,
-            );
-        }
+        ({
+            quadIndex,
+            shadowQuadIndex,
+        } = drawCharacterImageQuads({
+            pass,
+            frame,
+            characterTextures,
+            quadRenderer,
+            shadowQuadRenderer,
+            quadIndex,
+            shadowQuadIndex,
+        }));
 
         lineRenderer.drawRange(
             pass,
@@ -386,3 +403,66 @@ export class WebGpuViewportRenderer {
         this.onStatusChange(status);
     }
 }
+
+export type CharacterImageQuadDrawState = {
+    quadIndex: number,
+    shadowQuadIndex: number,
+};
+
+export const drawCharacterImageQuads = ({
+    pass,
+    frame,
+    characterTextures,
+    quadRenderer,
+    shadowQuadRenderer,
+    quadIndex,
+    shadowQuadIndex,
+}: {
+    pass: GPURenderPassEncoder,
+    frame: CharacterRenderFrame,
+    characterTextures: TextureResource[],
+    quadRenderer: WebGpuQuadRenderer,
+    shadowQuadRenderer: WebGpuQuadRenderer,
+} & CharacterImageQuadDrawState): CharacterImageQuadDrawState => {
+    for (let index = 0; index < frame.items.length; index++) {
+        const item = frame.items[index];
+
+        if (item.image !== null) {
+            shadowQuadIndex = shadowQuadRenderer.drawTextureQuad(
+                pass,
+                shadowQuadIndex,
+                frame,
+                characterImageShadowRectPx(item.rectPx),
+                characterTextures[index],
+                withOpacity(CHARACTER_IMAGE_SHADOW_COLOR, item.opacity),
+                {
+                    shadowRadiusPx: CHARACTER_IMAGE_SHADOW_RADIUS_PX,
+                    uvTransform: characterImageShadowUvTransform(
+                        item.rectPx,
+                        CHARACTER_IMAGE_SHADOW_RADIUS_PX,
+                        item.flippedHorizontally,
+                    ),
+                },
+            );
+        }
+
+        quadIndex = quadRenderer.drawTextureQuad(
+            pass,
+            quadIndex,
+            frame,
+            item.rectPx,
+            characterTextures[index],
+            item.image === null
+                ? withOpacity(PLACEHOLDER_COLOR, item.opacity)
+                : withOpacity(IMAGE_TINT, item.opacity),
+            {
+                flipX: item.flippedHorizontally,
+            },
+        );
+    }
+
+    return {
+        quadIndex,
+        shadowQuadIndex,
+    };
+};

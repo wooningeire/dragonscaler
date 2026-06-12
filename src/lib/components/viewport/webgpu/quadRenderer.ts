@@ -7,9 +7,18 @@ import {
 } from "./constants";
 import type {
     ColorRgba,
+    QuadDrawOptions,
     QuadUniformResource,
     TextureResource,
+    UvTransform,
 } from "./types";
+
+const defaultUvTransform = (flipX: boolean): UvTransform => [
+    flipX ? -1 : 1,
+    1,
+    flipX ? 1 : 0,
+    0,
+];
 
 export class WebGpuQuadRenderer {
     private readonly uniforms: QuadUniformResource[] = [];
@@ -32,14 +41,14 @@ export class WebGpuQuadRenderer {
         rectPx: RectPx,
         texture: TextureResource,
         tint: ColorRgba,
-        flipX = false,
+        options: QuadDrawOptions = {},
     ) {
         const uniform = this.writeQuadUniform(
             quadIndex,
             frame,
             rectPx,
             tint,
-            flipX,
+            options,
         );
 
         pass.setPipeline(this.pipeline);
@@ -54,10 +63,12 @@ export class WebGpuQuadRenderer {
         frame: CharacterRenderFrame,
         rectPx: RectPx,
         tint: ColorRgba,
-        flipX: boolean,
+        options: QuadDrawOptions,
     ) {
         const uniform = this.getQuadUniform(index);
         const data = new Float32Array(QUAD_UNIFORM_FLOAT_COUNT);
+        const uvTransform = options.uvTransform
+            ?? defaultUvTransform(options.flipX ?? false);
         data[0] = frame.widthPx;
         data[1] = frame.heightPx;
         data[4] = rectPx.x;
@@ -68,10 +79,11 @@ export class WebGpuQuadRenderer {
         data[9] = tint[1];
         data[10] = tint[2];
         data[11] = tint[3];
-        data[12] = flipX ? -1 : 1;
-        data[13] = 1;
-        data[14] = flipX ? 1 : 0;
-        data[15] = 0;
+        data[12] = uvTransform[0];
+        data[13] = uvTransform[1];
+        data[14] = uvTransform[2];
+        data[15] = uvTransform[3];
+        data[16] = options.shadowRadiusPx ?? 0;
 
         this.device.queue.writeBuffer(
             uniform.buffer,
