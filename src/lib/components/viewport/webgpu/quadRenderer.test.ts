@@ -104,7 +104,7 @@ describe("WebGpuQuadRenderer", () => {
         });
     });
 
-    test("writes custom shadow UV transform and radius effect params", () => {
+    test("writes custom UV transform and effect params", () => {
         const {
             device,
             pass,
@@ -122,27 +122,35 @@ describe("WebGpuQuadRenderer", () => {
                 height: 80,
             },
             makeTexture(),
-            [1, 1, 1, 0.56],
+            [0.36, 0.38, 0.34, 0.82],
             {
-                shadowRadiusPx: 24,
+                effect: [
+                    34,
+                    10,
+                    14,
+                    0,
+                ],
                 uvTransform: [
-                    1.48,
-                    1.6,
-                    -0.24,
-                    -0.3,
+                    1.39,
+                    1.82,
+                    -0.17,
+                    -0.34,
                 ],
             },
         );
 
         const data = latestUniformData(device);
-        expect(data[8]).toBeCloseTo(1);
-        expect(data[9]).toBeCloseTo(1);
-        expect(data[10]).toBeCloseTo(1);
-        expect(data[11]).toBeCloseTo(0.56);
-        expect(data[12]).toBeCloseTo(1.48);
-        expect(data[13]).toBeCloseTo(1.6);
-        expect(data[14]).toBeCloseTo(-0.24);
-        expect(data[15]).toBeCloseTo(-0.3);
-        expect(data[16]).toBe(24);
+        expect(data[8]).toBeCloseTo(0.36);
+        expect(data[9]).toBeCloseTo(0.38);
+        expect(data[10]).toBeCloseTo(0.34);
+        expect(data[11]).toBeCloseTo(0.82);
+        expect(data[12]).toBeCloseTo(1.39);
+        expect(data[13]).toBeCloseTo(1.82);
+        expect(data[14]).toBeCloseTo(-0.17);
+        expect(data[15]).toBeCloseTo(-0.34);
+        expect(data[16]).toBe(34);
+        expect(data[17]).toBe(10);
+        expect(data[18]).toBe(14);
+        expect(data[19]).toBe(0);
     });
 });

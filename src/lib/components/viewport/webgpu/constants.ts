@@ -26,8 +26,12 @@ export const GPU_BUFFER_USAGE = {
 
 export const PLACEHOLDER_COLOR = [0.9, 0.9, 0.9, 1] as const satisfies ColorRgba;
 export const IMAGE_TINT = [1, 1, 1, 1] as const satisfies ColorRgba;
-export const CHARACTER_IMAGE_SHADOW_COLOR = [1, 1, 1, 0.56] as const satisfies ColorRgba;
-export const CHARACTER_IMAGE_SHADOW_RADIUS_PX = 24;
+export const CHARACTER_IMAGE_OUTLINE_COLOR = [1, 1, 1, 0.74] as const satisfies ColorRgba;
+export const CHARACTER_IMAGE_OUTLINE_RADIUS_PX = 2;
+export const CHARACTER_IMAGE_DROP_SHADOW_MULTIPLIER = [0.36, 0.38, 0.34, 0.82] as const satisfies ColorRgba;
+export const CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX = 16;
+export const CHARACTER_IMAGE_DROP_SHADOW_OFFSET_X_PX = 0;
+export const CHARACTER_IMAGE_DROP_SHADOW_OFFSET_Y_PX = 0;
 export const GRIDLINE_LIGHT_COLOR = [0.76, 0.84, 0.68, 1] as const satisfies ColorRgba;
 export const GRIDLINE_STRONG_COLOR = [0.62, 0.75, 0.58, 1] as const satisfies ColorRgba;
 export const BASELINE_WHITE_COLOR = [1, 1, 1, 1] as const satisfies ColorRgba;

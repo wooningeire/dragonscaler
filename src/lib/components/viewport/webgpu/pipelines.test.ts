@@ -22,7 +22,7 @@ const makeDevice = () => ({
 
 
 describe("createWebGpuPipelines", () => {
-    test("makes quad uniforms visible to the shadow fragment shader", () => {
+    test("makes quad uniforms visible to effect fragment shaders", () => {
         const device = makeDevice();
 
         createWebGpuPipelines(
@@ -45,7 +45,12 @@ describe("createWebGpuPipelines", () => {
         });
         expect(device.createRenderPipeline).toHaveBeenCalledWith(expect.objectContaining({
             fragment: expect.objectContaining({
-                entryPoint: "shadowFragment",
+                entryPoint: "outlineFragment",
+            }),
+        }));
+        expect(device.createRenderPipeline).toHaveBeenCalledWith(expect.objectContaining({
+            fragment: expect.objectContaining({
+                entryPoint: "dropShadowFragment",
             }),
         }));
     });

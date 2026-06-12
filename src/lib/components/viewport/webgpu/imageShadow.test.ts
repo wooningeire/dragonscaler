@@ -1,55 +1,106 @@
 import { describe, expect, test } from "vitest";
 import {
-    CHARACTER_IMAGE_SHADOW_RADIUS_PX,
+    CHARACTER_IMAGE_DROP_SHADOW_OFFSET_X_PX,
+    CHARACTER_IMAGE_DROP_SHADOW_OFFSET_Y_PX,
+    CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
+    CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
 } from "./constants";
 import {
-    characterImageShadowRectPx,
-    characterImageShadowUvTransform,
+    characterImageEffectRectPx,
+    characterImageEffectUvTransform,
 } from "./imageShadow";
 
 
-describe("character image shadow geometry", () => {
-    test("expands the character image rect without moving its center", () => {
+describe("character image effect geometry", () => {
+    test("expands the outline rect without moving its center", () => {
         const rect = {
             x: 100,
             y: 80,
             width: 200,
             height: 120,
         };
-        const shadowRect = characterImageShadowRectPx(rect);
+        const outlineRect = characterImageEffectRectPx(
+            rect,
+            CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
+        );
 
-        expect(shadowRect).toEqual({
-            x: 100 - CHARACTER_IMAGE_SHADOW_RADIUS_PX,
-            y: 80 - CHARACTER_IMAGE_SHADOW_RADIUS_PX,
-            width: 200 + CHARACTER_IMAGE_SHADOW_RADIUS_PX * 2,
-            height: 120 + CHARACTER_IMAGE_SHADOW_RADIUS_PX * 2,
+        expect(outlineRect).toEqual({
+            x: 100 - CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
+            y: 80 - CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
+            width: 200 + CHARACTER_IMAGE_OUTLINE_RADIUS_PX * 2,
+            height: 120 + CHARACTER_IMAGE_OUTLINE_RADIUS_PX * 2,
         });
-        expect(shadowRect.x + shadowRect.width / 2).toBe(rect.x + rect.width / 2);
-        expect(shadowRect.y + shadowRect.height / 2).toBe(rect.y + rect.height / 2);
+        expect(outlineRect.x + outlineRect.width / 2).toBe(rect.x + rect.width / 2);
+        expect(outlineRect.y + outlineRect.height / 2).toBe(rect.y + rect.height / 2);
     });
 
-    test("maps the expanded shadow quad back to the unshifted image UVs", () => {
+    test("expands the drop shadow rect toward its offset", () => {
+        const rect = {
+            x: 100,
+            y: 80,
+            width: 200,
+            height: 120,
+        };
+        const shadowRect = characterImageEffectRectPx(
+            rect,
+            CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
+            {
+                x: CHARACTER_IMAGE_DROP_SHADOW_OFFSET_X_PX,
+                y: CHARACTER_IMAGE_DROP_SHADOW_OFFSET_Y_PX,
+            },
+        );
+
+        expect(shadowRect).toEqual({
+            x: 100 - CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
+            y: 80 - CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
+            width:
+                200
+                + CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX * 2
+                + CHARACTER_IMAGE_DROP_SHADOW_OFFSET_X_PX,
+            height:
+                120
+                + CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX * 2
+                + CHARACTER_IMAGE_DROP_SHADOW_OFFSET_Y_PX,
+        });
+    });
+
+    test("maps expanded effect quads back to the unshifted image UVs", () => {
         const rect = {
             x: 0,
             y: 0,
             width: 200,
             height: 100,
         };
-
-        const uvTransform = characterImageShadowUvTransform(rect);
-        const flippedUvTransform = characterImageShadowUvTransform(
+        const outlineRect = characterImageEffectRectPx(
             rect,
-            CHARACTER_IMAGE_SHADOW_RADIUS_PX,
+            CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
+        );
+        const dropShadowRect = characterImageEffectRectPx(
+            rect,
+            CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
+            {
+                x: CHARACTER_IMAGE_DROP_SHADOW_OFFSET_X_PX,
+                y: CHARACTER_IMAGE_DROP_SHADOW_OFFSET_Y_PX,
+            },
+        );
+
+        const outlineUvTransform = characterImageEffectUvTransform(
+            rect,
+            outlineRect,
+        );
+        const flippedDropShadowUvTransform = characterImageEffectUvTransform(
+            rect,
+            dropShadowRect,
             true,
         );
 
-        expect(uvTransform[0]).toBeCloseTo(1.24);
-        expect(uvTransform[1]).toBeCloseTo(1.48);
-        expect(uvTransform[2]).toBeCloseTo(-0.12);
-        expect(uvTransform[3]).toBeCloseTo(-0.24);
-        expect(flippedUvTransform[0]).toBeCloseTo(-1.24);
-        expect(flippedUvTransform[1]).toBeCloseTo(1.48);
-        expect(flippedUvTransform[2]).toBeCloseTo(1.12);
-        expect(flippedUvTransform[3]).toBeCloseTo(-0.24);
+        expect(outlineUvTransform[0]).toBeCloseTo(1.1);
+        expect(outlineUvTransform[1]).toBeCloseTo(1.2);
+        expect(outlineUvTransform[2]).toBeCloseTo(-0.05);
+        expect(outlineUvTransform[3]).toBeCloseTo(-0.1);
+        expect(flippedDropShadowUvTransform[0]).toBeCloseTo(-1.39);
+        expect(flippedDropShadowUvTransform[1]).toBeCloseTo(1.82);
+        expect(flippedDropShadowUvTransform[2]).toBeCloseTo(1.17);
+        expect(flippedDropShadowUvTransform[3]).toBeCloseTo(-0.34);
     });
 });

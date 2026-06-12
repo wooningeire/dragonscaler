@@ -7,7 +7,8 @@ import quadShaderCode from "./shaders/quad.wgsl?raw";
 
 export type WebGpuPipelines = {
     quadPipeline: GPURenderPipeline,
-    shadowQuadPipeline: GPURenderPipeline,
+    outlineQuadPipeline: GPURenderPipeline,
+    dropShadowQuadPipeline: GPURenderPipeline,
     linePipeline: GPURenderPipeline,
 };
 
@@ -30,6 +31,17 @@ const additiveBlend: GPUBlendState = {
     alpha: {
         srcFactor: "one",
         dstFactor: "one-minus-src-alpha",
+    },
+};
+
+const multiplicativeBlend: GPUBlendState = {
+    color: {
+        srcFactor: "dst",
+        dstFactor: "zero",
+    },
+    alpha: {
+        srcFactor: "zero",
+        dstFactor: "one",
     },
 };
 
@@ -125,13 +137,21 @@ export const createWebGpuPipelines = (
             fragmentEntryPoint: "fragment",
             blend: alphaBlend,
         }),
-        shadowQuadPipeline: createQuadPipeline({
+        outlineQuadPipeline: createQuadPipeline({
             device,
             format,
             module: quadModule,
             bindGroupLayouts: quadBindGroupLayouts,
-            fragmentEntryPoint: "shadowFragment",
+            fragmentEntryPoint: "outlineFragment",
             blend: additiveBlend,
+        }),
+        dropShadowQuadPipeline: createQuadPipeline({
+            device,
+            format,
+            module: quadModule,
+            bindGroupLayouts: quadBindGroupLayouts,
+            fragmentEntryPoint: "dropShadowFragment",
+            blend: multiplicativeBlend,
         }),
         linePipeline: device.createRenderPipeline({
             layout: "auto",

@@ -60,7 +60,7 @@ const makeRenderer = (
 
 
 describe("drawCharacterImageQuads", () => {
-    test("draws each shadow immediately before its character image", () => {
+    test("draws each drop shadow behind its outline and character image", () => {
         const calls: string[] = [];
         const frame = {
             widthPx: 800,
@@ -83,23 +83,31 @@ describe("drawCharacterImageQuads", () => {
                 "image",
                 calls,
             ),
-            shadowQuadRenderer: makeRenderer(
-                "shadow",
+            outlineQuadRenderer: makeRenderer(
+                "outline",
+                calls,
+            ),
+            dropShadowQuadRenderer: makeRenderer(
+                "drop-shadow",
                 calls,
             ),
             quadIndex: 0,
-            shadowQuadIndex: 0,
+            outlineQuadIndex: 0,
+            dropShadowQuadIndex: 0,
         });
 
         expect(calls).toEqual([
-            "shadow:behind",
+            "drop-shadow:behind",
+            "outline:behind",
             "image:behind",
-            "shadow:front",
+            "drop-shadow:front",
+            "outline:front",
             "image:front",
         ]);
         expect(result).toEqual({
             quadIndex: 2,
-            shadowQuadIndex: 2,
+            outlineQuadIndex: 2,
+            dropShadowQuadIndex: 2,
         });
     });
 });

@@ -7,6 +7,7 @@ import {
 } from "./constants";
 import type {
     ColorRgba,
+    QuadEffectParams,
     QuadDrawOptions,
     QuadUniformResource,
     TextureResource,
@@ -17,6 +18,13 @@ const defaultUvTransform = (flipX: boolean): UvTransform => [
     flipX ? -1 : 1,
     1,
     flipX ? 1 : 0,
+    0,
+];
+
+const defaultEffectParams = (radiusPx: number): QuadEffectParams => [
+    radiusPx,
+    0,
+    0,
     0,
 ];
 
@@ -83,7 +91,12 @@ export class WebGpuQuadRenderer {
         data[13] = uvTransform[1];
         data[14] = uvTransform[2];
         data[15] = uvTransform[3];
-        data[16] = options.shadowRadiusPx ?? 0;
+        const effect = options.effect
+            ?? defaultEffectParams(options.shadowRadiusPx ?? 0);
+        data[16] = effect[0];
+        data[17] = effect[1];
+        data[18] = effect[2];
+        data[19] = effect[3];
 
         this.device.queue.writeBuffer(
             uniform.buffer,

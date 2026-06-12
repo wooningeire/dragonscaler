@@ -1,15 +1,19 @@
 import type { CharacterRenderFrame } from "./characterRenderModel";
 import {
-    CHARACTER_IMAGE_SHADOW_COLOR,
-    CHARACTER_IMAGE_SHADOW_RADIUS_PX,
+    CHARACTER_IMAGE_DROP_SHADOW_MULTIPLIER,
+    CHARACTER_IMAGE_DROP_SHADOW_OFFSET_X_PX,
+    CHARACTER_IMAGE_DROP_SHADOW_OFFSET_Y_PX,
+    CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
+    CHARACTER_IMAGE_OUTLINE_COLOR,
+    CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
     IMAGE_TINT,
     LINE_VERTEX_FLOAT_COUNT,
     PLACEHOLDER_COLOR,
     TRANSPARENT_CLEAR_COLOR,
 } from "./webgpu/constants";
 import {
-    characterImageShadowRectPx,
-    characterImageShadowUvTransform,
+    characterImageEffectRectPx,
+    characterImageEffectUvTransform,
 } from "./webgpu/imageShadow";
 import {
     buildCharacterLineVertices,
@@ -58,7 +62,8 @@ export class WebGpuViewportRenderer {
     private pipelines: WebGpuPipelines | null = null;
     private sampler: GPUSampler | null = null;
     private quadRenderer: WebGpuQuadRenderer | null = null;
-    private shadowQuadRenderer: WebGpuQuadRenderer | null = null;
+    private outlineQuadRenderer: WebGpuQuadRenderer | null = null;
+    private dropShadowQuadRenderer: WebGpuQuadRenderer | null = null;
     private lineRenderer: WebGpuLineRenderer | null = null;
     private textureResources: WebGpuTextureResources | null = null;
     private latestFrame: CharacterRenderFrame | null = null;
@@ -133,9 +138,13 @@ export class WebGpuViewportRenderer {
             this.device,
             this.pipelines.quadPipeline,
         );
-        this.shadowQuadRenderer = new WebGpuQuadRenderer(
+        this.outlineQuadRenderer = new WebGpuQuadRenderer(
             this.device,
-            this.pipelines.shadowQuadPipeline,
+            this.pipelines.outlineQuadPipeline,
+        );
+        this.dropShadowQuadRenderer = new WebGpuQuadRenderer(
+            this.device,
+            this.pipelines.dropShadowQuadPipeline,
         );
         this.lineRenderer = new WebGpuLineRenderer(
             this.device,
@@ -170,7 +179,8 @@ export class WebGpuViewportRenderer {
         this.latestFrame = null;
         this.lineRenderer?.destroy();
         this.quadRenderer?.destroy();
-        this.shadowQuadRenderer?.destroy();
+        this.outlineQuadRenderer?.destroy();
+        this.dropShadowQuadRenderer?.destroy();
         this.textureResources?.destroy();
         this.unconfigureContext();
         this.device?.destroy();
@@ -181,7 +191,8 @@ export class WebGpuViewportRenderer {
         this.pipelines = null;
         this.sampler = null;
         this.quadRenderer = null;
-        this.shadowQuadRenderer = null;
+        this.outlineQuadRenderer = null;
+        this.dropShadowQuadRenderer = null;
         this.lineRenderer = null;
         this.textureResources = null;
         this.configuredWidthPx = 0;
@@ -220,7 +231,8 @@ export class WebGpuViewportRenderer {
             || this.context === null
             || this.format === null
             || this.quadRenderer === null
-            || this.shadowQuadRenderer === null
+            || this.outlineQuadRenderer === null
+            || this.dropShadowQuadRenderer === null
             || this.lineRenderer === null
             || this.textureResources === null
         ) {
@@ -233,7 +245,8 @@ export class WebGpuViewportRenderer {
 
         const textureResources = this.textureResources;
         const quadRenderer = this.quadRenderer;
-        const shadowQuadRenderer = this.shadowQuadRenderer;
+        const outlineQuadRenderer = this.outlineQuadRenderer;
+        const dropShadowQuadRenderer = this.dropShadowQuadRenderer;
         const lineRenderer = this.lineRenderer;
         const characterTextures = await Promise.all(
             frame.items.map(item => textureResources.getCharacterTextureResource(item.image)),
@@ -289,7 +302,8 @@ export class WebGpuViewportRenderer {
             ],
         });
         let quadIndex = 0;
-        let shadowQuadIndex = 0;
+        let outlineQuadIndex = 0;
+        let dropShadowQuadIndex = 0;
 
         lineRenderer.drawRange(
             pass,
@@ -319,15 +333,18 @@ export class WebGpuViewportRenderer {
 
         ({
             quadIndex,
-            shadowQuadIndex,
+            outlineQuadIndex,
+            dropShadowQuadIndex,
         } = drawCharacterImageQuads({
             pass,
             frame,
             characterTextures,
             quadRenderer,
-            shadowQuadRenderer,
+            outlineQuadRenderer,
+            dropShadowQuadRenderer,
             quadIndex,
-            shadowQuadIndex,
+            outlineQuadIndex,
+            dropShadowQuadIndex,
         }));
 
         lineRenderer.drawRange(
@@ -406,7 +423,8 @@ export class WebGpuViewportRenderer {
 
 export type CharacterImageQuadDrawState = {
     quadIndex: number,
-    shadowQuadIndex: number,
+    outlineQuadIndex: number,
+    dropShadowQuadIndex: number,
 };
 
 export const drawCharacterImageQuads = ({
@@ -414,32 +432,75 @@ export const drawCharacterImageQuads = ({
     frame,
     characterTextures,
     quadRenderer,
-    shadowQuadRenderer,
+    outlineQuadRenderer,
+    dropShadowQuadRenderer,
     quadIndex,
-    shadowQuadIndex,
+    outlineQuadIndex,
+    dropShadowQuadIndex,
 }: {
     pass: GPURenderPassEncoder,
     frame: CharacterRenderFrame,
     characterTextures: TextureResource[],
     quadRenderer: WebGpuQuadRenderer,
-    shadowQuadRenderer: WebGpuQuadRenderer,
+    outlineQuadRenderer: WebGpuQuadRenderer,
+    dropShadowQuadRenderer: WebGpuQuadRenderer,
 } & CharacterImageQuadDrawState): CharacterImageQuadDrawState => {
     for (let index = 0; index < frame.items.length; index++) {
         const item = frame.items[index];
 
         if (item.image !== null) {
-            shadowQuadIndex = shadowQuadRenderer.drawTextureQuad(
+            const outlineRectPx = characterImageEffectRectPx(
+                item.rectPx,
+                CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
+            );
+            const dropShadowOffsetPx = {
+                x: CHARACTER_IMAGE_DROP_SHADOW_OFFSET_X_PX,
+                y: CHARACTER_IMAGE_DROP_SHADOW_OFFSET_Y_PX,
+            };
+            const dropShadowRectPx = characterImageEffectRectPx(
+                item.rectPx,
+                CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
+                dropShadowOffsetPx,
+            );
+
+            dropShadowQuadIndex = dropShadowQuadRenderer.drawTextureQuad(
                 pass,
-                shadowQuadIndex,
+                dropShadowQuadIndex,
                 frame,
-                characterImageShadowRectPx(item.rectPx),
+                dropShadowRectPx,
                 characterTextures[index],
-                withOpacity(CHARACTER_IMAGE_SHADOW_COLOR, item.opacity),
+                withOpacity(CHARACTER_IMAGE_DROP_SHADOW_MULTIPLIER, item.opacity),
                 {
-                    shadowRadiusPx: CHARACTER_IMAGE_SHADOW_RADIUS_PX,
-                    uvTransform: characterImageShadowUvTransform(
+                    effect: [
+                        CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
+                        dropShadowOffsetPx.x,
+                        dropShadowOffsetPx.y,
+                        0,
+                    ],
+                    uvTransform: characterImageEffectUvTransform(
                         item.rectPx,
-                        CHARACTER_IMAGE_SHADOW_RADIUS_PX,
+                        dropShadowRectPx,
+                        item.flippedHorizontally,
+                    ),
+                },
+            );
+            outlineQuadIndex = outlineQuadRenderer.drawTextureQuad(
+                pass,
+                outlineQuadIndex,
+                frame,
+                outlineRectPx,
+                characterTextures[index],
+                withOpacity(CHARACTER_IMAGE_OUTLINE_COLOR, item.opacity),
+                {
+                    effect: [
+                        CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
+                        0,
+                        0,
+                        0,
+                    ],
+                    uvTransform: characterImageEffectUvTransform(
+                        item.rectPx,
+                        outlineRectPx,
                         item.flippedHorizontally,
                     ),
                 },
@@ -463,6 +524,7 @@ export const drawCharacterImageQuads = ({
 
     return {
         quadIndex,
-        shadowQuadIndex,
+        outlineQuadIndex,
+        dropShadowQuadIndex,
     };
 };

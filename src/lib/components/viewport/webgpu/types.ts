@@ -11,9 +11,11 @@ export type TextureResource = TextureSizePx & {
 };
 
 export type UvTransform = readonly [number, number, number, number];
+export type QuadEffectParams = readonly [number, number, number, number];
 
 export type QuadDrawOptions = {
     flipX?: boolean,
+    effect?: QuadEffectParams,
     uvTransform?: UvTransform,
     shadowRadiusPx?: number,
 };

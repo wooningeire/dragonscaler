@@ -1,33 +1,49 @@
 import type { RectPx } from "../characterRenderModel";
 import {
-    CHARACTER_IMAGE_SHADOW_RADIUS_PX,
+    CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
 } from "./constants";
 import type { UvTransform } from "./types";
 
-export const characterImageShadowRectPx = (
-    rectPx: RectPx,
-    radiusPx = CHARACTER_IMAGE_SHADOW_RADIUS_PX,
-): RectPx => ({
-    x: rectPx.x - radiusPx,
-    y: rectPx.y - radiusPx,
-    width: rectPx.width + radiusPx * 2,
-    height: rectPx.height + radiusPx * 2,
-});
+export type ImageEffectOffsetPx = {
+    x: number,
+    y: number,
+};
 
-export const characterImageShadowUvTransform = (
+export const characterImageEffectRectPx = (
     rectPx: RectPx,
-    radiusPx = CHARACTER_IMAGE_SHADOW_RADIUS_PX,
+    radiusPx = CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
+    offsetPx: ImageEffectOffsetPx = {
+        x: 0,
+        y: 0,
+    },
+): RectPx => {
+    const leftMarginPx = radiusPx + Math.max(0, -offsetPx.x);
+    const rightMarginPx = radiusPx + Math.max(0, offsetPx.x);
+    const topMarginPx = radiusPx + Math.max(0, -offsetPx.y);
+    const bottomMarginPx = radiusPx + Math.max(0, offsetPx.y);
+
+    return {
+        x: rectPx.x - leftMarginPx,
+        y: rectPx.y - topMarginPx,
+        width: rectPx.width + leftMarginPx + rightMarginPx,
+        height: rectPx.height + topMarginPx + bottomMarginPx,
+    };
+};
+
+export const characterImageEffectUvTransform = (
+    rectPx: RectPx,
+    effectRectPx = characterImageEffectRectPx(rectPx),
     flipX = false,
 ): UvTransform => {
-    const widthScale = (rectPx.width + radiusPx * 2) / rectPx.width;
-    const heightScale = (rectPx.height + radiusPx * 2) / rectPx.height;
-    const xMargin = radiusPx / rectPx.width;
-    const yMargin = radiusPx / rectPx.height;
+    const widthScale = effectRectPx.width / rectPx.width;
+    const heightScale = effectRectPx.height / rectPx.height;
+    const xOffset = (effectRectPx.x - rectPx.x) / rectPx.width;
+    const yOffset = (effectRectPx.y - rectPx.y) / rectPx.height;
 
     return [
         flipX ? -widthScale : widthScale,
         heightScale,
-        flipX ? 1 + xMargin : -xMargin,
-        -yMargin,
+        flipX ? 1 - xOffset : xOffset,
+        yOffset,
     ];
 };

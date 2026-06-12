@@ -68,15 +68,14 @@ fn alpha_or_zero(uv: vec2f) -> f32 {
     );
 }
 
-@fragment
-fn shadowFragment(input: VertexOutput) -> @location(0) vec4f {
-    let radiusPx = max(params.effect.x, 1.0);
-    let pixelUvX = dpdx(input.uv);
-    let pixelUvY = dpdy(input.uv);
-    let centerAlpha = alpha_or_zero(input.uv);
-
+fn blurred_alpha(
+    uv: vec2f,
+    pixelUvX: vec2f,
+    pixelUvY: vec2f,
+    radiusPx: f32,
+) -> f32 {
     const SQRT1_2: f32 = 0.70710678;
-    const DROP_SHADOW_SAMPLE_DIRECTIONS = array<vec2f, 8>(
+    const SAMPLE_DIRECTIONS = array<vec2f, 8>(
         vec2f(0, -1),
         vec2f(SQRT1_2, -SQRT1_2),
         vec2f(1, 0),
@@ -86,7 +85,7 @@ fn shadowFragment(input: VertexOutput) -> @location(0) vec4f {
         vec2f(-1, 0),
         vec2f(-SQRT1_2, -SQRT1_2),
     );
-    const DROP_SHADOW_SAMPLE_RING_RADII = array<f32, 6>(
+    const SAMPLE_RING_RADII = array<f32, 6>(
         0.18,
         0.34,
         0.5,
@@ -94,7 +93,7 @@ fn shadowFragment(input: VertexOutput) -> @location(0) vec4f {
         0.82,
         1.0,
     );
-    const DROP_SHADOW_SAMPLE_RING_WEIGHTS = array<f32, 6>(
+    const SAMPLE_RING_WEIGHTS = array<f32, 6>(
         1.0,
         0.9,
         0.7,
@@ -103,16 +102,16 @@ fn shadowFragment(input: VertexOutput) -> @location(0) vec4f {
         0.13,
     );
 
-    var blurredAlpha = centerAlpha * 1.05;
+    var blurredAlpha = alpha_or_zero(uv) * 1.05;
     var totalWeight: f32 = 1.05;
 
     for (var ringIndex = 0u; ringIndex < 6u; ringIndex = ringIndex + 1u) {
         for (var directionIndex = 0u; directionIndex < 8u; directionIndex = directionIndex + 1u) {
-            let offset = DROP_SHADOW_SAMPLE_DIRECTIONS[directionIndex]
-                * DROP_SHADOW_SAMPLE_RING_RADII[ringIndex]
+            let offset = SAMPLE_DIRECTIONS[directionIndex]
+                * SAMPLE_RING_RADII[ringIndex]
                 * radiusPx;
-            let ringWeight = DROP_SHADOW_SAMPLE_RING_WEIGHTS[ringIndex];
-            let sampleUv = input.uv
+            let ringWeight = SAMPLE_RING_WEIGHTS[ringIndex];
+            let sampleUv = uv
                 + pixelUvX * offset.x
                 + pixelUvY * offset.y;
 
@@ -121,21 +120,127 @@ fn shadowFragment(input: VertexOutput) -> @location(0) vec4f {
         }
     }
 
-    let softAlpha = max(
-        blurredAlpha / totalWeight - centerAlpha * 0.58,
-        0.0,
+    return blurredAlpha / totalWeight;
+}
+
+fn dilated_alpha(
+    uv: vec2f,
+    pixelUvX: vec2f,
+    pixelUvY: vec2f,
+    radiusPx: f32,
+) -> f32 {
+    const SQRT1_2: f32 = 0.70710678;
+    const SAMPLE_DIRECTIONS = array<vec2f, 16>(
+        vec2f(0, -1),
+        vec2f(0.38268343, -0.92387953),
+        vec2f(SQRT1_2, -SQRT1_2),
+        vec2f(0.92387953, -0.38268343),
+        vec2f(1, 0),
+        vec2f(0.92387953, 0.38268343),
+        vec2f(SQRT1_2, SQRT1_2),
+        vec2f(0.38268343, 0.92387953),
+        vec2f(0, 1),
+        vec2f(-0.38268343, 0.92387953),
+        vec2f(-SQRT1_2, SQRT1_2),
+        vec2f(-0.92387953, 0.38268343),
+        vec2f(-1, 0),
+        vec2f(-0.92387953, -0.38268343),
+        vec2f(-SQRT1_2, -SQRT1_2),
+        vec2f(-0.38268343, -0.92387953),
     );
-    let shadowAlpha = pow(
-        clamp(
-            softAlpha * 1.55,
-            0.0,
-            1.0,
-        ),
-        1.45,
-    ) * input.tint.a;
+    const SAMPLE_RING_RADII = array<f32, 3>(
+        0.38,
+        0.72,
+        1.0,
+    );
+
+    var maxAlpha = alpha_or_zero(uv);
+
+    for (var ringIndex = 0u; ringIndex < 3u; ringIndex = ringIndex + 1u) {
+        for (var directionIndex = 0u; directionIndex < 16u; directionIndex = directionIndex + 1u) {
+            let offset = SAMPLE_DIRECTIONS[directionIndex]
+                * SAMPLE_RING_RADII[ringIndex]
+                * radiusPx;
+            let sampleUv = uv
+                + pixelUvX * offset.x
+                + pixelUvY * offset.y;
+
+            maxAlpha = max(
+                maxAlpha,
+                alpha_or_zero(sampleUv),
+            );
+        }
+    }
+
+    return maxAlpha;
+}
+
+@fragment
+fn outlineFragment(input: VertexOutput) -> @location(0) vec4f {
+    let radiusPx = max(params.effect.x, 1.0);
+    let pixelUvX = dpdx(input.uv);
+    let pixelUvY = dpdy(input.uv);
+    let centerAlpha = alpha_or_zero(input.uv);
+    let strokeAlpha = dilated_alpha(
+        input.uv,
+        pixelUvX,
+        pixelUvY,
+        radiusPx,
+    );
+    let outsideImage = 1.0 - smoothstep(
+        0.04,
+        0.72,
+        centerAlpha,
+    );
+    let outlineAlpha = smoothstep(
+        0.08,
+        0.2,
+        strokeAlpha,
+    ) * outsideImage * input.tint.a;
 
     return vec4f(
         input.tint.rgb,
+        outlineAlpha,
+    );
+}
+
+@fragment
+fn dropShadowFragment(input: VertexOutput) -> @location(0) vec4f {
+    let radiusPx = max(params.effect.x, 1.0);
+    let pixelUvX = dpdx(input.uv);
+    let pixelUvY = dpdy(input.uv);
+    let offsetPx = params.effect.yz;
+    let sourceUv = input.uv
+        - pixelUvX * offsetPx.x
+        - pixelUvY * offsetPx.y;
+    let blurAlpha = blurred_alpha(
+        sourceUv,
+        pixelUvX,
+        pixelUvY,
+        radiusPx,
+    );
+    let centerAlpha = alpha_or_zero(input.uv);
+    let outsideMask = 1.0 - smoothstep(
+        0.02,
+        0.55,
+        centerAlpha,
+    );
+    let shadowAlpha = pow(
+        clamp(
+            blurAlpha * outsideMask * 2.05,
+            0.0,
+            1.0,
+        ),
+        0.92,
+    ) * input.tint.a;
+    let multiplier = mix(
+        vec3f(1.0),
+        input.tint.rgb,
         shadowAlpha,
+    );
+
+    return vec4f(
+        multiplier,
+        1.0,
     );
 }
