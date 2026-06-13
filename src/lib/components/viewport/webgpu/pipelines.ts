@@ -7,8 +7,10 @@ import quadShaderCode from "./shaders/quad.wgsl?raw";
 
 export type WebGpuPipelines = {
     quadPipeline: GPURenderPipeline,
+    gridQuadPipeline: GPURenderPipeline,
     outlineQuadPipeline: GPURenderPipeline,
     dropShadowQuadPipeline: GPURenderPipeline,
+    gridLinePipeline: GPURenderPipeline,
     linePipeline: GPURenderPipeline,
 };
 
@@ -45,6 +47,17 @@ const multiplicativeBlend: GPUBlendState = {
     },
 };
 
+const alphaMultiplyBlend: GPUBlendState = {
+    color: {
+        srcFactor: "dst",
+        dstFactor: "one-minus-src-alpha",
+    },
+    alpha: {
+        srcFactor: "one",
+        dstFactor: "one-minus-src-alpha",
+    },
+};
+
 const createQuadPipeline = ({
     device,
     format,
@@ -66,6 +79,56 @@ const createQuadPipeline = ({
     vertex: {
         module,
         entryPoint: "vertex",
+    },
+    fragment: {
+        module,
+        entryPoint: fragmentEntryPoint,
+        targets: [
+            {
+                format,
+                blend,
+            },
+        ],
+    },
+    primitive: {
+        topology: "triangle-list",
+    },
+});
+
+const createLinePipeline = ({
+    device,
+    format,
+    module,
+    fragmentEntryPoint,
+    blend,
+}: {
+    device: GPUDevice,
+    format: GPUTextureFormat,
+    module: GPUShaderModule,
+    fragmentEntryPoint: string,
+    blend: GPUBlendState,
+}) => device.createRenderPipeline({
+    layout: "auto",
+    vertex: {
+        module,
+        entryPoint: "vertex",
+        buffers: [
+            {
+                arrayStride: LINE_VERTEX_BYTE_COUNT,
+                attributes: [
+                    {
+                        shaderLocation: 0,
+                        offset: 0,
+                        format: "float32x2",
+                    },
+                    {
+                        shaderLocation: 1,
+                        offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+                        format: "float32x4",
+                    },
+                ],
+            },
+        ],
     },
     fragment: {
         module,
@@ -137,6 +200,14 @@ export const createWebGpuPipelines = (
             fragmentEntryPoint: "fragment",
             blend: alphaBlend,
         }),
+        gridQuadPipeline: createQuadPipeline({
+            device,
+            format,
+            module: quadModule,
+            bindGroupLayouts: quadBindGroupLayouts,
+            fragmentEntryPoint: "multiplyFragment",
+            blend: alphaMultiplyBlend,
+        }),
         outlineQuadPipeline: createQuadPipeline({
             device,
             format,
@@ -153,42 +224,19 @@ export const createWebGpuPipelines = (
             fragmentEntryPoint: "dropShadowFragment",
             blend: multiplicativeBlend,
         }),
-        linePipeline: device.createRenderPipeline({
-            layout: "auto",
-            vertex: {
-                module: lineModule,
-                entryPoint: "vertex",
-                buffers: [
-                    {
-                        arrayStride: LINE_VERTEX_BYTE_COUNT,
-                        attributes: [
-                            {
-                                shaderLocation: 0,
-                                offset: 0,
-                                format: "float32x2",
-                            },
-                            {
-                                shaderLocation: 1,
-                                offset: 2 * Float32Array.BYTES_PER_ELEMENT,
-                                format: "float32x4",
-                            },
-                        ],
-                    },
-                ],
-            },
-            fragment: {
-                module: lineModule,
-                entryPoint: "fragment",
-                targets: [
-                    {
-                        format,
-                        blend: alphaBlend,
-                    },
-                ],
-            },
-            primitive: {
-                topology: "triangle-list",
-            },
+        gridLinePipeline: createLinePipeline({
+            device,
+            format,
+            module: lineModule,
+            fragmentEntryPoint: "multiplyFragment",
+            blend: alphaMultiplyBlend,
+        }),
+        linePipeline: createLinePipeline({
+            device,
+            format,
+            module: lineModule,
+            fragmentEntryPoint: "fragment",
+            blend: alphaBlend,
         }),
     };
 };

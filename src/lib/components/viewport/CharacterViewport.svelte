@@ -17,6 +17,10 @@ import {
     clampBaselinePoint,
     computeBaselineArcLength,
 } from "$lib/util/baselineGeometry";
+import {
+    projectViewportYMeters,
+    unprojectViewportYMeters,
+} from "$lib/util/viewportProjection";
 
 type DragState =
     | {
@@ -63,6 +67,7 @@ const baselinePreview: BaselinePreview = $derived.by(() => {
     };
 });
 const displayCharacters = $derived(store.characterManager.displayCharacters);
+const logPerspective = $derived(store.characterManager.logPerspective);
 
 $effect(() => {
     viewportWidth;
@@ -95,6 +100,8 @@ const renderFrame = $derived(buildCharacterRenderFrame({
     heightPx: viewportHeight,
     editingCharacter: store.characterManager.editingCharacter,
     baselinePreview,
+    logPerspective,
+    gridlinesOnTop: store.gridlinesOnTop,
 }));
 
 $effect(() => {
@@ -128,6 +135,7 @@ $effect(() => {
         positionX,
         viewportDimsPx,
         viewportInsetsPx,
+        logPerspective,
     });
 
     untrack(() => {
@@ -252,7 +260,13 @@ const continuePointerDrag = (event: PointerEvent) => {
 
     if (dragState.kind === "pan") {
         store.camera.setPosMetersX(store.camera.posMetersX - event.movementX / store.camera.scalePxPerMeter);
-        store.camera.setPosMetersY(store.camera.posMetersY + event.movementY / store.camera.scalePxPerMeter);
+        store.camera.setPosMetersY(unprojectViewportYMeters(
+            projectViewportYMeters(
+                store.camera.posMetersY,
+                logPerspective,
+            ) + event.movementY / store.camera.scalePxPerMeter,
+            logPerspective,
+        ));
         return;
     }
 
@@ -320,13 +334,19 @@ const finishPointerDrag = (event: PointerEvent) => {
         const mouseY = event.clientY - store.camera.viewportPositionPx.y;
 
         const worldX = store.camera.posMetersX + mouseX / store.camera.scalePxPerMeter;
-        const worldY = store.camera.posMetersY - mouseY / store.camera.scalePxPerMeter;
+        const projectedWorldY = projectViewportYMeters(
+            store.camera.posMetersY,
+            logPerspective,
+        ) - mouseY / store.camera.scalePxPerMeter;
 
         const scaleFac = 2 ** (-event.deltaY * 0.001);
         store.camera.setScalePxPerMeter(store.camera.scalePxPerMeter * scaleFac);
 
         store.camera.setPosMetersX(worldX - mouseX / store.camera.scalePxPerMeter);
-        store.camera.setPosMetersY(worldY + mouseY / store.camera.scalePxPerMeter);
+        store.camera.setPosMetersY(unprojectViewportYMeters(
+            projectedWorldY + mouseY / store.camera.scalePxPerMeter,
+            logPerspective,
+        ));
     }}
 >
     <CharacterCanvas frame={renderFrame} />

@@ -47,6 +47,16 @@ fn fragment(input: VertexOutput) -> @location(0) vec4f {
     return textureSample(textureSource, textureSampler, input.uv) * input.tint;
 }
 
+@fragment
+fn multiplyFragment(input: VertexOutput) -> @location(0) vec4f {
+    let color = textureSample(textureSource, textureSampler, input.uv) * input.tint;
+
+    return vec4f(
+        color.rgb * color.a,
+        color.a,
+    );
+}
+
 fn alpha_or_zero(uv: vec2f) -> f32 {
     let clampedUv = clamp(
         uv,

@@ -18,3 +18,11 @@ fn vertex(
 fn fragment(input: VertexOutput) -> @location(0) vec4f {
     return input.color;
 }
+
+@fragment
+fn multiplyFragment(input: VertexOutput) -> @location(0) vec4f {
+    return vec4f(
+        input.color.rgb * input.color.a,
+        input.color.a,
+    );
+}

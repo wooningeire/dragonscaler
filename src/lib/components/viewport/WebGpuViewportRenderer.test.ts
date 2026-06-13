@@ -5,10 +5,14 @@ import type {
     CharacterRenderItem,
 } from "./characterRenderModel";
 import {
+    drawFrameContent,
     drawCharacterImageQuads,
 } from "./WebGpuViewportRenderer";
 import type { WebGpuQuadRenderer } from "./webgpu/quadRenderer";
-import type { TextureResource } from "./webgpu/types";
+import type {
+    LineVertexRange,
+    TextureResource,
+} from "./webgpu/types";
 
 
 const makeItem = (name: string): CharacterRenderItem => ({
@@ -58,6 +62,18 @@ const makeRenderer = (
     }),
 }) as unknown as WebGpuQuadRenderer;
 
+const makeLineRenderer = (
+    kind: string,
+    calls: string[],
+) => ({
+    drawRange: vi.fn((
+        _pass: GPURenderPassEncoder,
+        range: LineVertexRange,
+    ) => {
+        calls.push(`${kind}:${range.firstVertex}`);
+    }),
+}) as unknown as Parameters<typeof drawFrameContent>[0]["lineRenderer"];
+
 
 describe("drawCharacterImageQuads", () => {
     test("draws each drop shadow behind its outline and character image", () => {
@@ -66,6 +82,7 @@ describe("drawCharacterImageQuads", () => {
             widthPx: 800,
             heightPx: 600,
             gridlineStepMeters: 1,
+            gridlinesOnTop: false,
             gridlines: [],
             items: [
                 makeItem("behind"),
@@ -109,5 +126,89 @@ describe("drawCharacterImageQuads", () => {
             outlineQuadIndex: 2,
             dropShadowQuadIndex: 2,
         });
+    });
+
+    test("moves gridlines above character images when requested", () => {
+        const drawFrame = (gridlinesOnTop: boolean) => {
+            const calls: string[] = [];
+            const frame = {
+                widthPx: 800,
+                heightPx: 600,
+                gridlineStepMeters: 1,
+                gridlinesOnTop,
+                gridlines: [
+                    {
+                        orientation: "y",
+                        offsetPx: 300,
+                        coordMeters: 0,
+                        weight: "origin",
+                    },
+                ],
+                items: [makeItem("character")],
+            } satisfies CharacterRenderFrame;
+
+            drawFrameContent({
+                pass: {} as GPURenderPassEncoder,
+                frame,
+                characterTextures: [makeTexture("character")],
+                gridLabelTextures: [makeTexture("grid-label")],
+                characterLabelTextures: [null],
+                quadRenderer: makeRenderer(
+                    "image",
+                    calls,
+                ),
+                gridQuadRenderer: makeRenderer(
+                    "grid-label",
+                    calls,
+                ),
+                outlineQuadRenderer: makeRenderer(
+                    "outline",
+                    calls,
+                ),
+                dropShadowQuadRenderer: makeRenderer(
+                    "drop-shadow",
+                    calls,
+                ),
+                gridLineRenderer: makeLineRenderer(
+                    "grid-line",
+                    calls,
+                ),
+                lineRenderer: makeLineRenderer(
+                    "character-line",
+                    calls,
+                ),
+                gridLineRange: {
+                    firstVertex: 0,
+                    vertexCount: 6,
+                },
+                characterLineRange: {
+                    firstVertex: 0,
+                    vertexCount: 6,
+                },
+                pixelRatio: 1,
+                quadIndex: 0,
+                outlineQuadIndex: 0,
+                dropShadowQuadIndex: 0,
+            });
+
+            return calls;
+        };
+
+        expect(drawFrame(false)).toEqual([
+            "grid-line:0",
+            "grid-label:grid-label",
+            "drop-shadow:character",
+            "outline:character",
+            "image:character",
+            "character-line:0",
+        ]);
+        expect(drawFrame(true)).toEqual([
+            "drop-shadow:character",
+            "outline:character",
+            "image:character",
+            "grid-line:0",
+            "grid-label:grid-label",
+            "character-line:0",
+        ]);
     });
 });

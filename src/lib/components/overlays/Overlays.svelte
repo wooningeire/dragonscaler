@@ -2,7 +2,7 @@
 import { store } from "$lib/types/Store.svelte";
 import Button from "../generic/Button.svelte";
 import Slider from "../generic/Slider.svelte";
-    import BottomDock from "./BottomDock.svelte";
+import BottomDock from "./BottomDock.svelte";
 
 const currentAccountName = $derived(store.databaseStore.currentAccountName());
 const currentAccountAvatarUrl = $derived(store.databaseStore.currentAccountAvatarUrl());
@@ -43,6 +43,24 @@ const currentAccountAvatarUrl = $derived(store.databaseStore.currentAccountAvata
         </div>
 
         <div class="gizmos-bottom-right">
+            <label>
+                <input
+                    type="checkbox"
+                    bind:checked={store.characterManager.logPerspective}
+                />
+
+                Logarithmic
+            </label>
+
+            <label>
+                <input
+                    type="checkbox"
+                    bind:checked={store.gridlinesOnTop}
+                />
+
+                Gridlines on top
+            </label>
+
             <Slider
                 label="Spacing"
                 min={0}

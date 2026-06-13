@@ -5,6 +5,7 @@ import {
     isBaselineEditMode,
     type BaselineEditMode,
 } from "$lib/util/baselineGeometry";
+import { characterViewportWidthForProjection } from "$lib/util/viewportProjection";
 
 const BASELINE_EDIT_MODE_STORAGE_KEY = "dragonscaler:baseline-edit-mode";
 
@@ -15,6 +16,7 @@ type CharacterSpacingInput = {
 export const computeCharacterPositionsX = (
     characters: CharacterSpacingInput[],
     spacingFac: number,
+    logPerspective = false,
 ) => {
     const positions: number[] = [];
     let currentRightEdgeX = 0;
@@ -23,11 +25,16 @@ export const computeCharacterPositionsX = (
         index,
         character,
     ] of characters.entries()) {
+        const characterWidth = characterViewportWidthForProjection(
+            character,
+            logPerspective,
+        );
+
         if (index > 0) {
-            currentRightEdgeX += character.viewportWidth * spacingFac;
+            currentRightEdgeX += characterWidth * spacingFac;
         }
 
-        positions.push(currentRightEdgeX - character.viewportWidth);
+        positions.push(currentRightEdgeX - characterWidth);
     }
 
     return positions;
@@ -45,13 +52,16 @@ export class CharacterManager {
     baselineEditMode: BaselineEditMode = $state(readBaselineEditMode());
 
     // 0 spacing: right-aligned by image right edge; 1 spacing: one after another.
-    spacingFac = $state(0);
+    spacingFac = $state(1/3);
+
+    logPerspective = $state(false);
 
     displayCharacters = $derived.by(() => this.characters.toSorted(compareCharactersByScale));
 
     positionsX = $derived.by(() => computeCharacterPositionsX(
         this.displayCharacters,
         this.spacingFac,
+        this.logPerspective,
     ));
     
     constructor() {

@@ -136,6 +136,29 @@ describe("computeCharacterPositionsX", () => {
         ]);
     });
 
+    test("uses projected character widths for logarithmic perspective spacing", () => {
+        const short = makeCharacter(
+            "Short",
+            1,
+        );
+        const tall = makeCharacter(
+            "Tall",
+            3,
+        );
+        const manager = new CharacterManager();
+
+        manager.characters = [
+            short,
+            tall,
+        ];
+        manager.spacingFac = 1;
+        manager.logPerspective = true;
+
+        expect(manager.positionsX[0] + Math.log1p(1)).toBeCloseTo(0);
+        expect(manager.positionsX[1]).toBeCloseTo(0);
+        expect(manager.positionsX[1] + Math.log1p(3)).toBeCloseTo(Math.log1p(3));
+    });
+
     test("removes characters and clears matching selection/edit state", () => {
         const removed = makeCharacter(
             "Removed",

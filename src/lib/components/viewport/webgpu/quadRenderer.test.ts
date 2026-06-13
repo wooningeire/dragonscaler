@@ -11,6 +11,7 @@ const makeFrame = (): CharacterRenderFrame => ({
     widthPx: 800,
     heightPx: 600,
     gridlineStepMeters: 1,
+    gridlinesOnTop: false,
     gridlines: [],
     items: [],
 });

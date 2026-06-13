@@ -161,6 +161,125 @@ describe("buildCharacterRenderFrame", () => {
         );
     });
 
+    test("projects character heights and horizontal gridlines logarithmically", () => {
+        const character = makeCharacter("Large", 3);
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [-Math.log1p(3)],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+            logPerspective: true,
+        });
+        const twoMeterGridline = frame.gridlines.find(gridline => (
+            gridline.orientation === "y"
+            && Math.abs(gridline.coordMeters - 2) < 1e-6
+        ));
+
+        expect(frame.items[0].rectPx).toEqual({
+            x: 400 - Math.log1p(3) * 100,
+            y: 300 - Math.log1p(3) * 100,
+            width: Math.log1p(3) * 100,
+            height: Math.log1p(3) * 100,
+        });
+        expect(twoMeterGridline?.offsetPx).toBeCloseTo(300 - Math.log1p(2) * 100);
+    });
+
+    test("keeps a nonzero character anchor on world y zero in logarithmic projection", () => {
+        const character = makeCharacter("Offset Anchor", 4);
+        character.anchor = {
+            x: 0.5,
+            y: 0.25,
+        };
+
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+            logPerspective: true,
+        });
+        const item = frame.items[0];
+        const anchorYPx = item.rectPx.y + (1 - character.anchor.y) * item.rectPx.height;
+
+        expect(item.rectPx.height).toBeCloseTo((Math.log1p(3) + Math.log1p(1)) * 100);
+        expect(anchorYPx).toBeCloseTo(300);
+    });
+
+    test("keeps logarithmic gridline steps stable while panning vertically", () => {
+        const buildFrameAtY = (posMetersY: number) => buildCharacterRenderFrame({
+            characters: [],
+            positionsX: [],
+            camera: {
+                posMetersX: 0,
+                posMetersY,
+                scalePxPerMeter: 40,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+            logPerspective: true,
+        });
+        const originFrame = buildFrameAtY(0);
+        const pannedFrame = buildFrameAtY(4);
+        const fourMeterGridline = pannedFrame.gridlines.find(gridline => (
+            gridline.orientation === "y"
+            && Math.abs(gridline.coordMeters - 4) < 1e-6
+        ));
+
+        expect(originFrame.gridlineStepMeters).toBe(4);
+        expect(pannedFrame.gridlineStepMeters).toBe(4);
+        expect(fourMeterGridline?.offsetPx).toBeCloseTo(300);
+    });
+
+    test("keeps zoomed-out logarithmic grid generation bounded", () => {
+        const frame = buildCharacterRenderFrame({
+            characters: [],
+            positionsX: [],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 0.1,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+            logPerspective: true,
+        });
+        const horizontalGridlines = frame.gridlines.filter(gridline => gridline.orientation === "y");
+
+        expect(frame.gridlineStepMeters).toBe(1024);
+        expect(horizontalGridlines.length).toBeLessThanOrEqual(8);
+        expect(frame.gridlines.every(gridline => Number.isFinite(gridline.offsetPx))).toBe(true);
+    });
+
     test("uses compact nameplate textures for short labels", () => {
         const character = makeCharacter("A", 1);
         const frame = buildCharacterRenderFrame({

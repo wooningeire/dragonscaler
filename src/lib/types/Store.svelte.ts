@@ -2,6 +2,11 @@ import { CharacterManager } from "./CharacterManager.svelte";
 import { DatabaseStore } from "./DatabaseStore.svelte";
 import { Camera2d } from "./Camera2d.svelte";
 import type { Character } from "./Character.svelte";
+import {
+    characterViewportWidthForProjection,
+    projectedViewportHeightMeters,
+    unprojectViewportYMeters,
+} from "$lib/util/viewportProjection";
 
 
 const FOCUS_PADDING_FAC = 1.5;
@@ -29,16 +34,26 @@ export const centeredCameraPositionForCharacter = ({
     positionX,
     viewportDimsPx,
     viewportInsetsPx,
+    logPerspective = false,
 }: {
     character: Character,
     positionX: number,
     viewportDimsPx: ViewportDimsPx,
     viewportInsetsPx: ViewportInsetsPx,
+    logPerspective?: boolean,
 }): CenteredCameraPosition => {
-    const widthMeters = character.viewportWidth;
+    const widthMeters = characterViewportWidthForProjection(
+        character,
+        logPerspective,
+    );
     const heightMeters = character.baseline.scaleFac;
+    const displayHeightMeters = projectedViewportHeightMeters(
+        heightMeters,
+        character.anchor.y,
+        logPerspective,
+    );
     const centerXMeters = widthMeters * 0.5;
-    const centerYMeters = (0.5 - character.anchor.y) * heightMeters;
+    const centerProjectedYMeters = (0.5 - character.anchor.y) * displayHeightMeters;
     const focusWidthPx = Math.max(
         1,
         viewportDimsPx.width - viewportInsetsPx.left - viewportInsetsPx.right,
@@ -57,7 +72,7 @@ export const centeredCameraPositionForCharacter = ({
     );
     const requiredHeightMeters = Math.max(
         0.001,
-        heightMeters,
+        displayHeightMeters,
     );
     const scalePxPerMeter = Math.min(
         focusHeightPx / (requiredHeightMeters * FOCUS_PADDING_FAC),
@@ -66,7 +81,10 @@ export const centeredCameraPositionForCharacter = ({
 
     return {
         x: positionX + centerXMeters - focusOffsetPx.x / scalePxPerMeter,
-        y: centerYMeters + focusOffsetPx.y / scalePxPerMeter,
+        y: unprojectViewportYMeters(
+            centerProjectedYMeters + focusOffsetPx.y / scalePxPerMeter,
+            logPerspective,
+        ),
         scalePxPerMeter,
     };
 };
@@ -79,6 +97,8 @@ export class Store {
     readonly databaseStore = new DatabaseStore();
     readonly camera = new Camera2d();
 
+    gridlinesOnTop = $state(false);
+    
     async loadCharacters() {
         this.characterManager.characters = await this.databaseStore.loadCharacterData();
     }
@@ -93,6 +113,7 @@ export class Store {
             positionX: this.characterManager.positionsX[index],
             viewportDimsPx: this.camera.viewportDimsPx,
             viewportInsetsPx: this.camera.viewportInsetsPx,
+            logPerspective: this.characterManager.logPerspective,
         });
     }
 }

@@ -13,22 +13,26 @@ type DragonscalerDebugWindow = typeof window & {
         store: typeof store,
         Character: typeof Character,
         Baseline: typeof Baseline,
+        initialLoadPromise: Promise<void>,
     },
 };
 
 onMount(async () => {
+    const initialLoadPromise = Promise.all([
+        store.databaseStore.loadUserRecord(),
+        store.loadCharacters(),
+    ]).then(() => {});
+
     if (import.meta.env.DEV) {
         (window as DragonscalerDebugWindow).__dragonscalerDebug = {
             store,
             Character,
             Baseline,
+            initialLoadPromise,
         };
     }
 
-    await Promise.all([
-        store.databaseStore.loadUserRecord(),
-        store.loadCharacters(),
-    ])
+    await initialLoadPromise;
 });
 </script>
 

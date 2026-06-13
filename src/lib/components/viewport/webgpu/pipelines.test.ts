@@ -54,4 +54,47 @@ describe("createWebGpuPipelines", () => {
             }),
         }));
     });
+
+    test("uses alpha-multiply blend state for grid line and grid label pipelines", () => {
+        const device = makeDevice();
+
+        createWebGpuPipelines(
+            device,
+            "bgra8unorm",
+        );
+
+        const descriptors = vi.mocked(device.createRenderPipeline).mock.calls.map(([
+            descriptor,
+        ]) => descriptor as GPURenderPipelineDescriptor);
+        const multiplyPipelines = descriptors.filter(descriptor => (
+            descriptor.fragment?.entryPoint === "multiplyFragment"
+        ));
+        const blendStates = multiplyPipelines.map(descriptor => (
+            descriptor.fragment?.targets[0]?.blend
+        ));
+
+        expect(multiplyPipelines).toHaveLength(2);
+        expect(blendStates).toEqual([
+            {
+                color: {
+                    srcFactor: "dst",
+                    dstFactor: "one-minus-src-alpha",
+                },
+                alpha: {
+                    srcFactor: "one",
+                    dstFactor: "one-minus-src-alpha",
+                },
+            },
+            {
+                color: {
+                    srcFactor: "dst",
+                    dstFactor: "one-minus-src-alpha",
+                },
+                alpha: {
+                    srcFactor: "one",
+                    dstFactor: "one-minus-src-alpha",
+                },
+            },
+        ]);
+    });
 });

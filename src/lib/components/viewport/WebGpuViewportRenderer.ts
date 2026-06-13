@@ -1,27 +1,15 @@
 import type { CharacterRenderFrame } from "./characterRenderModel";
 import {
-    CHARACTER_IMAGE_DROP_SHADOW_MULTIPLIER,
-    CHARACTER_IMAGE_DROP_SHADOW_OFFSET_X_PX,
-    CHARACTER_IMAGE_DROP_SHADOW_OFFSET_Y_PX,
-    CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
-    CHARACTER_IMAGE_OUTLINE_COLOR,
-    CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
-    IMAGE_TINT,
     LINE_VERTEX_FLOAT_COUNT,
-    PLACEHOLDER_COLOR,
     TRANSPARENT_CLEAR_COLOR,
 } from "./webgpu/constants";
-import {
-    characterImageEffectRectPx,
-    characterImageEffectUvTransform,
-} from "./webgpu/imageShadow";
+import { drawFrameContent } from "./webgpu/frameContentRenderer";
 import {
     buildCharacterLineVertices,
     buildGridLineVertices,
 } from "./webgpu/lineGeometry";
 import { WebGpuLineRenderer } from "./webgpu/lineRenderer";
 import {
-    characterLabelRectPx,
     characterLabelTextSpec,
     gridlineTextSpec,
     loadTextFonts,
@@ -32,14 +20,7 @@ import {
 } from "./webgpu/pipelines";
 import { WebGpuQuadRenderer } from "./webgpu/quadRenderer";
 import { WebGpuTextureResources } from "./webgpu/textureResources";
-import type {
-    LineVertexRange,
-    TextureResource,
-} from "./webgpu/types";
-import {
-    concatenateFloat32Arrays,
-    withOpacity,
-} from "./webgpu/utils";
+import type { LineVertexRange } from "./webgpu/types";
 
 export {
     characterLabelPanelRectPx,
@@ -47,6 +28,10 @@ export {
     characterLabelScale,
     characterLabelTextureSizePx,
 } from "./webgpu/nameplateLayout";
+export {
+    drawCharacterImageQuads,
+    drawFrameContent,
+} from "./webgpu/frameContentRenderer";
 export type { TextureSizePx } from "./webgpu/types";
 
 export type WebGpuRendererStatus =
@@ -62,8 +47,10 @@ export class WebGpuViewportRenderer {
     private pipelines: WebGpuPipelines | null = null;
     private sampler: GPUSampler | null = null;
     private quadRenderer: WebGpuQuadRenderer | null = null;
+    private gridQuadRenderer: WebGpuQuadRenderer | null = null;
     private outlineQuadRenderer: WebGpuQuadRenderer | null = null;
     private dropShadowQuadRenderer: WebGpuQuadRenderer | null = null;
+    private gridLineRenderer: WebGpuLineRenderer | null = null;
     private lineRenderer: WebGpuLineRenderer | null = null;
     private textureResources: WebGpuTextureResources | null = null;
     private latestFrame: CharacterRenderFrame | null = null;
@@ -138,6 +125,10 @@ export class WebGpuViewportRenderer {
             this.device,
             this.pipelines.quadPipeline,
         );
+        this.gridQuadRenderer = new WebGpuQuadRenderer(
+            this.device,
+            this.pipelines.gridQuadPipeline,
+        );
         this.outlineQuadRenderer = new WebGpuQuadRenderer(
             this.device,
             this.pipelines.outlineQuadPipeline,
@@ -145,6 +136,10 @@ export class WebGpuViewportRenderer {
         this.dropShadowQuadRenderer = new WebGpuQuadRenderer(
             this.device,
             this.pipelines.dropShadowQuadPipeline,
+        );
+        this.gridLineRenderer = new WebGpuLineRenderer(
+            this.device,
+            this.pipelines.gridLinePipeline,
         );
         this.lineRenderer = new WebGpuLineRenderer(
             this.device,
@@ -177,8 +172,10 @@ export class WebGpuViewportRenderer {
         this.destroyed = true;
         this.status = "unavailable";
         this.latestFrame = null;
+        this.gridLineRenderer?.destroy();
         this.lineRenderer?.destroy();
         this.quadRenderer?.destroy();
+        this.gridQuadRenderer?.destroy();
         this.outlineQuadRenderer?.destroy();
         this.dropShadowQuadRenderer?.destroy();
         this.textureResources?.destroy();
@@ -191,8 +188,10 @@ export class WebGpuViewportRenderer {
         this.pipelines = null;
         this.sampler = null;
         this.quadRenderer = null;
+        this.gridQuadRenderer = null;
         this.outlineQuadRenderer = null;
         this.dropShadowQuadRenderer = null;
+        this.gridLineRenderer = null;
         this.lineRenderer = null;
         this.textureResources = null;
         this.configuredWidthPx = 0;
@@ -231,8 +230,10 @@ export class WebGpuViewportRenderer {
             || this.context === null
             || this.format === null
             || this.quadRenderer === null
+            || this.gridQuadRenderer === null
             || this.outlineQuadRenderer === null
             || this.dropShadowQuadRenderer === null
+            || this.gridLineRenderer === null
             || this.lineRenderer === null
             || this.textureResources === null
         ) {
@@ -245,8 +246,10 @@ export class WebGpuViewportRenderer {
 
         const textureResources = this.textureResources;
         const quadRenderer = this.quadRenderer;
+        const gridQuadRenderer = this.gridQuadRenderer;
         const outlineQuadRenderer = this.outlineQuadRenderer;
         const dropShadowQuadRenderer = this.dropShadowQuadRenderer;
+        const gridLineRenderer = this.gridLineRenderer;
         const lineRenderer = this.lineRenderer;
         const characterTextures = await Promise.all(
             frame.items.map(item => textureResources.getCharacterTextureResource(item.image)),
@@ -276,18 +279,14 @@ export class WebGpuViewportRenderer {
             vertexCount: gridLineVertices.length / LINE_VERTEX_FLOAT_COUNT,
         };
         const characterLineRange: LineVertexRange = {
-            firstVertex: gridLineRange.vertexCount,
+            firstVertex: 0,
             vertexCount: characterLineVertices.length / LINE_VERTEX_FLOAT_COUNT,
         };
-        const lineVertices = concatenateFloat32Arrays(
-            gridLineVertices,
-            characterLineVertices,
-        );
-
-        // WebGPU consumes buffer contents when submitted, not when the draw is encoded.
-        // Keep all line geometry in one frame-stable upload so later line draws cannot corrupt the grid.
-        if (lineVertices.length > 0) {
-            lineRenderer.writeVertices(lineVertices);
+        if (gridLineVertices.length > 0) {
+            gridLineRenderer.writeVertices(gridLineVertices);
+        }
+        if (characterLineVertices.length > 0) {
+            lineRenderer.writeVertices(characterLineVertices);
         }
 
         const encoder = this.device.createCommandEncoder();
@@ -305,73 +304,29 @@ export class WebGpuViewportRenderer {
         let outlineQuadIndex = 0;
         let dropShadowQuadIndex = 0;
 
-        lineRenderer.drawRange(
-            pass,
-            gridLineRange,
-        );
-
-        let gridLabelIndex = 0;
-        for (const gridline of frame.gridlines) {
-            if (gridline.orientation !== "y" || gridline.weight === "light") continue;
-
-            const texture = gridLabelTextures[gridLabelIndex];
-            gridLabelIndex += 1;
-            quadIndex = quadRenderer.drawTextureQuad(
-                pass,
-                quadIndex,
-                frame,
-                {
-                    x: 8,
-                    y: gridline.offsetPx + 8,
-                    width: texture.widthPx,
-                    height: texture.heightPx,
-                },
-                texture,
-                IMAGE_TINT,
-            );
-        }
-
         ({
             quadIndex,
             outlineQuadIndex,
             dropShadowQuadIndex,
-        } = drawCharacterImageQuads({
+        } = drawFrameContent({
             pass,
             frame,
             characterTextures,
+            gridLabelTextures,
+            characterLabelTextures,
             quadRenderer,
+            gridQuadRenderer,
             outlineQuadRenderer,
             dropShadowQuadRenderer,
+            gridLineRenderer,
+            lineRenderer,
+            gridLineRange,
+            characterLineRange,
+            pixelRatio: this.pixelRatio,
             quadIndex,
             outlineQuadIndex,
             dropShadowQuadIndex,
         }));
-
-        lineRenderer.drawRange(
-            pass,
-            characterLineRange,
-        );
-
-        for (let index = 0; index < frame.items.length; index++) {
-            const item = frame.items[index];
-            if (item.labelOpacity < 0.02) continue;
-
-            const texture = characterLabelTextures[index];
-            if (texture === null) continue;
-
-            quadIndex = quadRenderer.drawTextureQuad(
-                pass,
-                quadIndex,
-                frame,
-                characterLabelRectPx(
-                    item,
-                    texture,
-                    this.pixelRatio,
-                ),
-                texture,
-                withOpacity(IMAGE_TINT, item.labelOpacity),
-            );
-        }
 
         pass.end();
         this.device.queue.submit([encoder.finish()]);
@@ -420,111 +375,3 @@ export class WebGpuViewportRenderer {
         this.onStatusChange(status);
     }
 }
-
-export type CharacterImageQuadDrawState = {
-    quadIndex: number,
-    outlineQuadIndex: number,
-    dropShadowQuadIndex: number,
-};
-
-export const drawCharacterImageQuads = ({
-    pass,
-    frame,
-    characterTextures,
-    quadRenderer,
-    outlineQuadRenderer,
-    dropShadowQuadRenderer,
-    quadIndex,
-    outlineQuadIndex,
-    dropShadowQuadIndex,
-}: {
-    pass: GPURenderPassEncoder,
-    frame: CharacterRenderFrame,
-    characterTextures: TextureResource[],
-    quadRenderer: WebGpuQuadRenderer,
-    outlineQuadRenderer: WebGpuQuadRenderer,
-    dropShadowQuadRenderer: WebGpuQuadRenderer,
-} & CharacterImageQuadDrawState): CharacterImageQuadDrawState => {
-    for (let index = 0; index < frame.items.length; index++) {
-        const item = frame.items[index];
-
-        if (item.image !== null) {
-            const outlineRectPx = characterImageEffectRectPx(
-                item.rectPx,
-                CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
-            );
-            const dropShadowOffsetPx = {
-                x: CHARACTER_IMAGE_DROP_SHADOW_OFFSET_X_PX,
-                y: CHARACTER_IMAGE_DROP_SHADOW_OFFSET_Y_PX,
-            };
-            const dropShadowRectPx = characterImageEffectRectPx(
-                item.rectPx,
-                CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
-                dropShadowOffsetPx,
-            );
-
-            dropShadowQuadIndex = dropShadowQuadRenderer.drawTextureQuad(
-                pass,
-                dropShadowQuadIndex,
-                frame,
-                dropShadowRectPx,
-                characterTextures[index],
-                withOpacity(CHARACTER_IMAGE_DROP_SHADOW_MULTIPLIER, item.opacity),
-                {
-                    effect: [
-                        CHARACTER_IMAGE_DROP_SHADOW_RADIUS_PX,
-                        dropShadowOffsetPx.x,
-                        dropShadowOffsetPx.y,
-                        0,
-                    ],
-                    uvTransform: characterImageEffectUvTransform(
-                        item.rectPx,
-                        dropShadowRectPx,
-                        item.flippedHorizontally,
-                    ),
-                },
-            );
-            outlineQuadIndex = outlineQuadRenderer.drawTextureQuad(
-                pass,
-                outlineQuadIndex,
-                frame,
-                outlineRectPx,
-                characterTextures[index],
-                withOpacity(CHARACTER_IMAGE_OUTLINE_COLOR, item.opacity),
-                {
-                    effect: [
-                        CHARACTER_IMAGE_OUTLINE_RADIUS_PX,
-                        0,
-                        0,
-                        0,
-                    ],
-                    uvTransform: characterImageEffectUvTransform(
-                        item.rectPx,
-                        outlineRectPx,
-                        item.flippedHorizontally,
-                    ),
-                },
-            );
-        }
-
-        quadIndex = quadRenderer.drawTextureQuad(
-            pass,
-            quadIndex,
-            frame,
-            item.rectPx,
-            characterTextures[index],
-            item.image === null
-                ? withOpacity(PLACEHOLDER_COLOR, item.opacity)
-                : withOpacity(IMAGE_TINT, item.opacity),
-            {
-                flipX: item.flippedHorizontally,
-            },
-        );
-    }
-
-    return {
-        quadIndex,
-        outlineQuadIndex,
-        dropShadowQuadIndex,
-    };
-};

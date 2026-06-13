@@ -59,4 +59,51 @@ describe("centeredCameraPositionForCharacter", () => {
         expect(position.scalePxPerMeter).toBeCloseTo(40);
         expect(position.y).toBeCloseTo(0);
     });
+
+    test("fits the projected image bounds when logarithmic perspective is active", () => {
+        const projectedHeightMeters = Math.log1p(10);
+        const position = centeredCameraPositionForCharacter({
+            character: makeCharacter(),
+            positionX: 100,
+            viewportDimsPx: {
+                width: 1000,
+                height: 1000,
+            },
+            viewportInsetsPx: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+            },
+            logPerspective: true,
+        });
+
+        expect(position.x).toBeCloseTo(100 + projectedHeightMeters * 0.5);
+        expect(position.y).toBeCloseTo(Math.expm1(projectedHeightMeters * 0.5));
+        expect(position.scalePxPerMeter).toBeCloseTo(1000 / (projectedHeightMeters * 1.5));
+    });
+
+    test("centers logarithmic character bounds around nonzero anchors", () => {
+        const character = makeCharacter();
+        character.anchor.y = 0.25;
+        const projectedHeightMeters = Math.log1p(7.5) + Math.log1p(2.5);
+        const position = centeredCameraPositionForCharacter({
+            character,
+            positionX: 100,
+            viewportDimsPx: {
+                width: 1000,
+                height: 1000,
+            },
+            viewportInsetsPx: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+            },
+            logPerspective: true,
+        });
+
+        expect(position.y).toBeCloseTo(Math.expm1(projectedHeightMeters * 0.25));
+        expect(position.scalePxPerMeter).toBeCloseTo(1000 / (projectedHeightMeters * 1.5));
+    });
 });
