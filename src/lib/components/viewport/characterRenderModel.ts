@@ -49,6 +49,13 @@ export type CharacterRenderFrame = {
     items: CharacterRenderItem[],
 };
 
+export type CharacterProjectionOverride = {
+    character: Character,
+    scaleFac: number,
+    centerXMeters: number,
+    centerProjectedYMeters: number,
+};
+
 export type CharacterRenderCamera = {
     posMetersX: number,
     posMetersY: number,
@@ -93,6 +100,7 @@ export const buildCharacterRenderFrame = ({
     heightPx,
     editingCharacter,
     baselinePreview = null,
+    projectionOverride = null,
     logPerspective = false,
     gridlinesOnTop = false,
 }: {
@@ -103,6 +111,7 @@ export const buildCharacterRenderFrame = ({
     heightPx: number,
     editingCharacter: Character | null,
     baselinePreview?: BaselinePreview,
+    projectionOverride?: CharacterProjectionOverride | null,
     logPerspective?: boolean,
     gridlinesOnTop?: boolean,
 }): CharacterRenderFrame => {
@@ -128,7 +137,17 @@ export const buildCharacterRenderFrame = ({
         ) * camera.scalePxPerMeter
     );
     const items = characters.map((character, index) => {
-        const characterHeightMeters = character.baseline.scaleFac;
+        const characterHeightMeters = projectionOverride?.character === character
+            ? projectionOverride.scaleFac
+            : character.baseline.scaleFac;
+        const projectionCharacter = {
+            viewportWidth: characterHeightMeters * character.aspect,
+            baseline: {
+                scaleFac: characterHeightMeters,
+            },
+            aspect: character.aspect,
+            anchor: character.anchor,
+        };
         const height = projectedViewportHeightMeters(
             characterHeightMeters,
             character.anchor.y,
@@ -136,9 +155,17 @@ export const buildCharacterRenderFrame = ({
         ) * camera.scalePxPerMeter;
         const anchorY = screenYMetersAsPx(0);
         const width = characterViewportWidthForProjection(
-            character,
+            projectionCharacter,
             logPerspective,
         ) * camera.scalePxPerMeter;
+        const centerPx = projectionOverride?.character === character
+            ? {
+                x: camera.viewportPositionPx.x
+                    + (projectionOverride.centerXMeters - camera.posMetersX) * camera.scalePxPerMeter,
+                y: camera.viewportPositionPx.y
+                    - (projectionOverride.centerProjectedYMeters - projectedCameraYMeters) * camera.scalePxPerMeter,
+            }
+            : null;
         const mutedByEditMode = editingCharacter !== null && editingCharacter !== character;
         const editing = editingCharacter === character;
         const opacity = mutedByEditMode ? EDIT_MUTED_OPACITY : 1;
@@ -152,8 +179,12 @@ export const buildCharacterRenderFrame = ({
             name: character.name,
             owners: character.ownerIdentities,
             rectPx: {
-                x: camera.viewportPositionPx.x + (positionsX[index] - camera.posMetersX) * camera.scalePxPerMeter,
-                y: anchorY - (1 - character.anchor.y) * height,
+                x: centerPx === null ? (
+                    camera.viewportPositionPx.x + (positionsX[index] - camera.posMetersX) * camera.scalePxPerMeter
+                ) : centerPx.x - width * 0.5,
+                y: centerPx === null ? (
+                    anchorY - (1 - character.anchor.y) * height
+                ) : centerPx.y - height * 0.5,
                 width,
                 height,
             },

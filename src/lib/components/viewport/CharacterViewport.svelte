@@ -1,9 +1,21 @@
 <script lang="ts">
-import { untrack } from "svelte";
+import {
+    onDestroy,
+    untrack,
+} from "svelte";
+import { Tween } from "svelte/motion";
 import {
     centeredCameraPositionForCharacter,
+    referenceCurveSignatureForCharacter,
     store,
 } from "$lib/types/Store.svelte";
+import {
+    CAMERA_EASE_DURATION_MS,
+    CAMERA_EASE_OPTIONS,
+    cameraScaleFromTweenValue,
+    cameraScaleToTweenValue,
+} from "$lib/types/Camera2d.svelte";
+import type { Character } from "$lib/types/Character.svelte";
 import CharacterCanvas from "./CharacterCanvas.svelte";
 import {
     buildCharacterRenderFrame,
@@ -39,6 +51,11 @@ type DragState =
     }
     | null;
 
+type FocusedReferenceCurve = {
+    character: Character,
+    signature: string,
+};
+
 type DragonscalerViewportDebugWindow = typeof window & {
     __dragonscalerViewportDebug?: {
         renderFrame: CharacterRenderFrame,
@@ -52,6 +69,11 @@ let viewportLeft = $state(0);
 let viewportTop = $state(0);
 let dragState: DragState = $state(null);
 let rawDrawPoints: Point[] = $state([]);
+let focusedReferenceCurve: FocusedReferenceCurve | null = null;
+let focusedProjectionCharacter: Character | null = $state(null);
+let focusedProjectionTimeout: number | null = null;
+const focusedScaleFacTween = new Tween(cameraScaleToTweenValue(1), {duration: 0});
+const focusedScaleFac = $derived(cameraScaleFromTweenValue(focusedScaleFacTween.current));
 const baselinePreview: BaselinePreview = $derived.by(() => {
     if (dragState?.kind !== "baseline") return null;
 
@@ -68,6 +90,47 @@ const baselinePreview: BaselinePreview = $derived.by(() => {
 });
 const displayCharacters = $derived(store.characterManager.displayCharacters);
 const logPerspective = $derived(store.characterManager.logPerspective);
+const focusOffsetPx = $derived({
+    x: (store.camera.viewportInsetsPx.left - store.camera.viewportInsetsPx.right) * 0.5,
+    y: (store.camera.viewportInsetsPx.top - store.camera.viewportInsetsPx.bottom) * 0.5,
+});
+const projectionOverride = $derived.by(() => {
+    if (focusedProjectionCharacter === null) return null;
+
+    return {
+        character: focusedProjectionCharacter,
+        scaleFac: focusedScaleFac,
+        centerXMeters: store.camera.posMetersX + focusOffsetPx.x / store.camera.scalePxPerMeter,
+        centerProjectedYMeters: projectViewportYMeters(
+            store.camera.posMetersY,
+            logPerspective,
+        ) - focusOffsetPx.y / store.camera.scalePxPerMeter,
+    };
+});
+
+const clearFocusedProjectionTimeout = () => {
+    if (focusedProjectionTimeout === null) return;
+
+    clearTimeout(focusedProjectionTimeout);
+    focusedProjectionTimeout = null;
+};
+
+const finishFocusedProjectionAfterEase = (character: Character) => {
+    clearFocusedProjectionTimeout();
+
+    focusedProjectionTimeout = setTimeout(
+        () => {
+            if (focusedProjectionCharacter === character) {
+                focusedProjectionCharacter = null;
+            }
+
+            focusedProjectionTimeout = null;
+        },
+        CAMERA_EASE_DURATION_MS,
+    );
+};
+
+onDestroy(clearFocusedProjectionTimeout);
 
 $effect(() => {
     viewportWidth;
@@ -100,6 +163,7 @@ const renderFrame = $derived(buildCharacterRenderFrame({
     heightPx: viewportHeight,
     editingCharacter: store.characterManager.editingCharacter,
     baselinePreview,
+    projectionOverride,
     logPerspective,
     gridlinesOnTop: store.gridlinesOnTop,
 }));
@@ -112,10 +176,7 @@ $effect(() => {
     };
 });
 
-$effect(() => {
-    const selected = store.characterManager.selectedCharacter;
-    if (selected === null) return;
-
+const focusSelectedCharacter = (selected: Character) => {
     const index = displayCharacters.indexOf(selected);
     if (index === -1) return;
 
@@ -138,10 +199,47 @@ $effect(() => {
         logPerspective,
     });
 
+    store.camera.setPosMetersXWithEase(pos.x);
+    store.camera.setPosMetersYWithEase(pos.y);
+    store.camera.setScalePxPerMeterWithEase(pos.scalePxPerMeter);
+};
+
+$effect(() => {
+    const selected = store.characterManager.selectedCharacter;
+    if (selected === null) {
+        focusedReferenceCurve = null;
+        focusedProjectionCharacter = null;
+        clearFocusedProjectionTimeout();
+        return;
+    }
+
+    const signature = referenceCurveSignatureForCharacter(selected);
+    const selectedChanged = focusedReferenceCurve?.character !== selected;
+    const referenceCurveChanged = (
+        !selectedChanged
+        && focusedReferenceCurve?.signature !== signature
+    );
+    focusedReferenceCurve = {
+        character: selected,
+        signature,
+    };
+
+    if (!selectedChanged && !referenceCurveChanged) return;
+
     untrack(() => {
-        store.camera.setPosMetersXWithEase(pos.x);
-        store.camera.setPosMetersYWithEase(pos.y);
-        store.camera.setScalePxPerMeterWithEase(pos.scalePxPerMeter);
+        if (referenceCurveChanged) {
+            focusedProjectionCharacter = selected;
+            finishFocusedProjectionAfterEase(selected);
+        } else {
+            focusedProjectionCharacter = null;
+            clearFocusedProjectionTimeout();
+        }
+
+        focusedScaleFacTween.set(
+            cameraScaleToTweenValue(selected.baseline.scaleFac),
+            referenceCurveChanged ? CAMERA_EASE_OPTIONS : {duration: 0},
+        );
+        focusSelectedCharacter(selected);
     });
 });
 

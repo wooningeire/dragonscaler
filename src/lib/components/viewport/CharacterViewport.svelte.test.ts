@@ -93,7 +93,7 @@ describe("CharacterViewport", () => {
         expect(viewport?.querySelectorAll(".character-overlay")).toHaveLength(0);
     });
 
-    test("retargets selected-character centering after image dimensions load", async () => {
+    test("retargets selected-character centering only after reference curve changes", async () => {
         mockViewportRect(
             1000,
             1000,
@@ -115,11 +115,11 @@ describe("CharacterViewport", () => {
             store.camera,
             "setPosMetersXWithEase",
         ).mockImplementation(() => {});
-        vi.spyOn(
+        const setPosMetersYWithEase = vi.spyOn(
             store.camera,
             "setPosMetersYWithEase",
         ).mockImplementation(() => {});
-        vi.spyOn(
+        const setScalePxPerMeterWithEase = vi.spyOn(
             store.camera,
             "setScalePxPerMeterWithEase",
         ).mockImplementation(() => {});
@@ -128,6 +128,25 @@ describe("CharacterViewport", () => {
 
         await waitFor(() => expect(setPosMetersXWithEase).toHaveBeenCalledWith(-1));
         setPosMetersXWithEase.mockClear();
+        setPosMetersYWithEase.mockClear();
+        setScalePxPerMeterWithEase.mockClear();
+
+        store.characterManager.spacingFac = 1;
+        await tick();
+
+        expect(setPosMetersXWithEase).not.toHaveBeenCalled();
+        expect(setPosMetersYWithEase).not.toHaveBeenCalled();
+        expect(setScalePxPerMeterWithEase).not.toHaveBeenCalled();
+
+        character.anchor = {
+            x: 0.25,
+            y: 0.2,
+        };
+        await tick();
+
+        expect(setPosMetersXWithEase).not.toHaveBeenCalled();
+        expect(setPosMetersYWithEase).not.toHaveBeenCalled();
+        expect(setScalePxPerMeterWithEase).not.toHaveBeenCalled();
 
         character.image = makeImage(
             200,
@@ -135,6 +154,19 @@ describe("CharacterViewport", () => {
         );
         await tick();
 
-        await waitFor(() => expect(setPosMetersXWithEase).toHaveBeenCalledWith(-2));
+        expect(setPosMetersXWithEase).not.toHaveBeenCalled();
+        expect(setPosMetersYWithEase).not.toHaveBeenCalled();
+        expect(setScalePxPerMeterWithEase).not.toHaveBeenCalled();
+
+        character.baseline.targetLength = 4;
+        await waitFor(() => expect(setPosMetersXWithEase).toHaveBeenCalledWith(-4));
+
+        setPosMetersXWithEase.mockClear();
+        character.baseline.points = [
+            {x: 0.5, y: 0},
+            {x: 0.5, y: 0.5},
+        ];
+
+        await waitFor(() => expect(setPosMetersXWithEase).toHaveBeenCalledWith(-8));
     });
 });

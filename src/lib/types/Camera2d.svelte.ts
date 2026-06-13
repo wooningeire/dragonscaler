@@ -1,20 +1,31 @@
-import { quadInOut, sineInOut } from "svelte/easing";
+import { quadInOut } from "svelte/easing";
 import { Tween } from "svelte/motion";
 
 
-const DURATION = 500;
+export const CAMERA_EASE_DURATION_MS = 500;
+export const CAMERA_EASE_OPTIONS = {
+    duration: CAMERA_EASE_DURATION_MS,
+    easing: quadInOut,
+};
+
 const SCALE_EXP = 8;
 const SCALE_EXP_LOG = Math.log2(SCALE_EXP);
 
+export const cameraScaleToTweenValue = (scale: number) => Math.log2(scale) / SCALE_EXP_LOG;
+export const cameraScaleFromTweenValue = (value: number) => SCALE_EXP ** value;
+
 export class Camera2d {
-    private readonly scalePxPerMeterTween = new Tween(Math.log2(72) / SCALE_EXP_LOG, {duration: 0});
-    readonly scalePxPerMeter = $derived(SCALE_EXP ** this.scalePxPerMeterTween.current);
+    private readonly scalePxPerMeterTween = new Tween(cameraScaleToTweenValue(72), {duration: 0});
+    readonly scalePxPerMeter = $derived(cameraScaleFromTweenValue(this.scalePxPerMeterTween.current));
 
     setScalePxPerMeterWithEase(scalePxPerMeter: number) {
-        this.scalePxPerMeterTween.set(Math.log2(scalePxPerMeter) / SCALE_EXP_LOG, {duration: DURATION, easing: quadInOut});
+        this.scalePxPerMeterTween.set(
+            cameraScaleToTweenValue(scalePxPerMeter),
+            CAMERA_EASE_OPTIONS,
+        );
     }
     setScalePxPerMeter(scalePxPerMeter: number) {
-        this.scalePxPerMeterTween.set(Math.log2(scalePxPerMeter) / SCALE_EXP_LOG);
+        this.scalePxPerMeterTween.set(cameraScaleToTweenValue(scalePxPerMeter));
     }
 
     private readonly posMetersXTween = new Tween(0, {duration: 0});
@@ -26,10 +37,16 @@ export class Camera2d {
     readonly posMetersY = $derived(this.posMetersYTween.current);
 
     setPosMetersXWithEase(posMetersX: number) {
-        this.posMetersXTween.set(posMetersX, {duration: DURATION, easing: quadInOut});
+        this.posMetersXTween.set(
+            posMetersX,
+            CAMERA_EASE_OPTIONS,
+        );
     }
     setPosMetersYWithEase(posMetersY: number) {
-        this.posMetersYTween.set(posMetersY, {duration: DURATION, easing: quadInOut});
+        this.posMetersYTween.set(
+            posMetersY,
+            CAMERA_EASE_OPTIONS,
+        );
     }
 
     setPosMetersX(posMetersX: number) {

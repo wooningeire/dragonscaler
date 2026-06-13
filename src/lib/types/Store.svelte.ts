@@ -29,6 +29,11 @@ export type CenteredCameraPosition = {
     scalePxPerMeter: number,
 };
 
+export const referenceCurveSignatureForCharacter = (character: Character) => [
+    character.baseline.targetLength,
+    ...character.baseline.points.map(point => `${point.x},${point.y}`),
+].join("|");
+
 export const centeredCameraPositionForCharacter = ({
     character,
     positionX,

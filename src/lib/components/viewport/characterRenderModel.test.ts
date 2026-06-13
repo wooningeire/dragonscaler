@@ -122,6 +122,38 @@ describe("buildCharacterRenderFrame", () => {
         );
     });
 
+    test("uses the focused projection scale override for character geometry", () => {
+        const character = makeCharacter("Eased Projection", 4);
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+            projectionOverride: {
+                character,
+                scaleFac: 2,
+                centerXMeters: 1,
+                centerProjectedYMeters: 0.5,
+            },
+        });
+
+        expect(frame.items[0].rectPx.height).toBeCloseTo(200);
+        expect(frame.items[0].rectPx.width).toBeCloseTo(200);
+        expect(frame.items[0].rectPx.x).toBeCloseTo(400);
+        expect(frame.items[0].rectPx.y).toBeCloseTo(150);
+        expect(frame.items[0].baselinePoints).toBe(character.baseline.points);
+    });
+
     test("right-aligns nameplates to the character image", () => {
         const character = makeCharacter("Right Aligned", 2);
         const frame = buildCharacterRenderFrame({
