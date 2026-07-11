@@ -324,11 +324,15 @@ const canLeave = $derived(!loading && !saving && !deleting);
                         <label class="pixel-measurement-input">
                             <span>Pixel measurement</span>
 
-                            <TextEntry
-                                value={pixelMeasurementText}
-                                onValueChange={setPixelMeasurement}
-                                placeholderText="Pixels"
-                            />
+                            <div class="pixel-measurement-value">
+                                <TextEntry
+                                    value={pixelMeasurementText}
+                                    onValueChange={setPixelMeasurement}
+                                    placeholderText="Pixels"
+                                />
+
+                                <span>px</span>
+                            </div>
                         </label>
                     </div>
                 {:else}
@@ -436,6 +440,18 @@ character-edit-menu {
     > span {
         white-space: nowrap;
     }
+}
+
+.pixel-measurement-input {
+    grid-template-columns: max-content minmax(7rem, 8.5rem);
+}
+
+.pixel-measurement-value {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 0.5rem;
+    align-items: center;
+    min-width: 0;
 }
 
 .reference-label-input {

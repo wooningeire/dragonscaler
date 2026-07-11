@@ -101,6 +101,7 @@ describe("CharacterEditMenu", () => {
 
         expect(character.baseline.referenceSizingMethod).toBe("pixel_measurement");
         expect(screen.queryByRole("radiogroup", {name: "Reference curve mode"})).toBeNull();
+        expect(screen.getByText("px", {exact: true})).toBeVisible();
 
         const labelInput = container.querySelector<HTMLElement>(
             ".reference-label-input [contenteditable]",

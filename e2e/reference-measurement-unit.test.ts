@@ -337,6 +337,7 @@ test("reference measurement unit radio preserves layout and updates the edited f
 
     await page.getByRole("radio", {name: "Give a pixel measurement"}).click();
     await expect(page.getByText("Pixel measurement", {exact: true})).toBeVisible();
+    await expect(page.getByText("px", {exact: true})).toBeVisible();
     await expect(page.getByRole("radiogroup", {name: "Reference curve mode"})).toHaveCount(0);
 
     const referenceLabelInput = page.locator(".reference-label-input [contenteditable]");
@@ -359,6 +360,7 @@ test("reference measurement unit radio preserves layout and updates the edited f
             ".reference-label-input",
             ".pixel-measurement-row",
             ".pixel-measurement-input",
+            ".pixel-measurement-value",
             ".buttons",
         ];
 
