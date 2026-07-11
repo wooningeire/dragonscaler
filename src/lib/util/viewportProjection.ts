@@ -1,10 +1,8 @@
 type CharacterProjectionInput = {
     viewportWidth: number,
-    baseline?: {
-        scaleFac: number,
-    },
-    aspect?: number,
-    anchor?: {
+    scaleFac: number,
+    aspect: number,
+    anchor: {
         y: number,
     },
 };
@@ -57,17 +55,12 @@ export const characterViewportWidthForProjection = (
     character: CharacterProjectionInput,
     logPerspective: boolean,
 ) => {
-    if (
-        !logPerspective
-        || character.baseline === undefined
-        || character.aspect === undefined
-        || character.anchor === undefined
-    ) {
+    if (!logPerspective) {
         return character.viewportWidth;
     }
 
     return projectedViewportHeightMeters(
-        character.baseline.scaleFac,
+        character.scaleFac,
         character.anchor.y,
         logPerspective,
     ) * character.aspect;

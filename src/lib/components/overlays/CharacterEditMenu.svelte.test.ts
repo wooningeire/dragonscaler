@@ -76,7 +76,7 @@ describe("CharacterEditMenu", () => {
 
         render(CharacterEditMenu);
 
-        expect(screen.getByText("Reference curve")).toBeVisible();
+        expect(screen.getByText("Reference length")).toBeVisible();
         expect(screen.getByRole("radiogroup", {name: "Measurement unit"})).toBeVisible();
         expect(screen.getByRole("radio", {name: "m"})).toBeChecked();
 
@@ -85,6 +85,129 @@ describe("CharacterEditMenu", () => {
         expect(character.baseline.measurementUnit).toBe("ft");
         expect(screen.getByRole("radio", {name: "ft"})).toBeChecked();
         expect(screen.getByText("3.281")).toBeVisible();
+    });
+
+    test("records pixel reference sizing input with the current image dimensions", async () => {
+        const character = makeCharacter();
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+
+        const {container} = render(CharacterEditMenu);
+
+        expect(screen.getByRole("radiogroup", {name: "Reference sizing method"})).toBeVisible();
+        expect(screen.getByRole("radio", {name: "Draw a measurement line"})).toBeChecked();
+
+        await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
+
+        expect(character.baseline.referenceSizingMethod).toBe("pixel_measurement");
+        expect(screen.queryByRole("radiogroup", {name: "Reference curve mode"})).toBeNull();
+
+        const pixelInput = screen
+            .getByText("Pixel measurement")
+            .closest("label")
+            ?.querySelector("[contenteditable]");
+        if (pixelInput === null || pixelInput === undefined) throw new Error("missing pixel input");
+
+        pixelInput.textContent = "150";
+        await fireEvent.input(pixelInput);
+        await fireEvent.blur(pixelInput);
+
+        expect(character.baseline.pixelMeasurementPx).toBe(150);
+        expect(character.pixelMeasurementImageLength).toBe(150);
+        expect(container.querySelector(".pixel-measurement-row")).not.toBeNull();
+    });
+
+    test("enables pixel sizing when the image arrives after the measurement", async () => {
+        const character = new Character({
+            name: "Pret",
+            uploaded: false,
+        });
+        const image = makeImage();
+        vi.spyOn(CharacterImage, "fromFile").mockResolvedValue(image);
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+
+        const {container} = render(CharacterEditMenu);
+
+        await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
+
+        const pixelInput = screen
+            .getByText("Pixel measurement")
+            .closest("label")
+            ?.querySelector("[contenteditable]");
+        if (pixelInput === null || pixelInput === undefined) throw new Error("missing pixel input");
+
+        pixelInput.textContent = "150";
+        await fireEvent.input(pixelInput);
+        await fireEvent.blur(pixelInput);
+
+        expect(character.pixelMeasurementImageLength).toBeNull();
+        expect(screen.getByRole("button", {name: "Create"})).toBeDisabled();
+
+        const fileInput = container.querySelector<HTMLInputElement>("input[type=\"file\"]");
+        if (fileInput === null) throw new Error("missing file input");
+
+        Object.defineProperty(
+            fileInput,
+            "files",
+            {
+                configurable: true,
+                value: [image.file],
+            },
+        );
+        await fireEvent.input(fileInput);
+
+        await waitFor(() => {
+            expect(character.image).toBe(image);
+            expect(character.pixelMeasurementImageLength).toBe(150);
+            expect(screen.getByRole("button", {name: "Create"})).toBeEnabled();
+        });
+    });
+
+    test("keeps the current image usable when a replacement fails", async () => {
+        const previousImage = new CharacterImage({
+            src: "blob:previous",
+            file: new File(["previous"], "previous.png", {type: "image/png"}),
+            dimensions: {
+                width: 2,
+                height: 1,
+            },
+            hasObjectUrl: true,
+        });
+        const character = new Character({
+            id: "character-1",
+            image: previousImage,
+            name: "Pret",
+            uploaded: true,
+        });
+        const loadError = new Error("Invalid image.");
+        vi.spyOn(CharacterImage, "fromFile").mockRejectedValue(loadError);
+        const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+        const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+
+        const {container} = render(CharacterEditMenu);
+        const fileInput = container.querySelector<HTMLInputElement>("input[type=\"file\"]");
+        if (fileInput === null) throw new Error("missing file input");
+
+        Object.defineProperty(
+            fileInput,
+            "files",
+            {
+                configurable: true,
+                value: [new File(["invalid"], "invalid.png", {type: "image/png"})],
+            },
+        );
+        await fireEvent.input(fileInput);
+
+        await waitFor(() => expect(consoleError).toHaveBeenCalledWith(loadError));
+
+        expect(character.image).toBe(previousImage);
+        expect(revokeObjectUrl).not.toHaveBeenCalled();
+        expect(screen.getByRole("button", {name: "Update"})).toBeEnabled();
+        expect(screen.getByRole("button", {name: "Cancel"})).toBeEnabled();
+        expect(screen.getByRole("button", {name: "Flip"})).toBeEnabled();
     });
 
     test("flips the image and mirrors existing reference geometry", async () => {

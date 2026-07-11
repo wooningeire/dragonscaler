@@ -130,6 +130,7 @@ const snapshotReferenceMeasurement = async (page: Page): Promise<ReferenceMeasur
     const clippedSelectors = [
         "character-edit-menu",
         ".character-form-inputs",
+        ".reference-sizing-control",
         ".reference-measurement-row",
         ".reference-measurement-input",
         ".measurement-unit-control",
@@ -147,11 +148,16 @@ const snapshotReferenceMeasurement = async (page: Page): Promise<ReferenceMeasur
             || rect.top < dockRect.top - 0.5
             || rect.bottom > dockRect.bottom + 0.5;
     });
-    const checkedInput = document.querySelector<HTMLInputElement>(
+    const measurementUnitControl = document.querySelector(".measurement-unit-control");
+    const checkedInput = measurementUnitControl?.querySelector<HTMLInputElement>(
         "input[name=\"reference-measurement-unit\"]:checked",
-    );
-    const highlightKnob = document.querySelector<HTMLElement>("radio-group-button-highlight-knob");
-    const highlightSurface = document.querySelector<HTMLElement>("radio-group-button-highlight-surface");
+    ) ?? null;
+    const highlightKnob = measurementUnitControl?.querySelector<HTMLElement>(
+        "radio-group-button-highlight-knob",
+    ) ?? null;
+    const highlightSurface = measurementUnitControl?.querySelector<HTMLElement>(
+        "radio-group-button-highlight-surface",
+    ) ?? null;
     const checkedRect = checkedInput?.closest("label")?.getBoundingClientRect() ?? null;
     const highlightRect = highlightKnob?.getBoundingClientRect() ?? null;
     const highlightSurfaceRect = highlightSurface?.getBoundingClientRect() ?? null;
@@ -254,7 +260,7 @@ test("reference measurement unit radio preserves layout and updates the edited f
     expect(beforeSwitch.highlightSurfaceMinSizePx).toBeGreaterThan(1);
     expectSharedHighlightMotionTiming(beforeSwitch);
 
-    await page.getByRole("radio", {name: "ft"}).click();
+    await page.getByRole("radio", {name: "ft", exact: true}).click();
 
     const afterSwitch = await snapshotReferenceMeasurement(page);
     expect(afterSwitch).toMatchObject({
@@ -285,7 +291,7 @@ test("reference measurement unit radio preserves layout and updates the edited f
         beforeSwitch.menuRect,
     );
 
-    await page.getByRole("radio", {name: "m"}).click();
+    await page.getByRole("radio", {name: "m", exact: true}).click();
 
     const afterReturn = await snapshotReferenceMeasurement(page);
     expect(afterReturn).toMatchObject({
@@ -328,4 +334,45 @@ test("reference measurement unit radio preserves layout and updates the edited f
     expect(mobileSnapshot.highlightSurfaceMinSizePx).not.toBeNull();
     expect(mobileSnapshot.highlightSurfaceMinSizePx).toBeGreaterThan(1);
     expectSharedHighlightMotionTiming(mobileSnapshot);
+
+    await page.getByRole("radio", {name: "Give a pixel measurement"}).click();
+    await expect(page.getByText("Pixel measurement", {exact: true})).toBeVisible();
+    await expect(page.getByRole("radiogroup", {name: "Reference curve mode"})).toHaveCount(0);
+
+    const pixelLayout = await page.evaluate(() => {
+        const dock = document.querySelector("overlays-bottom-dock");
+        if (dock === null) throw new Error("missing bottom dock");
+
+        const dockRect = dock.getBoundingClientRect();
+        const selectors = [
+            "character-edit-menu",
+            ".character-form-inputs",
+            ".reference-sizing-control",
+            ".reference-measurement-row",
+            ".reference-measurement-input",
+            ".measurement-unit-control",
+            ".pixel-measurement-row",
+            ".pixel-measurement-input",
+            ".buttons",
+        ];
+
+        return {
+            horizontalOverflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+            verticalOverflowPx: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+            croppedSelectors: selectors.filter(selector => {
+                const rect = document.querySelector(selector)?.getBoundingClientRect();
+                if (rect === undefined) return true;
+
+                return rect.left < -0.5
+                    || rect.right > innerWidth + 0.5
+                    || rect.top < dockRect.top - 0.5
+                    || rect.bottom > dockRect.bottom + 0.5;
+            }),
+        };
+    });
+    expect(pixelLayout).toEqual({
+        horizontalOverflowPx: 0,
+        verticalOverflowPx: 0,
+        croppedSelectors: [],
+    });
 });

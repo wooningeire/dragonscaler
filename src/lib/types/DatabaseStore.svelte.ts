@@ -1,4 +1,8 @@
-import PocketBase, { type AuthRecord } from "pocketbase";
+import PocketBase, {
+    ClientResponseError,
+    type AuthRecord,
+    type RecordAuthResponse,
+} from "pocketbase";
 import { Character } from "./Character.svelte";
 import {
     Collections,
@@ -11,7 +15,10 @@ import {
     type PocketbaseCommonRecord,
     type ReferenceImageRecord,
 } from "./PocketBaseTypes";
-import { CharacterImage } from "./CharacterImage.svelte";
+import {
+    CharacterImage,
+    type Dimensions,
+} from "./CharacterImage.svelte";
 import { Baseline } from "./Baseline.svelte";
 import { getPocketbaseFileUrl, pocketbaseUrl } from "$lib/util/pocketbase";
 import type { IdentitySummary } from "./Identity";
@@ -22,17 +29,30 @@ type PocketBaseWritePayload = Record<string, unknown>;
 
 const RECORD_ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 const RECORD_ID_LENGTH = 15;
+const DISCORD_LOGIN_EXCHANGE_TIMEOUT_MS = 15_000;
+const DISCORD_LOGIN_TIMEOUT_MESSAGE = "The sign-in server did not respond. Try again in a moment.";
 const POCKETBASE_WRITE_OPTIONS = {
     // A collection path alone is not a write idempotency key.
     requestKey: null,
 };
 
 
+class DiscordLoginTimeoutError extends Error {
+    constructor() {
+        super(DISCORD_LOGIN_TIMEOUT_MESSAGE);
+        this.name = "DiscordLoginTimeoutError";
+    }
+}
+
+
 export class DatabaseStore {
     private readonly pb: PocketBase;
     private readonly characterWrites = new WeakMap<Character, Promise<unknown>>();
     private readonly defaultIdentityWrites = new Map<string, Promise<IdentitySummary>>();
+    private discordLoginPromise: Promise<RecordAuthResponse> | null = null;
     userRecord = $state<AuthRecord>(null);
+    discordLoginError = $state<string | null>(null);
+    discordLoginPending = $state(false);
 
 
     constructor() {
@@ -78,7 +98,7 @@ export class DatabaseStore {
         const identitiesById = new Map(identitiesResult.map(identity => [identity.id, identity]));
         const referenceImagesById = new Map(referenceImagesResult.map(referenceImage => [referenceImage.id, referenceImage]));
         const formsByCharacterId = this.groupByCharacterId(characterFormsResult);
-        const characterPromises: Promise<Character>[] = [];
+        const characters: Character[] = [];
 
         for (const characterData of characterDataResult) {
             const form = this.selectDefaultForm(formsByCharacterId.get(characterData.id) ?? []);
@@ -112,6 +132,7 @@ export class DatabaseStore {
             const character = new Character({
                 id: characterData.id,
                 image: null,
+                imageDimensions: this.referenceImageDimensions(referenceImage),
                 name: characterData.name,
                 anchor:
                     referenceImage?.anchor_point
@@ -125,6 +146,8 @@ export class DatabaseStore {
                     descriptor: referenceImage?.baseline_descriptor ?? legacyBaseline?.descriptor,
                     targetLength: form?.length_meters ?? legacyBaseline?.length_meters,
                     measurementUnit: form?.length_unit,
+                    referenceSizingMethod: referenceImage?.reference_sizing_method,
+                    pixelMeasurementPx: referenceImage?.pixel_measurement_px ?? null,
                 }),
                 ownerIdentities,
                 sonaIdentities,
@@ -140,27 +163,27 @@ export class DatabaseStore {
                 };
 
             if (imageSource !== null) {
-                characterPromises.push((async () => {
-                    const characterImageUrl = getPocketbaseFileUrl(imageSource);
+                const characterImageUrl = getPocketbaseFileUrl(imageSource);
 
-                    CharacterImage.fromUrl(
-                        characterImageUrl,
-                        imageSource.filename,
-                        {
-                            flippedHorizontally: referenceImage?.flipped_horizontally ?? false,
-                        },
-                    )
-                        .then(image => character.image = image)
-                        .catch(error => console.error(error));
-
-                    return character;
-                })());
-            } else {
-                characterPromises.push(Promise.resolve(character));
+                void CharacterImage.fromUrl(
+                    characterImageUrl,
+                    imageSource.filename,
+                    {
+                        flippedHorizontally: referenceImage?.flipped_horizontally ?? false,
+                        dimensions: character.imageDimensions,
+                    },
+                )
+                    .then(image => {
+                        character.image = image;
+                        character.imageDimensions = image.dimensions;
+                    })
+                    .catch(error => console.error(error));
             }
+
+            characters.push(character);
         }
 
-        return Promise.all(characterPromises);
+        return characters;
     }
 
     async createCharacter(character: Character) {
@@ -317,10 +340,35 @@ export class DatabaseStore {
         });
     }
 
-    async promptDiscordLogin() {
+    promptDiscordLogin() {
+        if (this.discordLoginPromise !== null) return this.discordLoginPromise;
+
+        this.discordLoginError = null;
+        this.discordLoginPending = true;
+        const loginPromise = this.performDiscordLogin();
+        this.discordLoginPromise = loginPromise;
+        void loginPromise
+            .catch(error => {
+                this.discordLoginError = this.discordLoginErrorText(error);
+            })
+            .finally(() => {
+                this.discordLoginPromise = null;
+                this.discordLoginPending = false;
+            });
+
+        return loginPromise;
+    }
+
+    private async performDiscordLogin() {
         const authResult = await this.pb.collection(Collections.Accounts).authWithOAuth2({
             provider: "discord",
             scopes: ["identify"],
+            // Repeated realtime callbacks otherwise cancel the first OAuth exchange.
+            // Each UI login remains single-flight through discordLoginPromise.
+            requestKey: null,
+            // PocketBase forwards this only to the final code exchange. Limit the
+            // server request without limiting the user's time in Discord.
+            fetch: this.fetchDiscordOAuthExchange,
         });
 
         this.userRecord = authResult.record;
@@ -347,6 +395,57 @@ export class DatabaseStore {
         await this.getDefaultIdentityForCurrentAccount();
 
         return authResult;
+    }
+
+    private readonly fetchDiscordOAuthExchange: typeof fetch = async (
+        input,
+        init,
+    ) => {
+        const abortController = new AbortController();
+        let timedOut = false;
+        const abortFromRequest = () => abortController.abort(init?.signal?.reason);
+        const timeoutId = setTimeout(
+            () => {
+                timedOut = true;
+                abortController.abort();
+            },
+            DISCORD_LOGIN_EXCHANGE_TIMEOUT_MS,
+        );
+
+        if (init?.signal?.aborted) {
+            abortFromRequest();
+        } else {
+            init?.signal?.addEventListener("abort", abortFromRequest, {once: true});
+        }
+
+        try {
+            return await fetch(
+                input,
+                {
+                    ...init,
+                    signal: abortController.signal,
+                },
+            );
+        } catch (error) {
+            if (timedOut) throw new DiscordLoginTimeoutError();
+
+            throw error;
+        } finally {
+            clearTimeout(timeoutId);
+            init?.signal?.removeEventListener("abort", abortFromRequest);
+        }
+    };
+
+    private discordLoginErrorText(error: unknown) {
+        if (
+            error instanceof DiscordLoginTimeoutError
+            || (
+                error instanceof ClientResponseError
+                && error.originalError instanceof DiscordLoginTimeoutError
+            )
+        ) return DISCORD_LOGIN_TIMEOUT_MESSAGE;
+
+        return "Discord sign-in failed. Try again.";
     }
 
     logout() {
@@ -649,6 +748,20 @@ export class DatabaseStore {
         };
     }
 
+    private referenceImageDimensions(referenceImage: ReferenceImageRecord | null): Dimensions | null {
+        const width = referenceImage?.width_px ?? null;
+        const height = referenceImage?.height_px ?? null;
+
+        if (width === null || height === null || width <= 0 || height <= 0) {
+            return null;
+        }
+
+        return {
+            width,
+            height,
+        };
+    }
+
     private async resolveOwnerIdentityIds(character: Character) {
         const ownerIdentityIds = character.ownerIdentities
             .map(identity => identity.identityId)
@@ -704,6 +817,10 @@ export class DatabaseStore {
             baseline_points: character.baseline.points,
             baseline_descriptor: character.baseline.descriptor,
             flipped_horizontally: character.image.flippedHorizontally,
+            width_px: character.image.dimensions.width,
+            height_px: character.image.dimensions.height,
+            reference_sizing_method: character.baseline.referenceSizingMethod,
+            pixel_measurement_px: character.baseline.pixelMeasurementPx,
         };
         const referenceImageCreateData = {
             ...referenceImageData,

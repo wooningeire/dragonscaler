@@ -1,5 +1,8 @@
-import { beforeEach, describe, expect, test } from "vitest";
-import type { AuthRecord } from "pocketbase";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+    ClientResponseError,
+    type AuthRecord,
+} from "pocketbase";
 import { Character } from "./Character.svelte";
 import { CharacterImage } from "./CharacterImage.svelte";
 import { Baseline } from "./Baseline.svelte";
@@ -86,6 +89,7 @@ const makeMissingRecordError = () => makePocketBaseError(
 );
 
 class FakeCollection {
+    readonly authWithOAuth2Calls: Record<string, unknown>[] = [];
     readonly createCalls: Record<string, unknown>[] = [];
     readonly updateCalls: {
         id: string,
@@ -94,9 +98,18 @@ class FakeCollection {
     readonly deleteCalls: string[] = [];
     readonly records = new Map<string, PocketbaseCommonRecord & Record<string, unknown>>();
 
+    authWithOAuth2Handler: (
+        options: Record<string, unknown>,
+    ) => Promise<unknown> = () => new Promise(() => {});
     createFailure: unknown = null;
 
     constructor(readonly name: string) {}
+
+    authWithOAuth2(options: Record<string, unknown>) {
+        this.authWithOAuth2Calls.push(options);
+
+        return this.authWithOAuth2Handler(options);
+    }
 
     async getOne<RecordType = PocketbaseCommonRecord & Record<string, unknown>>(id: string) {
         const record = this.records.get(id);
@@ -293,6 +306,55 @@ const makeNewCharacter = () => new Character({
     uploaded: false,
 });
 
+const seedStoredCharacter = (
+    fakePocketBase: FakePocketBase,
+    {
+        form = {},
+        referenceImage = null,
+    }: {
+        form?: Partial<CharacterFormRecord>,
+        referenceImage?: Partial<ReferenceImageRecord> | null,
+    } = {},
+) => {
+    const referenceImageIds = referenceImage === null
+        ? []
+        : ["reference-1"];
+    fakePocketBase.collection(Collections.Characters).records.set(
+        "character-1",
+        {
+            ...commonRecord("character-1"),
+            name: "Scale Wing",
+        } satisfies CharacterRecord,
+    );
+    fakePocketBase.collection(Collections.CharacterForms).records.set(
+        "form-1",
+        {
+            ...commonRecord("form-1"),
+            ...form,
+            character_id: "character-1",
+            is_default: true,
+            reference_image_ids: form.reference_image_ids ?? referenceImageIds,
+        } satisfies CharacterFormRecord,
+    );
+
+    if (referenceImage === null) return;
+
+    fakePocketBase.collection(Collections.ReferenceImages).records.set(
+        "reference-1",
+        {
+            ...commonRecord("reference-1"),
+            ...referenceImage,
+            image: referenceImage.image ?? "scale-wing.png",
+        } satisfies ReferenceImageRecord,
+    );
+};
+
+afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+});
+
 
 describe("DatabaseStore auth persistence", () => {
     beforeEach(() => {
@@ -326,6 +388,112 @@ describe("DatabaseStore auth persistence", () => {
 
         expect(databaseStore.userRecord?.id).toBe("user-1");
         expect(localStorage.getItem("pocketbase_auth")).toContain("user-1");
+    });
+
+    test("uses a bounded fetch without OAuth request auto-cancellation", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const accounts = fakePocketBase.collection(Collections.Accounts);
+        const oauthError = new Error("OAuth failed");
+        accounts.authWithOAuth2Handler = () => Promise.reject(oauthError);
+
+        await expect(databaseStore.promptDiscordLogin()).rejects.toBe(oauthError);
+
+        expect(accounts.authWithOAuth2Calls).toEqual([{
+            provider: "discord",
+            scopes: ["identify"],
+            requestKey: null,
+            fetch: expect.any(Function),
+        }]);
+        expect(databaseStore.discordLoginError).toBe(
+            "Discord sign-in failed. Try again.",
+        );
+        expect(databaseStore.discordLoginPending).toBe(false);
+    });
+
+    test("times out a stalled Discord token exchange", async () => {
+        vi.useFakeTimers();
+
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const accounts = fakePocketBase.collection(Collections.Accounts);
+        const stalledFetch = vi.fn((
+            _input: RequestInfo | URL,
+            init?: RequestInit,
+        ) => new Promise<Response>((_resolve, reject) => {
+            const rejectOnAbort = () => {
+                reject(
+                    new DOMException("The operation was aborted.", "AbortError"),
+                );
+            };
+
+            init?.signal?.addEventListener(
+                "abort",
+                rejectOnAbort,
+                {once: true},
+            );
+        }));
+        vi.stubGlobal("fetch", stalledFetch);
+        accounts.authWithOAuth2Handler = options => {
+            const exchangeFetch = options.fetch as typeof fetch;
+
+            return exchangeFetch(
+                "https://pb.example.test/api/collections/users/auth-with-oauth2",
+                {},
+            ).catch(error => {
+                throw new ClientResponseError(error);
+            });
+        };
+
+        const loginResult = databaseStore.promptDiscordLogin().catch(error => error);
+
+        await vi.runAllTimersAsync();
+        const loginError = await loginResult;
+
+        expect(loginError).toBeInstanceOf(ClientResponseError);
+        expect(stalledFetch).toHaveBeenCalledTimes(1);
+        expect(databaseStore.discordLoginError).toBe(
+            "The sign-in server did not respond. Try again in a moment.",
+        );
+        expect(databaseStore.discordLoginPending).toBe(false);
+    });
+
+    test("shares an in-flight Discord login and permits retry after failure", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const accounts = fakePocketBase.collection(Collections.Accounts);
+        const rejectLoginAttempts: ((reason: unknown) => void)[] = [];
+        accounts.authWithOAuth2Handler = () => new Promise((_resolve, reject) => {
+            rejectLoginAttempts.push(reject);
+        });
+
+        const firstLogin = databaseStore.promptDiscordLogin();
+        const duplicateLogin = databaseStore.promptDiscordLogin();
+        const firstAttempt = Promise.allSettled([
+            firstLogin,
+            duplicateLogin,
+        ]);
+
+        expect(duplicateLogin).toBe(firstLogin);
+        expect(accounts.authWithOAuth2Calls).toHaveLength(1);
+        expect(databaseStore.discordLoginPending).toBe(true);
+
+        rejectLoginAttempts[0]!(new Error("OAuth failed"));
+        await firstAttempt;
+
+        expect(databaseStore.discordLoginError).toBe(
+            "Discord sign-in failed. Try again.",
+        );
+        expect(databaseStore.discordLoginPending).toBe(false);
+
+        const retryLogin = databaseStore.promptDiscordLogin();
+        const retryAttempt = Promise.allSettled([retryLogin]);
+
+        expect(accounts.authWithOAuth2Calls).toHaveLength(2);
+        expect(databaseStore.discordLoginError).toBeNull();
+
+        rejectLoginAttempts[1]!(new Error("OAuth failed again"));
+        await retryAttempt;
     });
 });
 
@@ -368,6 +536,50 @@ describe("DatabaseStore write idempotency", () => {
             expect.objectContaining({
                 flipped_horizontally: true,
             }),
+        );
+    });
+
+    test("persists reference image dimensions", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+        character.image = new CharacterImage({
+            src: "blob:wide-dragon",
+            file: new File(["dragon"], "wide-dragon.png", {type: "image/png"}),
+            dimensions: {
+                width: 300,
+                height: 100,
+            },
+            hasObjectUrl: true,
+        });
+
+        await databaseStore.createCharacter(character);
+
+        expect(fakePocketBase.collection(Collections.ReferenceImages).createCalls[0]).toEqual(
+            expect.objectContaining({
+                width_px: 300,
+                height_px: 100,
+            }),
+        );
+    });
+
+    test("persists the authored pixel reference sizing input", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+        character.baseline.referenceSizingMethod = "pixel_measurement";
+        character.baseline.pixelMeasurementPx = 420;
+
+        await databaseStore.createCharacter(character);
+
+        expect(fakePocketBase.collection(Collections.ReferenceImages).createCalls[0]).toEqual(
+            expect.objectContaining({
+                reference_sizing_method: "pixel_measurement",
+                pixel_measurement_px: 420,
+            }),
+        );
+        expect(fakePocketBase.collection(Collections.CharacterForms).createCalls[0]).not.toHaveProperty(
+            "pixel_measurement_px",
         );
     });
 
@@ -507,27 +719,85 @@ describe("DatabaseStore write idempotency", () => {
 });
 
 describe("DatabaseStore character loading", () => {
+    test("uses stored reference image dimensions before the image file loads", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const imageLoadPromise = new Promise<CharacterImage>(() => {});
+        const fromUrl = vi.spyOn(CharacterImage, "fromUrl").mockReturnValue(imageLoadPromise);
+
+        seedStoredCharacter(fakePocketBase, {
+            referenceImage: {
+                flipped_horizontally: true,
+                width_px: 300,
+                height_px: 100,
+            },
+        });
+
+        const characters = await databaseStore.loadCharacterData();
+
+        expect(characters[0].image).toBeNull();
+        expect(characters[0].imageDimensions).toEqual({
+            width: 300,
+            height: 100,
+        });
+        expect(characters[0].aspect).toBe(3);
+        expect(fromUrl).toHaveBeenCalledWith(
+            expect.stringContaining(
+                "/api/files/dragonscaler_reference_images/reference-1/scale-wing.png",
+            ),
+            "scale-wing.png",
+            {
+                flippedHorizontally: true,
+                dimensions: {
+                    width: 300,
+                    height: 100,
+                },
+            },
+        );
+    });
+
+    test("uses decoded dimensions without writing during character load", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const loadedImage = new CharacterImage({
+            src: "http://example.test/scale-wing.png",
+            file: new File(["dragon"], "scale-wing.png"),
+            dimensions: {
+                width: 300,
+                height: 100,
+            },
+        });
+        let resolveImage: (image: CharacterImage) => void = () => {};
+        const imagePromise = new Promise<CharacterImage>(resolve => {
+            resolveImage = resolve;
+        });
+        vi.spyOn(CharacterImage, "fromUrl").mockReturnValue(imagePromise);
+
+        seedStoredCharacter(fakePocketBase, {
+            referenceImage: {},
+        });
+
+        const characters = await databaseStore.loadCharacterData();
+        resolveImage(loadedImage);
+        await imagePromise;
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(characters[0].imageDimensions).toEqual({
+            width: 300,
+            height: 100,
+        });
+        expect(fakePocketBase.collection(Collections.ReferenceImages).updateCalls).toEqual([]);
+    });
+
     test("loads the persisted reference measurement unit from the form", async () => {
         const databaseStore = new DatabaseStore();
         const fakePocketBase = installFakePocketBase(databaseStore);
-        fakePocketBase.collection(Collections.Characters).records.set(
-            "character-1",
-            {
-                ...commonRecord("character-1"),
-                name: "Scale Wing",
-            } satisfies CharacterRecord,
-        );
-        fakePocketBase.collection(Collections.CharacterForms).records.set(
-            "form-1",
-            {
-                ...commonRecord("form-1"),
-                character_id: "character-1",
-                is_default: true,
+        seedStoredCharacter(fakePocketBase, {
+            form: {
                 length_meters: 2,
                 length_unit: "ft",
-                reference_image_ids: [],
-            } satisfies CharacterFormRecord,
-        );
+            },
+        });
 
         const characters = await databaseStore.loadCharacterData();
 
@@ -536,26 +806,40 @@ describe("DatabaseStore character loading", () => {
         expect(characters[0].baseline.measurementUnit).toBe("ft");
     });
 
+    test("loads the persisted pixel reference sizing input from the reference image", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        seedStoredCharacter(fakePocketBase, {
+            form: {
+                length_meters: 2,
+            },
+            referenceImage: {
+                baseline_points: [
+                    {x: 0.5, y: 0},
+                    {x: 0.5, y: 1},
+                ],
+                reference_sizing_method: "pixel_measurement",
+                pixel_measurement_px: 300,
+                width_px: 900,
+                height_px: 600,
+            },
+        });
+
+        const characters = await databaseStore.loadCharacterData();
+
+        expect(characters[0].baseline.referenceSizingMethod).toBe("pixel_measurement");
+        expect(characters[0].baseline.pixelMeasurementPx).toBe(300);
+        expect(characters[0].scaleFac).toBe(4);
+    });
+
     test("defaults old form records without units to meters", async () => {
         const databaseStore = new DatabaseStore();
         const fakePocketBase = installFakePocketBase(databaseStore);
-        fakePocketBase.collection(Collections.Characters).records.set(
-            "character-1",
-            {
-                ...commonRecord("character-1"),
-                name: "Scale Wing",
-            } satisfies CharacterRecord,
-        );
-        fakePocketBase.collection(Collections.CharacterForms).records.set(
-            "form-1",
-            {
-                ...commonRecord("form-1"),
-                character_id: "character-1",
-                is_default: true,
+        seedStoredCharacter(fakePocketBase, {
+            form: {
                 length_meters: 2,
-                reference_image_ids: [],
-            } satisfies CharacterFormRecord,
-        );
+            },
+        });
 
         const characters = await databaseStore.loadCharacterData();
 

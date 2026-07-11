@@ -74,4 +74,10 @@ character-edit-menu-container {
 
     margin: calc(2em * var(--scale)) 0;
 }
+
+@media (max-width: 48rem) {
+    character-edit-menu-container {
+        margin: calc(0.75rem * var(--scale)) 0;
+    }
+}
 </style>

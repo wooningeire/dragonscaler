@@ -6,7 +6,6 @@ import {
 import { Tween } from "svelte/motion";
 import {
     centeredCameraPositionForCharacter,
-    referenceCurveSignatureForCharacter,
     store,
 } from "$lib/types/Store.svelte";
 import {
@@ -51,9 +50,9 @@ type DragState =
     }
     | null;
 
-type FocusedReferenceCurve = {
+type FocusedCharacterScale = {
     character: Character,
-    signature: string,
+    scaleFac: number,
 };
 
 type DragonscalerViewportDebugWindow = typeof window & {
@@ -69,7 +68,7 @@ let viewportLeft = $state(0);
 let viewportTop = $state(0);
 let dragState: DragState = $state(null);
 let rawDrawPoints: Point[] = $state([]);
-let focusedReferenceCurve: FocusedReferenceCurve | null = null;
+let focusedCharacterScale: FocusedCharacterScale | null = null;
 let focusedProjectionCharacter: Character | null = $state(null);
 let focusedProjectionTimeout: number | null = null;
 const focusedScaleFacTween = new Tween(cameraScaleToTweenValue(1), {duration: 0});
@@ -207,27 +206,30 @@ const focusSelectedCharacter = (selected: Character) => {
 $effect(() => {
     const selected = store.characterManager.selectedCharacter;
     if (selected === null) {
-        focusedReferenceCurve = null;
+        focusedCharacterScale = null;
         focusedProjectionCharacter = null;
         clearFocusedProjectionTimeout();
         return;
     }
 
-    const signature = referenceCurveSignatureForCharacter(selected);
-    const selectedChanged = focusedReferenceCurve?.character !== selected;
-    const referenceCurveChanged = (
+    const scaleFac = selected.scaleFac;
+    const selectedChanged = focusedCharacterScale?.character !== selected;
+    const scaleChanged = (
         !selectedChanged
-        && focusedReferenceCurve?.signature !== signature
+        && !Object.is(
+            focusedCharacterScale?.scaleFac,
+            scaleFac,
+        )
     );
-    focusedReferenceCurve = {
+    focusedCharacterScale = {
         character: selected,
-        signature,
+        scaleFac,
     };
 
-    if (!selectedChanged && !referenceCurveChanged) return;
+    if (!selectedChanged && !scaleChanged) return;
 
     untrack(() => {
-        if (referenceCurveChanged) {
+        if (scaleChanged) {
             focusedProjectionCharacter = selected;
             finishFocusedProjectionAfterEase(selected);
         } else {
@@ -236,8 +238,8 @@ $effect(() => {
         }
 
         focusedScaleFacTween.set(
-            cameraScaleToTweenValue(selected.baseline.scaleFac),
-            referenceCurveChanged ? CAMERA_EASE_OPTIONS : {duration: 0},
+            cameraScaleToTweenValue(scaleFac),
+            scaleChanged ? CAMERA_EASE_OPTIONS : {duration: 0},
         );
         focusSelectedCharacter(selected);
     });
@@ -342,6 +344,8 @@ const beginPointerDrag = (event: PointerEvent) => {
         };
         return;
     }
+
+    if (item.character.baseline.referenceSizingMethod === "pixel_measurement") return;
 
     rawDrawPoints = [baselinePointFromEvent(event, item)];
     dragState = {

@@ -9,9 +9,10 @@ import { characterViewportWidthForProjection } from "$lib/util/viewportProjectio
 
 const BASELINE_EDIT_MODE_STORAGE_KEY = "dragonscaler:baseline-edit-mode";
 
-type CharacterSpacingInput = {
-    viewportWidth: number,
-};
+type CharacterSpacingInput = Pick<
+    Character,
+    "anchor" | "aspect" | "scaleFac" | "viewportWidth"
+>;
 
 export const computeCharacterPositionsX = (
     characters: CharacterSpacingInput[],
@@ -43,7 +44,7 @@ export const computeCharacterPositionsX = (
 export const compareCharactersByScale = (
     a: Character,
     b: Character,
-) => a.baseline.scaleFac - b.baseline.scaleFac;
+) => a.scaleFac - b.scaleFac;
 
 export class CharacterManager {
     characters = $state<Character[]>([]);

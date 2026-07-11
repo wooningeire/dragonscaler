@@ -139,12 +139,10 @@ export const buildCharacterRenderFrame = ({
     const items = characters.map((character, index) => {
         const characterHeightMeters = projectionOverride?.character === character
             ? projectionOverride.scaleFac
-            : character.baseline.scaleFac;
+            : character.scaleFac;
         const projectionCharacter = {
             viewportWidth: characterHeightMeters * character.aspect,
-            baseline: {
-                scaleFac: characterHeightMeters,
-            },
+            scaleFac: characterHeightMeters,
             aspect: character.aspect,
             anchor: character.anchor,
         };
@@ -190,7 +188,9 @@ export const buildCharacterRenderFrame = ({
             },
             baselinePoints: baselinePreview?.character === character
                 ? baselinePreview.points
-                : character.baseline.points,
+                : character.baseline.referenceSizingMethod === "pixel_measurement"
+                    ? []
+                    : character.baseline.points,
             aspect: character.aspect,
             opacity,
             baselineOpacity: BASELINE_OPACITY * opacity,

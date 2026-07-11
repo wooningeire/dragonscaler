@@ -26,12 +26,10 @@ type FlipPanelSnapshot = {
     croppedSelectors: string[],
 };
 
-const testImageSvg = Buffer.from(`
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120" viewBox="0 0 240 120">
-    <rect width="120" height="120" fill="red"/>
-    <rect x="120" width="120" height="120" fill="blue"/>
-</svg>
-`);
+const testImagePng = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAOSURBVBhXY/jPwABC/wEP+QP98+IdQAAAAABJRU5ErkJggg==",
+    "base64",
+);
 
 const routeEmptyPocketBaseLists = async (page: Page) => {
     await page.route("**/api/collections/**/records*", async route => {
@@ -120,9 +118,9 @@ const uploadTestImage = async (page: Page) => {
     await page.setInputFiles(
         "input[type=\"file\"]",
         {
-            name: "flip-verifier.svg",
-            mimeType: "image/svg+xml",
-            buffer: testImageSvg,
+            name: "flip-verifier.png",
+            mimeType: "image/png",
+            buffer: testImagePng,
         },
     );
 
@@ -186,6 +184,7 @@ const snapshotFlipPanel = async (page: Page): Promise<FlipPanelSnapshot> => awai
         "character-edit-menu",
         ".character-image-container",
         ".character-form-inputs",
+        ".reference-sizing-control",
         ".buttons",
         ".baseline-mode-control",
     ];

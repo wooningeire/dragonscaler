@@ -6,6 +6,10 @@ import BottomDock from "./BottomDock.svelte";
 
 const currentAccountName = $derived(store.databaseStore.currentAccountName());
 const currentAccountAvatarUrl = $derived(store.databaseStore.currentAccountAvatarUrl());
+
+const promptDiscordLogin = () => {
+    void store.databaseStore.promptDiscordLogin().catch(error => console.error(error));
+};
 </script>
 
 <overlays-panel>
@@ -27,12 +31,30 @@ const currentAccountAvatarUrl = $derived(store.databaseStore.currentAccountAvata
                     {/if}
                 </Button>
             {:else}
-                <Button
-                    onclick={() => void store.databaseStore.promptDiscordLogin()}
-                    buttonStyle="icon"
-                >
-                    Sign in with Discord
-                </Button>
+                <div class="discord-login">
+                    <p
+                        id="discord-login-status"
+                        class="discord-login-status"
+                        class:error={store.databaseStore.discordLoginError !== null}
+                        role="status"
+                        aria-live="polite"
+                        aria-atomic="true"
+                    >
+                        {store.databaseStore.discordLoginPending
+                            ? "Waiting for Discord..."
+                            : store.databaseStore.discordLoginError ?? ""}
+                    </p>
+
+                    <Button
+                        onclick={promptDiscordLogin}
+                        disabled={store.databaseStore.discordLoginPending}
+                        aria-busy={store.databaseStore.discordLoginPending}
+                        aria-describedby="discord-login-status"
+                        buttonStyle="icon"
+                    >
+                        Sign in with Discord
+                    </Button>
+                </div>
             {/if}
 
             <Button
@@ -88,6 +110,12 @@ overlays-panel {
     pointer-events: none;
 }
 
+@media (max-width: 48rem) {
+    overlays-panel {
+        grid-template-rows: 1fr 50vh;
+    }
+}
+
 .gizmos {
     grid-area: 1/1;
 
@@ -104,10 +132,32 @@ overlays-panel {
     align-self: flex-end;
 
     display: flex;
+    align-items: flex-end;
     gap: 0.5rem;
 
     > :global(*) {
         pointer-events: auto;
+    }
+}
+
+.discord-login {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.discord-login-status {
+    min-height: 1rem;
+    max-width: 18rem;
+
+    margin: 0;
+
+    color: oklch(0.35 0.03 140);
+    font-size: 0.75rem;
+    line-height: 1rem;
+
+    &.error {
+        color: oklch(0.45 0.18 25);
     }
 }
 

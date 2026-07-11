@@ -34,54 +34,46 @@ export class CharacterImage {
         this.flippedHorizontally = flippedHorizontally;
     }
 
-    static fromFile(file: File) {
-        return new Promise<CharacterImage>(resolve => {
-            const url = URL.createObjectURL(file);
+    static async fromFile(file: File) {
+        const dimensions = await loadImageDimensions(file);
+        const url = URL.createObjectURL(file);
 
-            const img = new Image();
-            img.addEventListener("load", () => {
-                resolve(new CharacterImage({
-                    src: url,
-                    file,
-                    dimensions: {
-                        width: img.width,
-                        height: img.height,
-                    },
-                    hasObjectUrl: true,
-                }));
-            });
-            img.src = url;
+        return new CharacterImage({
+            src: url,
+            file,
+            dimensions,
+            hasObjectUrl: true,
         });
     }
 
-    static fromUrl(
+    static async fromUrl(
         url: string,
         filename: string,
         {
             flippedHorizontally = false,
+            dimensions = null,
         }: {
             flippedHorizontally?: boolean,
+            dimensions?: Dimensions | null,
         } = {},
     ) {
-        return new Promise<CharacterImage>(async resolve => {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            const file = new File([blob], filename);
-            
-            const img = new Image();
-            img.addEventListener("load", () => {
-                resolve(new CharacterImage({
-                    src: url,
-                    file,
-                    dimensions: {
-                        width: img.width,
-                        height: img.height,
-                    },
-                    hasObjectUrl: false,
-                    flippedHorizontally,
-                }));
-            });
-            img.src = url;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error("Failed to fetch image.");
+        }
+
+        const blob = await response.blob();
+        const file = new File([blob], filename);
+        const resolvedDimensions = isValidDimensions(dimensions)
+            ? dimensions
+            : await loadImageDimensions(file);
+
+        return new CharacterImage({
+            src: url,
+            file,
+            dimensions: resolvedDimensions,
+            hasObjectUrl: false,
+            flippedHorizontally,
         });
     }
 
@@ -95,3 +87,22 @@ export class CharacterImage {
         });
     }
 }
+
+const isValidDimensions = (dimensions: Dimensions | null): dimensions is Dimensions => (
+    dimensions !== null
+    && dimensions.width > 0
+    && dimensions.height > 0
+);
+
+const loadImageDimensions = async (source: ImageBitmapSource) => {
+    const bitmap = await createImageBitmap(source);
+
+    try {
+        return {
+            width: bitmap.width,
+            height: bitmap.height,
+        };
+    } finally {
+        bitmap.close();
+    }
+};

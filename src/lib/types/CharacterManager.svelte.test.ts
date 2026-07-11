@@ -27,6 +27,8 @@ describe("computeCharacterPositionsX", () => {
         const characters = [
             {
                 viewportWidth: 2,
+                scaleFac: 2,
+                aspect: 1,
                 anchor: {
                     x: 0,
                     y: 0,
@@ -34,6 +36,8 @@ describe("computeCharacterPositionsX", () => {
             },
             {
                 viewportWidth: 1,
+                scaleFac: 1,
+                aspect: 1,
                 anchor: {
                     x: 0.5,
                     y: 0,
@@ -41,6 +45,8 @@ describe("computeCharacterPositionsX", () => {
             },
             {
                 viewportWidth: 3,
+                scaleFac: 3,
+                aspect: 1,
                 anchor: {
                     x: 1,
                     y: 0,

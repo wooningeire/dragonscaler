@@ -1,5 +1,6 @@
 import type { Point } from "./Point";
 import type { MeasurementUnit } from "$lib/util/measurementUnits";
+import type { ReferenceSizingMethod } from "$lib/util/referenceSizing";
 
 export enum Collections {
     Accounts = "users",
@@ -38,6 +39,10 @@ export type ReferenceImageRecord = {
     baseline_descriptor?: string,
     rotation_deg?: number,
     flipped_horizontally?: boolean,
+    width_px?: number | null,
+    height_px?: number | null,
+    reference_sizing_method?: ReferenceSizingMethod | null,
+    pixel_measurement_px?: number | null,
 } & PocketbaseCommonRecord;
 
 export type CharacterFormRecord = {

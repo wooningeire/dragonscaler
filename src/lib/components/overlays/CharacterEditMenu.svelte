@@ -15,6 +15,11 @@ import {
     measurementUnits,
     measurementUnitToMeters,
 } from "$lib/util/measurementUnits";
+import {
+    formatPixelMeasurementValue,
+    isReferenceSizingMethod,
+    referenceSizingMethods,
+} from "$lib/util/referenceSizing";
 import Separator from "../generic/Separator.svelte";
 import RadioGroup from "$lib/components/generic/RadioGroup.svelte";
 
@@ -27,6 +32,11 @@ const targetLengthText = $derived(
             characterBeingEdited.baseline.measurementUnit,
         ),
 );
+const pixelMeasurementText = $derived(
+    characterBeingEdited === null
+        ? ""
+        : formatPixelMeasurementValue(characterBeingEdited.baseline.pixelMeasurementPx),
+);
 
 let fileInput: HTMLInputElement = $state()!;
 
@@ -34,21 +44,36 @@ let loading = $state(false);
 let saving = $state(false);
 let deleting = $state(false);
 const loadFile = async () => {
-    if (characterBeingEdited === null) return;
+    const character = characterBeingEdited;
+    if (character === null) return;
 
     if (fileInput.files === null || fileInput.files.length === 0) return;
 
     if (loading) return;
 
     loading = true;
+    const previousImage = character.image;
 
-    if (characterBeingEdited.image !== null) {
-        URL.revokeObjectURL(characterBeingEdited.image.src);
+    try {
+        const file = fileInput.files[0];
+        const image = await CharacterImage.fromFile(file);
+
+        if (characterBeingEdited !== character) {
+            URL.revokeObjectURL(image.src);
+            return;
+        }
+
+        character.image = image;
+        character.imageDimensions = image.dimensions;
+
+        if (previousImage?.hasObjectUrl) {
+            URL.revokeObjectURL(previousImage.src);
+        }
+    } catch (error) {
+        console.error(error);
+    } finally {
+        loading = false;
     }
-
-    const file = fileInput.files[0];
-    characterBeingEdited.image = await CharacterImage.fromFile(file);
-    loading = false;
 };
 
 const mirrorReferenceGeometry = (character: Character) => {
@@ -91,6 +116,27 @@ const setMeasurementUnit = (value: string) => {
     if (characterBeingEdited === null || !isMeasurementUnit(value)) return;
 
     characterBeingEdited.baseline.measurementUnit = value;
+};
+
+const setReferenceSizingMethod = (value: string) => {
+    if (characterBeingEdited === null || !isReferenceSizingMethod(value)) return;
+
+    characterBeingEdited.baseline.referenceSizingMethod = value;
+};
+
+const setPixelMeasurement = (value: string) => {
+    if (characterBeingEdited === null) return;
+
+    const trimmedValue = value.trim();
+    if (trimmedValue === "") {
+        characterBeingEdited.baseline.pixelMeasurementPx = null;
+        return;
+    }
+
+    const parsedValue = Number(trimmedValue);
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) return;
+
+    characterBeingEdited.baseline.pixelMeasurementPx = parsedValue;
 };
 
 const setBaselineEditMode = (value: string) => {
@@ -170,10 +216,15 @@ const canSubmit = $derived(
     characterBeingEdited !== null
     && characterBeingEdited.image !== null
     && characterBeingEdited.name !== ""
+    && (
+        characterBeingEdited.baseline.referenceSizingMethod === "measurement_line"
+        || characterBeingEdited.pixelMeasurementImageLength !== null
+    )
+    && !loading
     && !saving
     && !deleting,
 );
-const canLeave = $derived(!saving && !deleting);
+const canLeave = $derived(!loading && !saving && !deleting);
 </script>
 
 {#if characterBeingEdited !== null}
@@ -224,9 +275,19 @@ const canLeave = $derived(!saving && !deleting);
             </label>
 
             <div class="baseline-editor">
+                <div class="reference-sizing-control">
+                    <RadioGroup
+                        ariaLabel="Reference sizing method"
+                        name="reference-sizing-method"
+                        options={referenceSizingMethods}
+                        value={characterBeingEdited.baseline.referenceSizingMethod}
+                        onValueChange={setReferenceSizingMethod}
+                    />
+                </div>
+
                 <div class="reference-measurement-row">
                     <label class="reference-measurement-input">
-                        <span>Reference curve</span>
+                        <span>Reference length</span>
 
                         <TextEntry
                             value={targetLengthText}
@@ -247,28 +308,44 @@ const canLeave = $derived(!saving && !deleting);
                         />
                     </div>
 
-                    <label class="reference-label-input">
-                        <span class="visually-hidden">Reference curve label</span>
+                    {#if characterBeingEdited.baseline.referenceSizingMethod === "measurement_line"}
+                        <label class="reference-label-input">
+                            <span class="visually-hidden">Reference curve label</span>
 
-                        <TextEntry
-                            value={characterBeingEdited.baseline.descriptor}
-                            onValueChange={value => characterBeingEdited.baseline.descriptor = value}
-                            placeholderText="to the shoulder"
+                            <TextEntry
+                                value={characterBeingEdited.baseline.descriptor}
+                                onValueChange={value => characterBeingEdited.baseline.descriptor = value}
+                                placeholderText="to the shoulder"
+                            />
+                        </label>
+                    {/if}
+                </div>
+
+                {#if characterBeingEdited.baseline.referenceSizingMethod === "pixel_measurement"}
+                    <div class="pixel-measurement-row">
+                        <label class="pixel-measurement-input">
+                            <span>Pixel measurement</span>
+
+                            <TextEntry
+                                value={pixelMeasurementText}
+                                onValueChange={setPixelMeasurement}
+                                placeholderText="Pixels"
+                            />
+                        </label>
+                    </div>
+                {:else}
+                    <div
+                        class="baseline-mode-control"
+                    >
+                        <RadioGroup
+                            ariaLabel="Reference curve mode"
+                            name="reference-curve-mode"
+                            options={baselineEditModes}
+                            value={store.characterManager.baselineEditMode}
+                            onValueChange={setBaselineEditMode}
                         />
-                    </label>
-                </div>
-
-                <div
-                    class="baseline-mode-control"
-                >
-                    <RadioGroup
-                        ariaLabel="Reference curve mode"
-                        name="reference-curve-mode"
-                        options={baselineEditModes}
-                        value={store.characterManager.baselineEditMode}
-                        onValueChange={setBaselineEditMode}
-                    />
-                </div>
+                    </div>
+                {/if}
             </div>
         </div>
 
@@ -350,7 +427,8 @@ character-edit-menu {
     min-width: 0;
 }
 
-.reference-measurement-input {
+.reference-measurement-input,
+.pixel-measurement-input {
     display: grid;
     grid-template-columns: max-content minmax(5.5rem, 7rem);
     gap: 0.5rem;
@@ -367,11 +445,15 @@ character-edit-menu {
     min-width: 0;
 }
 
-.measurement-unit-control {
+.pixel-measurement-row {
     display: grid;
+    grid-template-columns: minmax(13rem, max-content);
     min-width: 0;
 }
 
+
+.reference-sizing-control,
+.measurement-unit-control,
 .baseline-mode-control {
     display: grid;
     min-width: 0;
@@ -443,7 +525,8 @@ input[type="file"] {
         grid-template-columns: minmax(0, 1fr) max-content;
     }
 
-    .reference-measurement-input {
+    .reference-measurement-input,
+    .pixel-measurement-input {
         grid-column: 1 / 2;
         grid-template-columns: minmax(0, 1fr);
         gap: 0.25rem;
@@ -458,5 +541,10 @@ input[type="file"] {
         grid-column: 1 / -1;
         min-width: 0;
     }
+
+    .pixel-measurement-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
 }
 </style>

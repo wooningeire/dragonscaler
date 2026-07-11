@@ -5,16 +5,22 @@ import {
     normalizeMeasurementUnit,
     type MeasurementUnit,
 } from "$lib/util/measurementUnits";
+import {
+    DEFAULT_REFERENCE_SIZING_METHOD,
+    normalizeReferenceSizingMethod,
+    type ReferenceSizingMethod,
+} from "$lib/util/referenceSizing";
 
 export class Baseline {
     points: Point[] = $state.raw()!;
     targetLength: number = $state()!;
     measurementUnit: MeasurementUnit = $state()!;
     descriptor: string = $state()!;
+    referenceSizingMethod: ReferenceSizingMethod = $state()!;
+    pixelMeasurementPx: number | null = $state(null);
     id: string | null = $state(null);
     
     readonly arcLength = $derived(computeBaselineArcLength(this.points));
-    readonly scaleFac = $derived(this.targetLength / this.arcLength);
 
     constructor({
         id = null,
@@ -25,18 +31,24 @@ export class Baseline {
         targetLength = 1,
         measurementUnit = DEFAULT_MEASUREMENT_UNIT,
         descriptor = "",
+        referenceSizingMethod = DEFAULT_REFERENCE_SIZING_METHOD,
+        pixelMeasurementPx = null,
     }: {
         id?: string | null,
         points?: {x: number, y: number}[],
         targetLength?: number,
         measurementUnit?: MeasurementUnit | string | null,
         descriptor?: string,
+        referenceSizingMethod?: ReferenceSizingMethod | string | null,
+        pixelMeasurementPx?: number | null,
     } = {}) {
         this.id = id;
         this.points = points;
         this.targetLength = targetLength;
         this.measurementUnit = normalizeMeasurementUnit(measurementUnit);
         this.descriptor = descriptor;
+        this.referenceSizingMethod = normalizeReferenceSizingMethod(referenceSizingMethod);
+        this.pixelMeasurementPx = pixelMeasurementPx;
     }
 
     clone() {
@@ -46,6 +58,8 @@ export class Baseline {
             targetLength: this.targetLength,
             measurementUnit: this.measurementUnit,
             descriptor: this.descriptor,
+            referenceSizingMethod: this.referenceSizingMethod,
+            pixelMeasurementPx: this.pixelMeasurementPx,
         });
     }
 
@@ -55,5 +69,7 @@ export class Baseline {
         this.targetLength = other.targetLength;
         this.measurementUnit = other.measurementUnit;
         this.descriptor = other.descriptor;
+        this.referenceSizingMethod = other.referenceSizingMethod;
+        this.pixelMeasurementPx = other.pixelMeasurementPx;
     }
 }

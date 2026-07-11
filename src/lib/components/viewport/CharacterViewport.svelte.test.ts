@@ -49,6 +49,21 @@ const mockViewportRect = (
     });
 };
 
+const mockCameraRetargeting = () => ({
+    setPosMetersXWithEase: vi.spyOn(
+        store.camera,
+        "setPosMetersXWithEase",
+    ).mockImplementation(() => {}),
+    setPosMetersYWithEase: vi.spyOn(
+        store.camera,
+        "setPosMetersYWithEase",
+    ).mockImplementation(() => {}),
+    setScalePxPerMeterWithEase: vi.spyOn(
+        store.camera,
+        "setScalePxPerMeterWithEase",
+    ).mockImplementation(() => {}),
+});
+
 describe("CharacterViewport", () => {
     afterEach(() => {
         vi.restoreAllMocks();
@@ -93,7 +108,7 @@ describe("CharacterViewport", () => {
         expect(viewport?.querySelectorAll(".character-overlay")).toHaveLength(0);
     });
 
-    test("retargets selected-character centering only after reference curve changes", async () => {
+    test("retargets selected-character centering only after effective scale changes", async () => {
         mockViewportRect(
             1000,
             1000,
@@ -111,18 +126,11 @@ describe("CharacterViewport", () => {
         store.characterManager.characters = [character];
         store.characterManager.selectedCharacter = character;
 
-        const setPosMetersXWithEase = vi.spyOn(
-            store.camera,
-            "setPosMetersXWithEase",
-        ).mockImplementation(() => {});
-        const setPosMetersYWithEase = vi.spyOn(
-            store.camera,
-            "setPosMetersYWithEase",
-        ).mockImplementation(() => {});
-        const setScalePxPerMeterWithEase = vi.spyOn(
-            store.camera,
-            "setScalePxPerMeterWithEase",
-        ).mockImplementation(() => {});
+        const {
+            setPosMetersXWithEase,
+            setPosMetersYWithEase,
+            setScalePxPerMeterWithEase,
+        } = mockCameraRetargeting();
 
         render(CharacterViewport);
 
@@ -168,5 +176,64 @@ describe("CharacterViewport", () => {
         ];
 
         await waitFor(() => expect(setPosMetersXWithEase).toHaveBeenCalledWith(-8));
+    });
+
+    test("ignores inactive pixel-mode data but retargets after its effective scale changes", async () => {
+        mockViewportRect(
+            1000,
+            1000,
+        );
+
+        const character = new Character({
+            imageDimensions: {
+                width: 100,
+                height: 100,
+            },
+            baseline: new Baseline({
+                targetLength: 2,
+                referenceSizingMethod: "pixel_measurement",
+                pixelMeasurementPx: 50,
+                points: [
+                    {x: 0.5, y: 0},
+                    {x: 0.5, y: 1},
+                ],
+            }),
+            uploaded: true,
+        });
+        store.characterManager.characters = [character];
+        store.characterManager.selectedCharacter = character;
+
+        const {
+            setPosMetersXWithEase,
+            setPosMetersYWithEase,
+            setScalePxPerMeterWithEase,
+        } = mockCameraRetargeting();
+
+        render(CharacterViewport);
+
+        await waitFor(() => expect(setScalePxPerMeterWithEase).toHaveBeenCalled());
+        setPosMetersXWithEase.mockClear();
+        setPosMetersYWithEase.mockClear();
+        setScalePxPerMeterWithEase.mockClear();
+
+        character.baseline.points = [
+            {x: 0.5, y: 0},
+            {x: 0.5, y: 0.25},
+        ];
+        character.imageDimensions = {
+            width: 200,
+            height: 100,
+        };
+        await tick();
+
+        expect(character.scaleFac).toBe(4);
+        expect(setPosMetersXWithEase).not.toHaveBeenCalled();
+        expect(setPosMetersYWithEase).not.toHaveBeenCalled();
+        expect(setScalePxPerMeterWithEase).not.toHaveBeenCalled();
+
+        character.baseline.pixelMeasurementPx = 25;
+
+        await waitFor(() => expect(setScalePxPerMeterWithEase).toHaveBeenCalled());
+        expect(character.scaleFac).toBe(8);
     });
 });

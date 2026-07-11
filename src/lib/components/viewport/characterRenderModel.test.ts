@@ -154,6 +154,72 @@ describe("buildCharacterRenderFrame", () => {
         expect(frame.items[0].baselinePoints).toBe(character.baseline.points);
     });
 
+    test("hides stale line geometry when pixel reference sizing is active", () => {
+        const character = makeCharacter("Pixel Sized", 1);
+        character.baseline.referenceSizingMethod = "pixel_measurement";
+        character.baseline.pixelMeasurementPx = 300;
+        character.imageDimensions = {
+            width: 600,
+            height: 600,
+        };
+
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+        });
+
+        expect(character.baseline.points).toHaveLength(2);
+        expect(frame.items[0].baselinePoints).toEqual([]);
+        expect(character.scaleFac).toBe(2);
+        expect(frame.items[0].rectPx.height).toBe(200);
+    });
+
+    test("uses stored image dimensions for placeholder character geometry", () => {
+        const character = makeCharacter("Pending Image", 1);
+        character.imageDimensions = {
+            width: 3,
+            height: 1,
+        };
+
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+        });
+
+        expect(frame.items[0].image).toBeNull();
+        expect(frame.items[0].aspect).toBe(3);
+        expect(frame.items[0].rectPx).toEqual({
+            x: 400,
+            y: 200,
+            width: 300,
+            height: 100,
+        });
+    });
+
     test("right-aligns nameplates to the character image", () => {
         const character = makeCharacter("Right Aligned", 2);
         const frame = buildCharacterRenderFrame({
