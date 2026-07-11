@@ -308,17 +308,15 @@ const canLeave = $derived(!loading && !saving && !deleting);
                         />
                     </div>
 
-                    {#if characterBeingEdited.baseline.referenceSizingMethod === "measurement_line"}
-                        <label class="reference-label-input">
-                            <span class="visually-hidden">Reference curve label</span>
+                    <label class="reference-label-input">
+                        <span class="visually-hidden">Reference label</span>
 
-                            <TextEntry
-                                value={characterBeingEdited.baseline.descriptor}
-                                onValueChange={value => characterBeingEdited.baseline.descriptor = value}
-                                placeholderText="to the shoulder"
-                            />
-                        </label>
-                    {/if}
+                        <TextEntry
+                            value={characterBeingEdited.baseline.descriptor}
+                            onValueChange={value => characterBeingEdited.baseline.descriptor = value}
+                            placeholderText="to the shoulder"
+                        />
+                    </label>
                 </div>
 
                 {#if characterBeingEdited.baseline.referenceSizingMethod === "pixel_measurement"}

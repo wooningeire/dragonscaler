@@ -87,7 +87,7 @@ describe("CharacterEditMenu", () => {
         expect(screen.getByText("3.281")).toBeVisible();
     });
 
-    test("records pixel reference sizing input with the current image dimensions", async () => {
+    test("records pixel sizing and keeps the reference label editable", async () => {
         const character = makeCharacter();
         store.characterManager.selectedCharacter = character;
         store.characterManager.editingCharacter = character;
@@ -101,6 +101,17 @@ describe("CharacterEditMenu", () => {
 
         expect(character.baseline.referenceSizingMethod).toBe("pixel_measurement");
         expect(screen.queryByRole("radiogroup", {name: "Reference curve mode"})).toBeNull();
+
+        const labelInput = container.querySelector<HTMLElement>(
+            ".reference-label-input [contenteditable]",
+        );
+        if (labelInput === null) throw new Error("missing reference label input");
+
+        labelInput.textContent = "reference human";
+        await fireEvent.input(labelInput);
+        await fireEvent.blur(labelInput);
+
+        expect(character.baseline.descriptor).toBe("reference human");
 
         const pixelInput = screen
             .getByText("Pixel measurement")

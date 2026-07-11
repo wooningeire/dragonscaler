@@ -339,6 +339,11 @@ test("reference measurement unit radio preserves layout and updates the edited f
     await expect(page.getByText("Pixel measurement", {exact: true})).toBeVisible();
     await expect(page.getByRole("radiogroup", {name: "Reference curve mode"})).toHaveCount(0);
 
+    const referenceLabelInput = page.locator(".reference-label-input [contenteditable]");
+    await expect(referenceLabelInput).toBeVisible();
+    await referenceLabelInput.fill("reference human");
+    await expect(referenceLabelInput).toHaveText("reference human");
+
     const pixelLayout = await page.evaluate(() => {
         const dock = document.querySelector("overlays-bottom-dock");
         if (dock === null) throw new Error("missing bottom dock");
@@ -351,6 +356,7 @@ test("reference measurement unit radio preserves layout and updates the edited f
             ".reference-measurement-row",
             ".reference-measurement-input",
             ".measurement-unit-control",
+            ".reference-label-input",
             ".pixel-measurement-row",
             ".pixel-measurement-input",
             ".buttons",
