@@ -8,6 +8,10 @@ import { Baseline } from "./Baseline.svelte";
 import {
     pixelMeasurementImageLength as computePixelMeasurementImageLength,
 } from "$lib/util/referenceSizing";
+import {
+    computeShoulderAltitudeMeters,
+    normalizeShoulderY,
+} from "$lib/util/shoulderAltitude";
 
 export class Character {
     id: string | null = $state(null);
@@ -16,6 +20,7 @@ export class Character {
     imageDimensions: Dimensions | null = $state(null);
     name: string = $state()!;
     anchor: Point = $state()!; // in image [0, 1] uv coordinates
+    shoulderY: number | null = $state(null);
     readonly baseline: Baseline;
     formId: string | null = $state(null);
     referenceImageIds: string[] = $state([]);
@@ -36,6 +41,16 @@ export class Character {
             : this.baseline.arcLength
     ));
     readonly scaleFac = $derived.by(() => this.baseline.targetLength / this.referenceImageLength);
+    readonly validShoulderY = $derived(normalizeShoulderY({
+        shoulderY: this.shoulderY,
+        groundY: this.anchor.y,
+    }));
+    readonly shoulderAltitude = $derived.by(() => computeShoulderAltitudeMeters({
+        shoulderY: this.validShoulderY,
+        groundY: this.anchor.y,
+        imageHeightMeters: this.scaleFac,
+    }));
+    readonly sortingAltitude = $derived(this.shoulderAltitude ?? this.scaleFac);
     readonly aspect = $derived.by(() => (
         imageAspect(resolvedImageDimensions(this.image, this.imageDimensions)) ?? 1
     ));
@@ -53,6 +68,7 @@ export class Character {
         name = "",
         anchor,
         center,
+        shoulderY = null,
         baseline = new Baseline(),
         formId = null,
         referenceImageIds = [],
@@ -67,6 +83,7 @@ export class Character {
         anchor?: Point,
         /** @deprecated Use anchor. Kept for PocketBase center_point compatibility. */
         center?: Point,
+        shoulderY?: number | null,
         baseline?: Baseline,
         formId?: string | null,
         referenceImageIds?: string[],
@@ -79,6 +96,10 @@ export class Character {
         this.imageDimensions = imageDimensions;
         this.name = name;
         this.anchor = anchor ?? center ?? {x: 0.5, y: 0};
+        this.shoulderY = normalizeShoulderY({
+            shoulderY,
+            groundY: this.anchor.y,
+        });
         this.baseline = baseline;
         this.formId = formId;
         this.referenceImageIds = referenceImageIds;
@@ -96,6 +117,7 @@ export class Character {
                 : {...this.imageDimensions},
             name: this.name,
             anchor: {...this.anchor},
+            shoulderY: this.validShoulderY,
             baseline: this.baseline.clone(),
             formId: this.formId,
             referenceImageIds: [...this.referenceImageIds],
@@ -113,6 +135,7 @@ export class Character {
             : {...character.imageDimensions};
         this.name = character.name;
         this.anchor = character.anchor;
+        this.shoulderY = character.validShoulderY;
         this.baseline.copy(character.baseline);
         this.formId = character.formId;
         this.referenceImageIds = [...character.referenceImageIds];

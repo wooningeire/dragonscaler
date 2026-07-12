@@ -151,6 +151,19 @@ const setBaselineEditMode = (value: string) => {
     store.characterManager.setBaselineEditMode(value);
 };
 
+const toggleShoulderMarking = () => {
+    store.characterManager.setShoulderMarkingActive(
+        !store.characterManager.shoulderMarkingActive,
+    );
+};
+
+const clearShoulderMark = () => {
+    if (characterBeingEdited === null) return;
+
+    characterBeingEdited.shoulderY = null;
+    store.characterManager.setShoulderMarkingActive(false);
+};
+
 const submit = async () => {
     if (characterBeingEdited === null) return;
 
@@ -278,6 +291,26 @@ const canLeave = $derived(!loading && !saving && !deleting);
                     placeholderText="Name"
                 />
             </label>
+
+            <div class="shoulder-altitude-row">
+                <span>Sorting / log scale</span>
+
+                <Button
+                    onclick={toggleShoulderMarking}
+                    disabled={characterBeingEdited.image === null || loading || saving || deleting}
+                    aria-pressed={store.characterManager.shoulderMarkingActive}
+                    title="Click or drag on the image, or use the viewport arrow keys, to mark shoulder altitude."
+                >
+                    Mark shoulder
+                </Button>
+
+                <Button
+                    onclick={clearShoulderMark}
+                    disabled={characterBeingEdited.validShoulderY === null || loading || saving || deleting}
+                >
+                    Clear mark
+                </Button>
+            </div>
 
             <div class="baseline-editor">
                 <div class="reference-sizing-control">
@@ -419,6 +452,17 @@ character-edit-menu {
     flex-direction: column;
     gap: 0.5rem;
     min-width: 0;
+}
+
+.shoulder-altitude-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    min-width: 0;
+
+    > span {
+        grid-column: 1 / -1;
+    }
 }
 
 .baseline-editor {

@@ -3,8 +3,7 @@ import { DatabaseStore } from "./DatabaseStore.svelte";
 import { Camera2d } from "./Camera2d.svelte";
 import type { Character } from "./Character.svelte";
 import {
-    characterViewportWidthForProjection,
-    projectedViewportHeightMeters,
+    characterProjectionMetrics,
     unprojectViewportYMeters,
 } from "$lib/util/viewportProjection";
 
@@ -42,16 +41,12 @@ export const centeredCameraPositionForCharacter = ({
     viewportInsetsPx: ViewportInsetsPx,
     logPerspective?: boolean,
 }): CenteredCameraPosition => {
-    const widthMeters = characterViewportWidthForProjection(
+    const projectionMetrics = characterProjectionMetrics(
         character,
         logPerspective,
     );
-    const heightMeters = character.scaleFac;
-    const displayHeightMeters = projectedViewportHeightMeters(
-        heightMeters,
-        character.anchor.y,
-        logPerspective,
-    );
+    const widthMeters = projectionMetrics.width;
+    const displayHeightMeters = projectionMetrics.height;
     const centerXMeters = widthMeters * 0.5;
     const centerProjectedYMeters = (0.5 - character.anchor.y) * displayHeightMeters;
     const focusWidthPx = Math.max(

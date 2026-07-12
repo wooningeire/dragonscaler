@@ -21,6 +21,7 @@ import {
     type CharacterRenderItem,
     type BaselinePreview,
     type CharacterRenderFrame,
+    type ShoulderPreview,
 } from "./characterRenderModel";
 import type { Point } from "$lib/types/Point";
 import {
@@ -29,9 +30,11 @@ import {
     computeBaselineArcLength,
 } from "$lib/util/baselineGeometry";
 import {
+    characterProjectionMetrics,
     projectViewportYMeters,
     unprojectViewportYMeters,
 } from "$lib/util/viewportProjection";
+import { normalizeShoulderY } from "$lib/util/shoulderAltitude";
 
 type DragState =
     | {
@@ -48,11 +51,17 @@ type DragState =
         pointerId: number,
         item: CharacterRenderItem,
     }
+    | {
+        kind: "shoulder",
+        pointerId: number,
+        item: CharacterRenderItem,
+    }
     | null;
 
-type FocusedCharacterScale = {
+type FocusedCharacterGeometry = {
     character: Character,
     scaleFac: number,
+    shoulderY: number | null,
 };
 
 type DragonscalerViewportDebugWindow = typeof window & {
@@ -61,6 +70,8 @@ type DragonscalerViewportDebugWindow = typeof window & {
     },
 };
 
+const MIN_SHOULDER_IMAGE_ALTITUDE = 1e-3;
+
 let viewport: HTMLDivElement | undefined = $state();
 let viewportWidth = $state(0);
 let viewportHeight = $state(0);
@@ -68,11 +79,12 @@ let viewportLeft = $state(0);
 let viewportTop = $state(0);
 let dragState: DragState = $state(null);
 let rawDrawPoints: Point[] = $state([]);
-let focusedCharacterScale: FocusedCharacterScale | null = null;
+let focusedCharacterGeometry: FocusedCharacterGeometry | null = null;
+let shoulderPreviewY: number | null = $state(null);
 let focusedProjectionCharacter: Character | null = $state(null);
 let focusedProjectionTimeout: number | null = null;
-const focusedScaleFacTween = new Tween(cameraScaleToTweenValue(1), {duration: 0});
-const focusedScaleFac = $derived(cameraScaleFromTweenValue(focusedScaleFacTween.current));
+const focusedProjectedHeightTween = new Tween(cameraScaleToTweenValue(1), {duration: 0});
+const focusedProjectedHeight = $derived(cameraScaleFromTweenValue(focusedProjectedHeightTween.current));
 const baselinePreview: BaselinePreview = $derived.by(() => {
     if (dragState?.kind !== "baseline") return null;
 
@@ -88,6 +100,26 @@ const baselinePreview: BaselinePreview = $derived.by(() => {
     };
 });
 const displayCharacters = $derived(store.characterManager.displayCharacters);
+const shoulderPreview: ShoulderPreview = $derived.by(() => {
+    if (dragState?.kind !== "shoulder" || shoulderPreviewY === null) return null;
+
+    return {
+        character: dragState.item.character,
+        y: shoulderPreviewY,
+    };
+});
+const shoulderMarkStatus = $derived.by(() => {
+    if (!store.characterManager.shoulderMarkingActive) return "";
+
+    const character = store.characterManager.editingCharacter;
+    const shoulderY = character?.validShoulderY ?? null;
+    if (shoulderY === null) return "Shoulder mark not set.";
+
+    const percentFromImageBottom = Math.round(shoulderY * 1_000) / 10;
+
+    return `Shoulder mark ${percentFromImageBottom}% from image bottom.`;
+});
+
 const logPerspective = $derived(store.characterManager.logPerspective);
 const focusOffsetPx = $derived({
     x: (store.camera.viewportInsetsPx.left - store.camera.viewportInsetsPx.right) * 0.5,
@@ -98,7 +130,7 @@ const projectionOverride = $derived.by(() => {
 
     return {
         character: focusedProjectionCharacter,
-        scaleFac: focusedScaleFac,
+        projectedHeightMeters: focusedProjectedHeight,
         centerXMeters: store.camera.posMetersX + focusOffsetPx.x / store.camera.scalePxPerMeter,
         centerProjectedYMeters: projectViewportYMeters(
             store.camera.posMetersY,
@@ -146,6 +178,16 @@ $effect(() => {
     store.camera.viewportPositionPx.y = rect.top + rect.height / 2;
 });
 
+$effect(() => {
+    if (!store.characterManager.shoulderMarkingActive || viewport === undefined) return;
+
+    const viewportElement = viewport;
+    untrack(() => {
+        viewportElement.focus();
+    });
+});
+
+
 const renderFrame = $derived(buildCharacterRenderFrame({
     characters: displayCharacters,
     positionsX: store.characterManager.positionsX,
@@ -162,6 +204,7 @@ const renderFrame = $derived(buildCharacterRenderFrame({
     heightPx: viewportHeight,
     editingCharacter: store.characterManager.editingCharacter,
     baselinePreview,
+    shoulderPreview,
     projectionOverride,
     logPerspective,
     gridlinesOnTop: store.gridlinesOnTop,
@@ -206,30 +249,40 @@ const focusSelectedCharacter = (selected: Character) => {
 $effect(() => {
     const selected = store.characterManager.selectedCharacter;
     if (selected === null) {
-        focusedCharacterScale = null;
+        focusedCharacterGeometry = null;
         focusedProjectionCharacter = null;
         clearFocusedProjectionTimeout();
         return;
     }
 
     const scaleFac = selected.scaleFac;
-    const selectedChanged = focusedCharacterScale?.character !== selected;
+    const shoulderY = selected.validShoulderY;
+    const selectedChanged = focusedCharacterGeometry?.character !== selected;
     const scaleChanged = (
         !selectedChanged
         && !Object.is(
-            focusedCharacterScale?.scaleFac,
+            focusedCharacterGeometry?.scaleFac,
             scaleFac,
         )
     );
-    focusedCharacterScale = {
+    const shoulderChanged = (
+        !selectedChanged
+        && !Object.is(
+            focusedCharacterGeometry?.shoulderY,
+            shoulderY,
+        )
+    );
+    const projectionChanged = scaleChanged || shoulderChanged;
+    focusedCharacterGeometry = {
         character: selected,
         scaleFac,
+        shoulderY,
     };
 
-    if (!selectedChanged && !scaleChanged) return;
+    if (!selectedChanged && !projectionChanged) return;
 
     untrack(() => {
-        if (scaleChanged) {
+        if (projectionChanged) {
             focusedProjectionCharacter = selected;
             finishFocusedProjectionAfterEase(selected);
         } else {
@@ -237,9 +290,14 @@ $effect(() => {
             clearFocusedProjectionTimeout();
         }
 
-        focusedScaleFacTween.set(
-            cameraScaleToTweenValue(scaleFac),
-            scaleChanged ? CAMERA_EASE_OPTIONS : {duration: 0},
+        const projectedHeightMeters = characterProjectionMetrics(
+            selected,
+            logPerspective,
+        ).height;
+
+        focusedProjectedHeightTween.set(
+            cameraScaleToTweenValue(projectedHeightMeters),
+            projectionChanged ? CAMERA_EASE_OPTIONS : {duration: 0},
         );
         focusSelectedCharacter(selected);
     });
@@ -275,6 +333,36 @@ const baselinePointFromEvent = (
             y: 1 - (point.y - item.rectPx.y) / item.rectPx.height,
         },
         item.aspect,
+    );
+};
+
+const shoulderYFromEvent = (
+    event: PointerEvent,
+    item: CharacterRenderItem,
+) => {
+    const groundY = item.character.anchor.y;
+    if (
+        !Number.isFinite(groundY)
+        || groundY < 0
+        || groundY >= 1
+        || item.rectPx.height <= 0
+    ) {
+        return null;
+    }
+
+    const minimumY = Math.min(
+        groundY + MIN_SHOULDER_IMAGE_ALTITUDE,
+        1,
+    );
+    const point = viewportPointFromEvent(event);
+    const imageY = 1 - (point.y - item.rectPx.y) / item.rectPx.height;
+
+    return Math.min(
+        Math.max(
+            imageY,
+            minimumY,
+        ),
+        1,
     );
 };
 
@@ -345,6 +433,22 @@ const beginPointerDrag = (event: PointerEvent) => {
         return;
     }
 
+    if (store.characterManager.shoulderMarkingActive) {
+        const shoulderY = shoulderYFromEvent(event, item);
+        if (shoulderY === null) {
+            releasePointer(event);
+            return;
+        }
+
+        shoulderPreviewY = shoulderY;
+        dragState = {
+            kind: "shoulder",
+            pointerId: event.pointerId,
+            item,
+        };
+        return;
+    }
+
     if (item.character.baseline.referenceSizingMethod === "pixel_measurement") return;
 
     rawDrawPoints = [baselinePointFromEvent(event, item)];
@@ -374,16 +478,32 @@ const continuePointerDrag = (event: PointerEvent) => {
 
     if (dragState.kind === "anchor") {
         const item = dragState.item;
-        item.character.anchor = {
+        const character = item.character;
+        character.anchor = {
             x: Math.min(
-                Math.max(item.character.anchor.x + event.movementX / item.rectPx.width, 0),
+                Math.max(character.anchor.x + event.movementX / item.rectPx.width, 0),
                 1,
             ),
             y: Math.min(
-                Math.max(item.character.anchor.y - event.movementY / item.rectPx.height, 0),
+                Math.max(character.anchor.y - event.movementY / item.rectPx.height, 0),
                 1,
             ),
         };
+        character.shoulderY = normalizeShoulderY({
+            shoulderY: character.shoulderY,
+            groundY: character.anchor.y,
+        });
+        return;
+    }
+
+    if (dragState.kind === "shoulder") {
+        const shoulderY = shoulderYFromEvent(
+            event,
+            dragState.item,
+        );
+        if (shoulderY !== null) {
+            shoulderPreviewY = shoulderY;
+        }
         return;
     }
 
@@ -394,11 +514,17 @@ const continuePointerDrag = (event: PointerEvent) => {
     ];
 };
 
-const finishPointerDrag = (event: PointerEvent) => {
-    if (dragState === null || dragState.pointerId !== event.pointerId) return;
-
+const clearPointerDrag = (event: PointerEvent) => {
     event.preventDefault();
     releasePointer(event);
+    rawDrawPoints = [];
+    shoulderPreviewY = null;
+    dragState = null;
+};
+
+
+const finishPointerDrag = (event: PointerEvent) => {
+    if (dragState === null || dragState.pointerId !== event.pointerId) return;
 
     if (dragState.kind === "baseline") {
         const character = dragState.item.character;
@@ -415,22 +541,86 @@ const finishPointerDrag = (event: PointerEvent) => {
         }
     }
 
-    rawDrawPoints = [];
-    dragState = null;
+    if (dragState.kind === "shoulder" && shoulderPreviewY !== null) {
+        dragState.item.character.shoulderY = shoulderPreviewY;
+    }
+
+    clearPointerDrag(event);
+};
+
+const cancelPointerDrag = (event: PointerEvent) => {
+    if (dragState === null || dragState.pointerId !== event.pointerId) return;
+
+    clearPointerDrag(event);
+};
+
+const adjustShoulderMark = (event: KeyboardEvent) => {
+    if (!store.characterManager.shoulderMarkingActive) return;
+
+    const character = store.characterManager.editingCharacter;
+    if (character === null) return;
+
+    const groundY = character.anchor.y;
+    if (
+        !Number.isFinite(groundY)
+        || groundY < 0
+        || groundY >= 1
+    ) return;
+
+    const minimumY = Math.min(groundY + MIN_SHOULDER_IMAGE_ALTITUDE, 1);
+
+    const currentY = character.validShoulderY ?? Math.min(
+        Math.max(0.75, minimumY),
+        1,
+    );
+    const step = event.shiftKey ? 0.1 : 0.01;
+    let shoulderY = currentY;
+
+    if (event.key === "ArrowUp") {
+        shoulderY += step;
+    } else if (event.key === "ArrowDown") {
+        shoulderY -= step;
+    } else if (event.key === "PageUp") {
+        shoulderY += 0.1;
+    } else if (event.key === "PageDown") {
+        shoulderY -= 0.1;
+    } else if (event.key === "Home") {
+        shoulderY = minimumY;
+    } else if (event.key === "End") {
+        shoulderY = 1;
+    } else {
+        return;
+    }
+
+    event.preventDefault();
+    character.shoulderY = Math.min(
+        Math.max(shoulderY, minimumY),
+        1,
+    );
 };
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex (The viewport is an interactive canvas.) -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions (The viewport supports pointer, wheel, and keyboard input.) -->
 <div
     class="character-viewport"
+    class:shoulder-marking-active={store.characterManager.shoulderMarkingActive}
     role="application"
-    aria-label="Character height chart viewport"
+    aria-label={store.characterManager.shoulderMarkingActive
+        ? "Character height chart viewport. Shoulder marking active. Use arrow keys to adjust the mark."
+        : "Character height chart viewport"}
+    aria-keyshortcuts={store.characterManager.shoulderMarkingActive
+        ? "ArrowUp ArrowDown PageUp PageDown Home End"
+        : undefined}
+    tabindex="0"
     bind:this={viewport}
     bind:clientWidth={viewportWidth}
     bind:clientHeight={viewportHeight}
     onpointerdown={beginPointerDrag}
     onpointermove={continuePointerDrag}
     onpointerup={finishPointerDrag}
-    onpointercancel={finishPointerDrag}
+    onpointercancel={cancelPointerDrag}
+    onkeydown={adjustShoulderMark}
     onwheel={event => {
         const mouseX = event.clientX - store.camera.viewportPositionPx.x;
         const mouseY = event.clientY - store.camera.viewportPositionPx.y;
@@ -454,7 +644,29 @@ const finishPointerDrag = (event: PointerEvent) => {
     <CharacterCanvas frame={renderFrame} />
 </div>
 
+{#if store.characterManager.shoulderMarkingActive}
+    <span
+        class="shoulder-mark-status"
+        role="status"
+        aria-label="Shoulder mark status"
+        aria-atomic="true"
+    >
+        {shoulderMarkStatus}
+    </span>
+
+{/if}
+
 <style lang="scss">
+.shoulder-mark-status {
+    position: fixed;
+    width: 0.0625rem;
+    height: 0.0625rem;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+
 .character-viewport {
     grid-area: 1/1;
 
@@ -464,7 +676,11 @@ const finishPointerDrag = (event: PointerEvent) => {
     display: grid;
     place-items: stretch;
     touch-action: none;
-    
+
+    &.shoulder-marking-active {
+        cursor: crosshair;
+    }
+
     > :global(*) {
         grid-area: 1/1;
     }

@@ -12,6 +12,8 @@ import {
     CENTER_OUTLINE_COLOR,
     GRIDLINE_LIGHT_COLOR,
     GRIDLINE_STRONG_COLOR,
+    SHOULDER_MARK_COLOR,
+    SHOULDER_MARK_OUTLINE_COLOR,
 } from "./constants";
 import type { ColorRgba } from "./types";
 import { withOpacity } from "./utils";
@@ -76,6 +78,15 @@ export const buildCharacterLineVertices = (frame: CharacterRenderFrame) => {
             );
         }
 
+        if (item.shoulderY !== null) {
+            appendShoulderGuide(
+                vertices,
+                frame,
+                item,
+                item.shoulderY,
+            );
+        }
+
         if (item.editing) {
             appendAnchorControl(vertices, frame, item);
         }
@@ -105,6 +116,46 @@ const appendBaselineStroke = (
             color,
         );
     }
+};
+
+const appendShoulderGuide = (
+    vertices: number[],
+    frame: CharacterRenderFrame,
+    item: CharacterRenderItem,
+    shoulderY: number,
+) => {
+    const y = item.rectPx.y + (1 - shoulderY) * item.rectPx.height;
+    const start = {
+        x: item.rectPx.x,
+        y,
+    };
+    const end = {
+        x: item.rectPx.x + item.rectPx.width,
+        y,
+    };
+
+    appendLineSegment(
+        vertices,
+        frame,
+        start,
+        end,
+        item.rectPx.height * 0.01,
+        withOpacity(
+            SHOULDER_MARK_OUTLINE_COLOR,
+            item.baselineOpacity,
+        ),
+    );
+    appendLineSegment(
+        vertices,
+        frame,
+        start,
+        end,
+        item.rectPx.height * 0.003,
+        withOpacity(
+            SHOULDER_MARK_COLOR,
+            item.baselineOpacity,
+        ),
+    );
 };
 
 const appendAnchorControl = (

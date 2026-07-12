@@ -36,6 +36,7 @@ describe("PocketBase data model types", () => {
                 x: 0.5,
                 y: 0,
             },
+            shoulder_y: 0.75,
             baseline_points: [
                 {x: 0.5, y: 0},
                 {x: 0.5, y: 1},
@@ -54,6 +55,7 @@ describe("PocketBase data model types", () => {
         expect(form.length_meters).toBe(2);
         expect(form.length_unit).toBe("ft");
         expect(referenceImage.anchor_point?.y).toBe(0);
+        expect(referenceImage.shoulder_y).toBe(0.75);
         expect(referenceImage.baseline_points).toHaveLength(2);
         expect(referenceImage.baseline_descriptor).toBe("to the shoulder");
         expect(referenceImage.width_px / referenceImage.height_px).toBe(3);

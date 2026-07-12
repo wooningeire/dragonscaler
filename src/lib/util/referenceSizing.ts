@@ -22,15 +22,12 @@ export const isReferenceSizingMethod = (value: string): value is ReferenceSizing
 
 export const normalizeReferenceSizingMethod = (
     value: string | null | undefined,
-    pixelMeasurementPx: number | null = null,
 ): ReferenceSizingMethod => (
     value !== null
     && value !== undefined
     && isReferenceSizingMethod(value)
         ? value
-        : isPositiveFinite(pixelMeasurementPx)
-            ? "pixel_measurement"
-            : DEFAULT_REFERENCE_SIZING_METHOD
+        : DEFAULT_REFERENCE_SIZING_METHOD
 );
 
 export const pixelMeasurementImageLength = (

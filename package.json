@@ -11,8 +11,10 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run && npm run test:e2e",
-		"test:e2e": "playwright test"
+		"test": "deno task test:unit --run && deno task test:e2e",
+		"test:e2e": "deno task test:e2e:preview && deno task test:e2e:shoulder",
+		"test:e2e:preview": "node node_modules/@playwright/test/cli.js test",
+		"test:e2e:shoulder": "node node_modules/@playwright/test/cli.js test --config playwright.shoulder.config.ts --grep shoulder"
 	},
 	"dependencies": {
 		"@vaie/hui": "^0.2.1",

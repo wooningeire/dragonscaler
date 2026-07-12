@@ -61,7 +61,9 @@ overlays-bottom-dock {
 
     pointer-events: auto;
 
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 
     background: $dock-bg-col;
 }

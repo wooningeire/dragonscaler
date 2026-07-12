@@ -35,6 +35,8 @@ export type ReferenceImageRecord = {
     image: string,
     caption?: string,
     anchor_point?: Point,
+    /** Bottom-up normalized image coordinate. */
+    shoulder_y?: number | null,
     baseline_points?: Point[],
     baseline_descriptor?: string,
     rotation_deg?: number,

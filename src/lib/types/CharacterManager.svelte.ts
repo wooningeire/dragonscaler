@@ -11,7 +11,7 @@ const BASELINE_EDIT_MODE_STORAGE_KEY = "dragonscaler:baseline-edit-mode";
 
 type CharacterSpacingInput = Pick<
     Character,
-    "anchor" | "aspect" | "scaleFac" | "viewportWidth"
+    "anchor" | "aspect" | "scaleFac" | "shoulderY"
 >;
 
 export const computeCharacterPositionsX = (
@@ -41,23 +41,26 @@ export const computeCharacterPositionsX = (
     return positions;
 };
 
-export const compareCharactersByScale = (
+export const compareCharactersBySortingAltitude = (
     a: Character,
     b: Character,
-) => a.scaleFac - b.scaleFac;
+) => a.sortingAltitude - b.sortingAltitude;
 
 export class CharacterManager {
     characters = $state<Character[]>([]);
     selectedCharacter = $state<Character | null>(null);
     editingCharacter = $state<Character | null>(null);
     baselineEditMode: BaselineEditMode = $state(readBaselineEditMode());
+    shoulderMarkingActive = $state(false);
 
     // 0 spacing: right-aligned by image right edge; 1 spacing: one after another.
     spacingFac = $state(1/3);
 
     logPerspective = $state(false);
 
-    displayCharacters = $derived.by(() => this.characters.toSorted(compareCharactersByScale));
+    displayCharacters = $derived.by(() => (
+        this.characters.toSorted(compareCharactersBySortingAltitude)
+    ));
 
     positionsX = $derived.by(() => computeCharacterPositionsX(
         this.displayCharacters,
@@ -84,10 +87,12 @@ export class CharacterManager {
     editCharacter = (character: Character) => {
         this.selectCharacter(character);
         this.editingCharacter = character;
+        this.shoulderMarkingActive = false;
     };
 
     stopEditingCharacter = () => {
         this.editingCharacter = null;
+        this.shoulderMarkingActive = false;
     };
 
     removeCharacter = (character: Character) => {
@@ -106,11 +111,16 @@ export class CharacterManager {
 
         if (this.editingCharacter === character) {
             this.editingCharacter = null;
+            this.shoulderMarkingActive = false;
         }
     };
 
     setBaselineEditMode = (baselineEditMode: BaselineEditMode) => {
         this.baselineEditMode = baselineEditMode;
+    };
+
+    setShoulderMarkingActive = (active: boolean) => {
+        this.shoulderMarkingActive = active;
     };
 
     beginNewCharacter = (ownerIdentity: IdentitySummary) => {

@@ -68,6 +68,38 @@ describe("CharacterEditMenu", () => {
         expect(screen.getByRole("radio", {name: "Line"})).toBeChecked();
     });
 
+    test("keeps shoulder marking separate from reference sizing", async () => {
+        const character = makeCharacter();
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+
+        render(CharacterEditMenu);
+
+        const markButton = screen.getByRole("button", {name: "Mark shoulder"});
+        const clearButton = screen.getByRole("button", {name: "Clear mark"});
+
+        expect(markButton).toHaveAttribute("aria-pressed", "false");
+        expect(clearButton).toBeDisabled();
+
+        await fireEvent.click(markButton);
+
+        expect(store.characterManager.shoulderMarkingActive).toBe(true);
+        expect(markButton).toHaveAttribute("aria-pressed", "true");
+
+        await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
+
+        expect(markButton).toBeEnabled();
+        expect(store.characterManager.shoulderMarkingActive).toBe(true);
+
+        character.shoulderY = 0.75;
+        await waitFor(() => expect(clearButton).toBeEnabled());
+        await fireEvent.click(clearButton);
+
+        expect(character.shoulderY).toBeNull();
+        expect(store.characterManager.shoulderMarkingActive).toBe(false);
+        expect(markButton).toHaveAttribute("aria-pressed", "false");
+    });
+
     test("switches the reference measurement display between meters and feet", async () => {
         const character = makeCharacter();
         character.baseline.targetLength = 1;
@@ -127,6 +159,14 @@ describe("CharacterEditMenu", () => {
         expect(character.baseline.pixelMeasurementPx).toBe(150);
         expect(character.pixelMeasurementImageLength).toBe(150);
         expect(container.querySelector(".pixel-measurement-row")).not.toBeNull();
+
+        await fireEvent.click(screen.getByRole("radio", {name: "Draw a measurement line"}));
+
+        expect(character.baseline.referenceSizingMethod).toBe("measurement_line");
+        expect(character.baseline.pixelMeasurementPx).toBe(150);
+        expect(screen.getByRole("radio", {name: "Draw a measurement line"})).toBeChecked();
+        expect(screen.getByRole("radiogroup", {name: "Reference curve mode"})).toBeVisible();
+        expect(container.querySelector(".pixel-measurement-row")).toBeNull();
     });
 
     test("requires usable reference sizing before updating", async () => {

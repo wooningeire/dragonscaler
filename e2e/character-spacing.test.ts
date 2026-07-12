@@ -30,6 +30,27 @@ type SpacingSnapshot = {
     verticalOverflowPx: number,
 };
 
+type CharacterSeed = {
+    name: string,
+    targetLength: number,
+    shoulderY?: number | null,
+};
+
+const defaultCharacterSeeds: CharacterSeed[] = [
+    {
+        name: "One meter",
+        targetLength: 1,
+    },
+    {
+        name: "Two meters",
+        targetLength: 2,
+    },
+    {
+        name: "Three meters",
+        targetLength: 3,
+    },
+];
+
 const routeEmptyPocketBaseLists = async (page: Page) => {
     await page.route("**/api/collections/**/records*", async route => {
         await route.fulfill({
@@ -60,8 +81,11 @@ const waitForInitialLoad = async (page: Page) => {
     });
 };
 
-const seedCharacters = async (page: Page) => {
-    await page.evaluate(() => {
+const seedCharacters = async (
+    page: Page,
+    characterSeeds = defaultCharacterSeeds,
+) => {
+    await page.evaluate((seeds: CharacterSeed[]) => {
         const browserWindow = window as typeof window & {
             __dragonscalerDebug?: {
                 store: {
@@ -85,35 +109,18 @@ const seedCharacters = async (page: Page) => {
         const debug = browserWindow.__dragonscalerDebug;
         if (debug === undefined) throw new Error("missing Dragonscaler debug hook");
 
-        const makeCharacter = (
-            name: string,
-            targetLength: number,
-        ) => new debug.Character({
-            name,
+        debug.store.characterManager.characters = seeds.map(seed => new debug.Character({
+            name: seed.name,
+            shoulderY: seed.shoulderY ?? null,
             baseline: new debug.Baseline({
-                targetLength,
+                targetLength: seed.targetLength,
                 points: [
                     {x: 0.5, y: 0},
                     {x: 0.5, y: 1},
                 ],
             }),
             uploaded: true,
-        });
-
-        debug.store.characterManager.characters = [
-            makeCharacter(
-                "One meter",
-                1,
-            ),
-            makeCharacter(
-                "Two meters",
-                2,
-            ),
-            makeCharacter(
-                "Three meters",
-                3,
-            ),
-        ];
+        }));
         debug.store.characterManager.selectedCharacter = null;
         debug.store.characterManager.editingCharacter = null;
         debug.store.characterManager.spacingFac = 0;
@@ -121,7 +128,7 @@ const seedCharacters = async (page: Page) => {
         debug.store.camera.setPosMetersX(0);
         debug.store.camera.setPosMetersY(0);
         debug.store.camera.setScalePxPerMeter(40);
-    });
+    }, characterSeeds);
 };
 
 const setSpacingSlider = async (
@@ -328,6 +335,92 @@ test("logarithmic and gridline-layer toggles update the live render frame", asyn
             && Math.abs(gridline.coordMeters - 4) < 1e-6
         ))?.offsetPx ?? Number.NaN;
     }).toBeCloseTo(300);
+});
+
+test("shoulder marks drive live sorting and logarithmic scale", async ({ page }) => {
+    await page.setViewportSize({
+        width: 800,
+        height: 600,
+    });
+    await routeEmptyPocketBaseLists(page);
+
+    await page.goto("/");
+    await expect(page.getByRole("application", {name: "Character height chart viewport"})).toBeVisible();
+    await expect.poll(async () => page.evaluate(() => "__dragonscalerDebug" in window)).toBe(true);
+    await waitForInitialLoad(page);
+
+    await seedCharacters(
+        page,
+        [
+            {
+                name: "Higher shoulders",
+                targetLength: 2,
+                shoulderY: 0.75,
+            },
+            {
+                name: "Taller image",
+                targetLength: 4,
+                shoulderY: 0.25,
+            },
+        ],
+    );
+
+    await expect.poll(async () => page.evaluate(() => {
+        const browserWindow = window as typeof window & {
+            __dragonscalerDebug?: {
+                store: {
+                    characterManager: {
+                        displayCharacters: {name: string}[],
+                    },
+                },
+            },
+        };
+
+        return browserWindow.__dragonscalerDebug?.store.characterManager.displayCharacters
+            .map(character => character.name) ?? [];
+    })).toEqual([
+        "Taller image",
+        "Higher shoulders",
+    ]);
+
+    const linearSnapshot = await snapshotSpacing(page);
+    const linearTallerImage = linearSnapshot.items.find(item => item.name === "Taller image");
+    const linearHigherShoulders = linearSnapshot.items.find(item => item.name === "Higher shoulders");
+    if (linearTallerImage === undefined || linearHigherShoulders === undefined) {
+        throw new Error("missing shoulder-marked characters");
+    }
+
+    expect(linearTallerImage.rectPx.height).toBeCloseTo(4 * 40);
+    expect(linearHigherShoulders.rectPx.height).toBeCloseTo(2 * 40);
+
+    await page.getByLabel("Logarithmic").check();
+
+    await expect.poll(async () => {
+        const snapshot = await snapshotSpacing(page);
+
+        return snapshot.items.find(item => item.name === "Taller image")?.rectPx.height ?? 0;
+    }).toBeCloseTo(4 * Math.log1p(1) * 40);
+    await expect.poll(async () => {
+        const snapshot = await snapshotSpacing(page);
+
+        return snapshot.items.find(item => item.name === "Higher shoulders")?.rectPx.height ?? 0;
+    }).toBeCloseTo(2 / 1.5 * Math.log1p(1.5) * 40);
+
+    const logarithmicSnapshot = await snapshotSpacing(page);
+    const originY = logarithmicSnapshot.gridlines.find(gridline => (
+        gridline.orientation === "y"
+        && gridline.coordMeters === 0
+    ))?.offsetPx;
+    const tallerImage = logarithmicSnapshot.items.find(item => item.name === "Taller image");
+    if (originY === undefined || tallerImage === undefined) {
+        throw new Error("missing logarithmic shoulder geometry");
+    }
+
+    const shoulderYPx = tallerImage.rectPx.y + 0.75 * tallerImage.rectPx.height;
+
+    expect(shoulderYPx).toBeCloseTo(originY - Math.log1p(1) * 40);
+    expect(logarithmicSnapshot.horizontalOverflowPx).toBe(0);
+    expect(logarithmicSnapshot.verticalOverflowPx).toBe(0);
 });
 
 test("logarithmic toggle stays responsive when zoomed far out", async ({ page }) => {

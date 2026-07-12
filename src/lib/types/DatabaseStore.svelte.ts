@@ -22,6 +22,7 @@ import {
 import { Baseline } from "./Baseline.svelte";
 import { getPocketbaseFileUrl, pocketbaseUrl } from "$lib/util/pocketbase";
 import type { IdentitySummary } from "./Identity";
+import { normalizeShoulderY } from "$lib/util/shoulderAltitude";
 
 
 type PocketBaseWritePayload = Record<string, unknown>;
@@ -129,16 +130,22 @@ export class DatabaseStore {
                 ownerIdentities.push(this.legacyIdentitySummary(legacyOwner));
             }
 
+            const anchor = (
+                referenceImage?.anchor_point
+                ?? form?.center_point
+                ?? characterData.center_point
+                ?? {x: 0.5, y: 0}
+            );
             const character = new Character({
                 id: characterData.id,
                 image: null,
                 imageDimensions: this.referenceImageDimensions(referenceImage),
                 name: characterData.name,
-                anchor:
-                    referenceImage?.anchor_point
-                    ?? form?.center_point
-                    ?? characterData.center_point
-                    ?? {x: 0.5, y: 0},
+                anchor,
+                shoulderY: normalizeShoulderY({
+                    shoulderY: referenceImage?.shoulder_y,
+                    groundY: anchor.y,
+                }),
                 formId: form?.id ?? null,
                 referenceImageIds: form?.reference_image_ids ?? [],
                 baseline: new Baseline({
@@ -814,6 +821,7 @@ export class DatabaseStore {
         const existingReferenceImageId = character.referenceImageIds[0];
         const referenceImageData = {
             anchor_point: character.anchor,
+            shoulder_y: character.validShoulderY,
             baseline_points: character.baseline.points,
             baseline_descriptor: character.baseline.descriptor,
             flipped_horizontally: character.image.flippedHorizontally,

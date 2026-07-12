@@ -28,6 +28,7 @@ describe("computeCharacterPositionsX", () => {
             {
                 viewportWidth: 2,
                 scaleFac: 2,
+                shoulderY: null,
                 aspect: 1,
                 anchor: {
                     x: 0,
@@ -37,6 +38,7 @@ describe("computeCharacterPositionsX", () => {
             {
                 viewportWidth: 1,
                 scaleFac: 1,
+                shoulderY: null,
                 aspect: 1,
                 anchor: {
                     x: 0.5,
@@ -46,6 +48,7 @@ describe("computeCharacterPositionsX", () => {
             {
                 viewportWidth: 3,
                 scaleFac: 3,
+                shoulderY: null,
                 aspect: 1,
                 anchor: {
                     x: 1,
@@ -142,6 +145,39 @@ describe("computeCharacterPositionsX", () => {
         ]);
     });
 
+    test("sorts marked characters by shoulder altitude", () => {
+        const tallerImage = makeCharacter(
+            "Taller image",
+            4,
+        );
+        const higherShoulders = makeCharacter(
+            "Higher shoulders",
+            2,
+        );
+        tallerImage.shoulderY = 0.25;
+        higherShoulders.shoulderY = 0.75;
+        const manager = new CharacterManager();
+
+        manager.characters = [
+            higherShoulders,
+            tallerImage,
+        ];
+
+        expect(tallerImage.shoulderAltitude).toBe(1);
+        expect(higherShoulders.shoulderAltitude).toBe(1.5);
+        expect(manager.displayCharacters).toEqual([
+            tallerImage,
+            higherShoulders,
+        ]);
+
+        tallerImage.shoulderY = null;
+
+        expect(manager.displayCharacters).toEqual([
+            higherShoulders,
+            tallerImage,
+        ]);
+    });
+
     test("uses projected character widths for logarithmic perspective spacing", () => {
         const short = makeCharacter(
             "Short",
@@ -165,6 +201,20 @@ describe("computeCharacterPositionsX", () => {
         expect(manager.positionsX[1] + Math.log1p(3)).toBeCloseTo(Math.log1p(3));
     });
 
+    test("uses shoulder altitude for logarithmic perspective spacing", () => {
+        const character = makeCharacter(
+            "Marked",
+            4,
+        );
+        character.shoulderY = 0.25;
+        const manager = new CharacterManager();
+
+        manager.characters = [character];
+        manager.logPerspective = true;
+
+        expect(manager.positionsX[0]).toBeCloseTo(-4 * Math.log1p(1));
+    });
+
     test("removes characters and clears matching selection/edit state", () => {
         const removed = makeCharacter(
             "Removed",
@@ -182,11 +232,13 @@ describe("computeCharacterPositionsX", () => {
         ];
         manager.selectedCharacter = removed;
         manager.editingCharacter = removed;
+        manager.shoulderMarkingActive = true;
 
         manager.removeCharacter(removed);
 
         expect(manager.characters).toEqual([remaining]);
         expect(manager.selectedCharacter).toBeNull();
         expect(manager.editingCharacter).toBeNull();
+        expect(manager.shoulderMarkingActive).toBe(false);
     });
 });

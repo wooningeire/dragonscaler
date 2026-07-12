@@ -122,8 +122,9 @@ describe("buildCharacterRenderFrame", () => {
         );
     });
 
-    test("uses the focused projection scale override for character geometry", () => {
+    test("uses the focused projected-height override after a shoulder change", () => {
         const character = makeCharacter("Eased Projection", 4);
+        character.shoulderY = 0.25;
         const frame = buildCharacterRenderFrame({
             characters: [character],
             positionsX: [0],
@@ -141,10 +142,11 @@ describe("buildCharacterRenderFrame", () => {
             editingCharacter: null,
             projectionOverride: {
                 character,
-                scaleFac: 2,
+                projectedHeightMeters: 2,
                 centerXMeters: 1,
                 centerProjectedYMeters: 0.5,
             },
+            logPerspective: true,
         });
 
         expect(frame.items[0].rectPx.height).toBeCloseTo(200);
@@ -184,6 +186,38 @@ describe("buildCharacterRenderFrame", () => {
         expect(frame.items[0].baselinePoints).toEqual([]);
         expect(character.scaleFac).toBe(2);
         expect(frame.items[0].rectPx.height).toBe(200);
+    });
+
+    test("uses line geometry when pixel input is dormant", () => {
+        const character = makeCharacter("Line Sized", 1);
+        character.baseline.pixelMeasurementPx = 300;
+        character.imageDimensions = {
+            width: 600,
+            height: 600,
+        };
+
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+        });
+
+        expect(character.baseline.referenceSizingMethod).toBe("measurement_line");
+        expect(character.baseline.pixelMeasurementPx).toBe(300);
+        expect(frame.items[0].baselinePoints).toBe(character.baseline.points);
+        expect(character.scaleFac).toBe(1);
+        expect(frame.items[0].rectPx.height).toBe(100);
     });
 
     test("uses stored image dimensions for placeholder character geometry", () => {
@@ -295,6 +329,69 @@ describe("buildCharacterRenderFrame", () => {
 
         expect(centerAnchor.imageBottomPx).toBe(bottomAnchor.imageBottomPx + 100);
         expect(centerAnchor.panelRect.y).toBe(bottomAnchor.panelRect.y);
+    });
+
+    test("uses the shoulder altitude as the uniform logarithmic scale reference", () => {
+        const character = makeCharacter("Marked", 4);
+        character.shoulderY = 0.25;
+        const buildFrame = (logPerspective: boolean) => buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: character,
+            logPerspective,
+        });
+        const linearItem = buildFrame(false).items[0];
+        const logarithmicItem = buildFrame(true).items[0];
+        const shoulderYPx = logarithmicItem.rectPx.y
+            + (1 - (logarithmicItem.shoulderY ?? 0)) * logarithmicItem.rectPx.height;
+
+        expect(character.shoulderAltitude).toBe(1);
+        expect(linearItem.rectPx.height).toBe(400);
+        expect(logarithmicItem.rectPx.height).toBeCloseTo(4 * Math.log1p(1) * 100);
+        expect(logarithmicItem.rectPx.width).toBeCloseTo(logarithmicItem.rectPx.height);
+        expect(shoulderYPx).toBeCloseTo(300 - Math.log1p(1) * 100);
+    });
+
+    test("hides a shoulder mark that is no longer above the anchor", () => {
+        const character = makeCharacter("Invalid mark", 4);
+        character.shoulderY = 0.25;
+        character.anchor = {
+            x: 0.5,
+            y: 0.5,
+        };
+
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: character,
+            logPerspective: true,
+        });
+
+        expect(character.validShoulderY).toBeNull();
+        expect(character.shoulderAltitude).toBeNull();
+        expect(frame.items[0].shoulderY).toBeNull();
     });
 
     test("projects character heights and horizontal gridlines logarithmically", () => {

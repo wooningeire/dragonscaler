@@ -62,9 +62,41 @@ describe("Character", () => {
         expect(character.aspect).toBe(2);
     });
 
-    test("preserves image dimensions and pixel sizing when cloning and copying", () => {
+    test("uses a valid shoulder mark as the sorting altitude", () => {
+        const character = new Character({
+            anchor: {x: 0.5, y: 0.1},
+            shoulderY: 0.6,
+            baseline: new Baseline({
+                targetLength: 4,
+                points: [
+                    {x: 0.5, y: 0},
+                    {x: 0.5, y: 1},
+                ],
+            }),
+        });
+
+        expect(character.scaleFac).toBe(4);
+        expect(character.shoulderAltitude).toBe(2);
+        expect(character.validShoulderY).toBe(0.6);
+        expect(character.sortingAltitude).toBe(2);
+
+        character.shoulderY = character.anchor.y;
+
+        expect(character.shoulderAltitude).toBeNull();
+        expect(character.validShoulderY).toBeNull();
+        expect(character.sortingAltitude).toBe(4);
+
+        character.shoulderY = 1.1;
+
+        expect(character.shoulderAltitude).toBeNull();
+        expect(character.validShoulderY).toBeNull();
+        expect(character.sortingAltitude).toBe(4);
+    });
+
+    test("preserves image dimensions, pixel sizing, and shoulder marks when cloning and copying", () => {
         const source = new Character({
             imageDimensions: {width: 900, height: 600},
+            shoulderY: 0.75,
             baseline: new Baseline({
                 referenceSizingMethod: "pixel_measurement",
                 pixelMeasurementPx: 300,
@@ -79,7 +111,9 @@ describe("Character", () => {
         expect(clone.imageDimensions).not.toBe(source.imageDimensions);
         expect(clone.baseline).not.toBe(source.baseline);
         expect(clone.pixelMeasurementImageLength).toBe(0.5);
+        expect(clone.shoulderY).toBe(0.75);
         expect(target.imageDimensions).toEqual({width: 900, height: 600});
         expect(target.pixelMeasurementImageLength).toBe(0.5);
+        expect(target.shoulderY).toBe(0.75);
     });
 });

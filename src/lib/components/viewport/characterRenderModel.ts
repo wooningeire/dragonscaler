@@ -3,8 +3,7 @@ import type { CharacterImage } from "$lib/types/CharacterImage.svelte";
 import type { IdentitySummary } from "$lib/types/Identity";
 import type { Point } from "$lib/types/Point";
 import {
-    characterViewportWidthForProjection,
-    projectedViewportHeightMeters,
+    characterProjectionMetrics,
     projectViewportYMeters,
     unprojectViewportYMeters,
 } from "$lib/util/viewportProjection";
@@ -25,6 +24,7 @@ export type CharacterRenderItem = {
     owners: IdentitySummary[],
     rectPx: RectPx,
     baselinePoints: Point[],
+    shoulderY: number | null,
     aspect: number,
     opacity: number,
     baselineOpacity: number,
@@ -51,7 +51,7 @@ export type CharacterRenderFrame = {
 
 export type CharacterProjectionOverride = {
     character: Character,
-    scaleFac: number,
+    projectedHeightMeters: number,
     centerXMeters: number,
     centerProjectedYMeters: number,
 };
@@ -66,6 +66,11 @@ export type CharacterRenderCamera = {
 export type BaselinePreview = {
     character: Character,
     points: Point[],
+} | null;
+
+export type ShoulderPreview = {
+    character: Character,
+    y: number,
 } | null;
 
 type ProjectedMetersRange = {
@@ -100,6 +105,7 @@ export const buildCharacterRenderFrame = ({
     heightPx,
     editingCharacter,
     baselinePreview = null,
+    shoulderPreview = null,
     projectionOverride = null,
     logPerspective = false,
     gridlinesOnTop = false,
@@ -111,6 +117,7 @@ export const buildCharacterRenderFrame = ({
     heightPx: number,
     editingCharacter: Character | null,
     baselinePreview?: BaselinePreview,
+    shoulderPreview?: ShoulderPreview,
     projectionOverride?: CharacterProjectionOverride | null,
     logPerspective?: boolean,
     gridlinesOnTop?: boolean,
@@ -137,25 +144,16 @@ export const buildCharacterRenderFrame = ({
         ) * camera.scalePxPerMeter
     );
     const items = characters.map((character, index) => {
-        const characterHeightMeters = projectionOverride?.character === character
-            ? projectionOverride.scaleFac
-            : character.scaleFac;
-        const projectionCharacter = {
-            viewportWidth: characterHeightMeters * character.aspect,
-            scaleFac: characterHeightMeters,
-            aspect: character.aspect,
-            anchor: character.anchor,
-        };
-        const height = projectedViewportHeightMeters(
-            characterHeightMeters,
-            character.anchor.y,
+        const projectionMetrics = characterProjectionMetrics(
+            character,
             logPerspective,
-        ) * camera.scalePxPerMeter;
+        );
+        const projectedHeightMeters = projectionOverride?.character === character
+            ? projectionOverride.projectedHeightMeters
+            : projectionMetrics.height;
+        const height = projectedHeightMeters * camera.scalePxPerMeter;
         const anchorY = screenYMetersAsPx(0);
-        const width = characterViewportWidthForProjection(
-            projectionCharacter,
-            logPerspective,
-        ) * camera.scalePxPerMeter;
+        const width = projectedHeightMeters * character.aspect * camera.scalePxPerMeter;
         const centerPx = projectionOverride?.character === character
             ? {
                 x: camera.viewportPositionPx.x
@@ -192,6 +190,11 @@ export const buildCharacterRenderFrame = ({
                     ? []
                     : character.baseline.points,
             aspect: character.aspect,
+            shoulderY: editing
+                ? shoulderPreview?.character === character
+                    ? shoulderPreview.y
+                    : character.validShoulderY
+                : null,
             opacity,
             baselineOpacity: BASELINE_OPACITY * opacity,
             labelOpacity,

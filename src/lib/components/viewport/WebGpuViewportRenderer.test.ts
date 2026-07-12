@@ -28,6 +28,7 @@ const makeItem = (name: string): CharacterRenderItem => ({
         height: 100,
     },
     baselinePoints: [],
+    shoulderY: null,
     aspect: 1,
     opacity: 1,
     baselineOpacity: 1,

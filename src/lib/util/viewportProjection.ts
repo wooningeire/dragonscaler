@@ -1,7 +1,10 @@
+import { computeShoulderAltitudeMeters } from "./shoulderAltitude";
+
+
 type CharacterProjectionInput = {
-    viewportWidth: number,
     scaleFac: number,
     aspect: number,
+    shoulderY?: number | null,
     anchor: {
         y: number,
     },
@@ -51,17 +54,44 @@ export const projectedViewportHeightMeters = (
     );
 };
 
+export const characterProjectionMetrics = (
+    character: CharacterProjectionInput,
+    logPerspective: boolean,
+    imageHeightMeters = character.scaleFac,
+) => {
+    if (!logPerspective) {
+        return {
+            height: imageHeightMeters,
+            width: imageHeightMeters * character.aspect,
+        };
+    }
+
+    const shoulderAltitudeMeters = computeShoulderAltitudeMeters({
+        shoulderY: character.shoulderY ?? null,
+        groundY: character.anchor.y,
+        imageHeightMeters,
+    });
+    const height = shoulderAltitudeMeters === null
+        ? projectedViewportHeightMeters(
+            imageHeightMeters,
+            character.anchor.y,
+            true,
+        )
+        : imageHeightMeters * projectViewportYMeters(
+            shoulderAltitudeMeters,
+            true,
+        ) / shoulderAltitudeMeters;
+
+    return {
+        height,
+        width: height * character.aspect,
+    };
+};
+
 export const characterViewportWidthForProjection = (
     character: CharacterProjectionInput,
     logPerspective: boolean,
-) => {
-    if (!logPerspective) {
-        return character.viewportWidth;
-    }
-
-    return projectedViewportHeightMeters(
-        character.scaleFac,
-        character.anchor.y,
-        logPerspective,
-    ) * character.aspect;
-};
+) => characterProjectionMetrics(
+    character,
+    logPerspective,
+).width;

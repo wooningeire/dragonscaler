@@ -83,6 +83,31 @@ describe("centeredCameraPositionForCharacter", () => {
         expect(position.scalePxPerMeter).toBeCloseTo(1000 / (projectedHeightMeters * 1.5));
     });
 
+    test("fits the full image using its marked shoulder as the logarithmic reference", () => {
+        const character = makeCharacter();
+        character.shoulderY = 0.2;
+        const projectedHeightMeters = 5 * Math.log1p(2);
+        const position = centeredCameraPositionForCharacter({
+            character,
+            positionX: 100,
+            viewportDimsPx: {
+                width: 1000,
+                height: 1000,
+            },
+            viewportInsetsPx: {
+                top: 0,
+                right: 0,
+                bottom: 0,
+                left: 0,
+            },
+            logPerspective: true,
+        });
+
+        expect(position.x).toBeCloseTo(100 + projectedHeightMeters * 0.5);
+        expect(position.y).toBeCloseTo(Math.expm1(projectedHeightMeters * 0.5));
+        expect(position.scalePxPerMeter).toBeCloseTo(1000 / (projectedHeightMeters * 1.5));
+    });
+
     test("centers logarithmic character bounds around nonzero anchors", () => {
         const character = makeCharacter();
         character.anchor.y = 0.25;

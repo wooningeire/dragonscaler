@@ -563,6 +563,22 @@ describe("DatabaseStore write idempotency", () => {
         );
     });
 
+    test("persists the shoulder mark on the reference image", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+        character.anchor.y = 0.1;
+        character.shoulderY = 0.65;
+
+        await databaseStore.createCharacter(character);
+
+        expect(fakePocketBase.collection(Collections.ReferenceImages).createCalls[0]).toEqual(
+            expect.objectContaining({
+                shoulder_y: 0.65,
+            }),
+        );
+    });
+
     test("persists the authored pixel reference sizing input", async () => {
         const databaseStore = new DatabaseStore();
         const fakePocketBase = installFakePocketBase(databaseStore);
@@ -728,6 +744,7 @@ describe("DatabaseStore character loading", () => {
         seedStoredCharacter(fakePocketBase, {
             referenceImage: {
                 flipped_horizontally: true,
+                shoulder_y: 0,
                 width_px: 300,
                 height_px: 100,
             },
@@ -741,6 +758,7 @@ describe("DatabaseStore character loading", () => {
             height: 100,
         });
         expect(characters[0].aspect).toBe(3);
+        expect(characters[0].shoulderY).toBeNull();
         expect(fromUrl).toHaveBeenCalledWith(
             expect.stringContaining(
                 "/api/files/dragonscaler_reference_images/reference-1/scale-wing.png",
@@ -754,6 +772,32 @@ describe("DatabaseStore character loading", () => {
                 },
             },
         );
+    });
+
+    test("restores the shoulder mark before the image file loads", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        vi.spyOn(CharacterImage, "fromUrl").mockReturnValue(new Promise<CharacterImage>(() => {}));
+
+        seedStoredCharacter(fakePocketBase, {
+            form: {
+                length_meters: 4,
+            },
+            referenceImage: {
+                anchor_point: {x: 0.5, y: 0.1},
+                baseline_points: [
+                    {x: 0.5, y: 0},
+                    {x: 0.5, y: 1},
+                ],
+                shoulder_y: 0.75,
+            },
+        });
+
+        const characters = await databaseStore.loadCharacterData();
+
+        expect(characters[0].image).toBeNull();
+        expect(characters[0].shoulderY).toBe(0.75);
+        expect(characters[0].shoulderAltitude).toBeCloseTo(2.6);
     });
 
     test("uses decoded dimensions without writing during character load", async () => {
@@ -806,7 +850,7 @@ describe("DatabaseStore character loading", () => {
         expect(characters[0].baseline.measurementUnit).toBe("ft");
     });
 
-    test("loads persisted pixel sizing from records without the method field", async () => {
+    test("keeps pixel input dormant when the method field is missing", async () => {
         const databaseStore = new DatabaseStore();
         const fakePocketBase = installFakePocketBase(databaseStore);
         seedStoredCharacter(fakePocketBase, {
@@ -818,6 +862,73 @@ describe("DatabaseStore character loading", () => {
                     {x: 0.5, y: 0},
                     {x: 0.5, y: 1},
                 ],
+                pixel_measurement_px: 300,
+                width_px: 900,
+                height_px: 600,
+            },
+        });
+
+        const characters = await databaseStore.loadCharacterData();
+
+        expect(characters[0].baseline.referenceSizingMethod).toBe("measurement_line");
+        expect(characters[0].baseline.pixelMeasurementPx).toBe(300);
+        expect(characters[0].referenceImageLength).toBe(1);
+        expect(characters[0].scaleFac).toBe(2);
+    });
+
+    test("uses Dynasha's corrected measurement line with dormant pixel input", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        seedStoredCharacter(fakePocketBase, {
+            form: {
+                length_meters: 12.192,
+            },
+            referenceImage: {
+                anchor_point: {
+                    x: 0.8209210019885815,
+                    y: 0.07310924369747898,
+                },
+                shoulder_y: 0.6121848739495797,
+                baseline_points: [
+                    {x: 1.392497573803337, y: 0.07310924369747898},
+                    {x: 1.392497573803337, y: 0.6121848739495797},
+                ],
+                baseline_descriptor: "to the shoulder",
+                reference_sizing_method: "measurement_line",
+                pixel_measurement_px: 427,
+                width_px: 3144,
+                height_px: 1879,
+            },
+        });
+
+        const characters = await databaseStore.loadCharacterData();
+        const character = characters[0];
+
+        expect(character.baseline.referenceSizingMethod).toBe("measurement_line");
+        expect(character.baseline.pixelMeasurementPx).toBe(427);
+        expect(character.referenceImageLength).toBeCloseTo(
+            0.6121848739495797 - 0.07310924369747898,
+        );
+        expect(character.scaleFac * character.referenceImageLength).toBeCloseTo(12.192);
+        expect(character.scaleFac).toBeCloseTo(22.6164925955);
+        expect(character.scaleFac).not.toBeCloseTo(53.6505105386);
+        expect(character.shoulderAltitude).toBeCloseTo(12.192);
+        expect(character.sortingAltitude).toBeCloseTo(12.192);
+    });
+
+    test("loads pixel sizing when the method is explicit", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        seedStoredCharacter(fakePocketBase, {
+            form: {
+                length_meters: 2,
+            },
+            referenceImage: {
+                baseline_points: [
+                    {x: 0.5, y: 0},
+                    {x: 0.5, y: 1},
+                ],
+                reference_sizing_method: "pixel_measurement",
                 pixel_measurement_px: 300,
                 width_px: 900,
                 height_px: 600,

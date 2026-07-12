@@ -36,6 +36,8 @@ export const GRIDLINE_LIGHT_COLOR = [0.76, 0.84, 0.68, 0.22] as const satisfies 
 export const GRIDLINE_STRONG_COLOR = [0.62, 0.75, 0.58, 0.36] as const satisfies ColorRgba;
 export const BASELINE_WHITE_COLOR = [1, 1, 1, 1] as const satisfies ColorRgba;
 export const BASELINE_BLACK_COLOR = [0, 0, 0, 1] as const satisfies ColorRgba;
+export const SHOULDER_MARK_OUTLINE_COLOR = [0, 0, 0, 1] as const satisfies ColorRgba;
+export const SHOULDER_MARK_COLOR = [1, 0.65, 0.15, 1] as const satisfies ColorRgba;
 export const CENTER_OUTLINE_COLOR = [1, 1, 1, 1] as const satisfies ColorRgba;
 export const CENTER_FILL_COLOR = [0, 0, 0, 1] as const satisfies ColorRgba;
 
