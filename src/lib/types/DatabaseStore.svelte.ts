@@ -71,6 +71,14 @@ export class DatabaseStore {
         this.userRecord = this.pb.authStore.record;
     }
 
+    canEditCharacter(character: Character) {
+        const accountId = this.userRecord?.id ?? null;
+
+        return accountId !== null && character.ownerIdentities.some(
+            identity => identity.accountId === accountId,
+        );
+    }
+
     async loadCharacterData() {
         const characterDataResultPromise = this.pb.collection(Collections.Characters).getFullList<CharacterRecord>();
         const legacyBaselinesResultPromise = this.loadOptionalRecords<LegacyBaselineRecord>(LEGACY_BASELINES_COLLECTION);
@@ -231,6 +239,9 @@ export class DatabaseStore {
     async updateCharacter(character: Character) {
         return await this.runExclusiveCharacterWrite(character, async () => {
             if (!this.isRecordId(character.id)) throw new Error("character has no id");
+            if (!this.canEditCharacter(character)) {
+                throw new Error("current account does not own this character");
+            }
 
             const ownerIdentityIds = await this.resolveOwnerIdentityIds(character);
             await this.pb.collection(Collections.Characters).update(
@@ -982,12 +993,24 @@ export class DatabaseStore {
         } catch (error) {
             if (!this.isMissingRecordError(error)) throw error;
 
-            return await this.createOrUpdateRecord<RecordType>(
-                collection,
-                id,
-                createData,
-                updateData,
-            );
+            try {
+                await this.pb.collection(collection).getOne(
+                    id,
+                    POCKETBASE_WRITE_OPTIONS,
+                );
+            } catch (lookupError) {
+                if (!this.isMissingRecordError(lookupError)) throw lookupError;
+
+                return await this.createOrUpdateRecord<RecordType>(
+                    collection,
+                    id,
+                    createData,
+                    updateData,
+                );
+            }
+
+            // PocketBase masks update-rule rejection as 404 even when public reads find the record.
+            throw error;
         }
     }
 

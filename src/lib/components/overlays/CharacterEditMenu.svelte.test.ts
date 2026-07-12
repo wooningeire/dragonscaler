@@ -51,6 +51,32 @@ describe("CharacterEditMenu", () => {
         expect(store.characterManager.selectedCharacter).toBe(character);
     });
 
+    test("reports a rejected update without leaving edit mode", async () => {
+        const character = makeCharacter();
+        const saveError = new Error("forbidden");
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+        const updateCharacter = vi
+            .spyOn(store.databaseStore, "updateCharacter")
+            .mockRejectedValue(saveError);
+        const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+
+        render(CharacterEditMenu);
+
+        await fireEvent.click(screen.getByRole("button", {name: "Update"}));
+
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+            "Could not save this character. Check your edit access and try again.",
+        );
+        expect(updateCharacter).toHaveBeenCalledWith(character);
+        expect(consoleError).toHaveBeenCalledWith(
+            "Failed to save character.",
+            saveError,
+        );
+        expect(store.characterManager.editingCharacter).toBe(character);
+        expect(screen.getByRole("button", {name: "Update"})).toBeEnabled();
+    });
+
     test("changes the reference curve editing mode", async () => {
         const character = makeCharacter();
         store.characterManager.selectedCharacter = character;

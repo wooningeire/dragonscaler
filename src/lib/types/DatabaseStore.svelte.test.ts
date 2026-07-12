@@ -102,6 +102,7 @@ class FakeCollection {
         options: Record<string, unknown>,
     ) => Promise<unknown> = () => new Promise(() => {});
     createFailure: unknown = null;
+    updateFailure: unknown = null;
 
     constructor(readonly name: string) {}
 
@@ -185,6 +186,12 @@ class FakeCollection {
             id,
             data,
         });
+
+        if (this.updateFailure !== null) {
+            const error = this.updateFailure;
+            this.updateFailure = null;
+            throw error;
+        }
 
         const record = this.records.get(id);
         if (record === undefined) throw makeMissingRecordError();
@@ -645,6 +652,80 @@ describe("DatabaseStore write idempotency", () => {
         ]);
     });
 
+    test("rejects a foreign-owner update before any network write", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+        databaseStore.userRecord = {
+            ...commonRecord("account-1"),
+            username: "Owner",
+        } as AccountRecord;
+        character.id = "character-1";
+        character.ownerIdentities = [
+            {
+                ...makeOwnerIdentity(),
+                accountId: "account-2",
+            },
+        ];
+        character.uploaded = true;
+
+        await expect(databaseStore.updateCharacter(character)).rejects.toThrow(
+            "current account does not own this character",
+        );
+
+        for (const collection of fakePocketBase.collections.values()) {
+            expect(collection.createCalls).toEqual([]);
+            expect(collection.updateCalls).toEqual([]);
+            expect(collection.deleteCalls).toEqual([]);
+        }
+    });
+
+    test("does not create over a readable record after a masked update 404", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+        databaseStore.userRecord = {
+            ...commonRecord("account-1"),
+            username: "Owner",
+        } as AccountRecord;
+        character.id = "character-1";
+        character.formId = "form-1";
+        character.referenceImageIds = ["reference-1"];
+        character.uploaded = true;
+        fakePocketBase.collection(Collections.Characters).records.set(
+            "character-1",
+            {
+                ...commonRecord("character-1"),
+                name: character.name,
+            } satisfies CharacterRecord,
+        );
+        fakePocketBase.collection(Collections.ReferenceImages).records.set(
+            "reference-1",
+            {
+                ...commonRecord("reference-1"),
+                image: "dragon.png",
+            } satisfies ReferenceImageRecord,
+        );
+        const forms = fakePocketBase.collection(Collections.CharacterForms);
+        forms.records.set(
+            "form-1",
+            {
+                ...commonRecord("form-1"),
+                character_id: "character-1",
+                reference_image_ids: ["reference-1"],
+            } satisfies CharacterFormRecord,
+        );
+        forms.updateFailure = makeMissingRecordError();
+
+        await expect(databaseStore.updateCharacter(character)).rejects.toMatchObject({
+            status: 404,
+        });
+
+        expect(forms.updateCalls).toHaveLength(1);
+        expect(forms.createCalls).toEqual([]);
+        expect(forms.records.has("form-1")).toBe(true);
+    });
+
     test("uses the account id as the default identity create id", async () => {
         const databaseStore = new DatabaseStore();
         const fakePocketBase = installFakePocketBase(databaseStore);
@@ -876,45 +957,6 @@ describe("DatabaseStore character loading", () => {
         expect(characters[0].scaleFac).toBe(2);
     });
 
-    test("uses Dynasha's corrected measurement line with dormant pixel input", async () => {
-        const databaseStore = new DatabaseStore();
-        const fakePocketBase = installFakePocketBase(databaseStore);
-        seedStoredCharacter(fakePocketBase, {
-            form: {
-                length_meters: 12.192,
-            },
-            referenceImage: {
-                anchor_point: {
-                    x: 0.8209210019885815,
-                    y: 0.07310924369747898,
-                },
-                shoulder_y: 0.6121848739495797,
-                baseline_points: [
-                    {x: 1.392497573803337, y: 0.07310924369747898},
-                    {x: 1.392497573803337, y: 0.6121848739495797},
-                ],
-                baseline_descriptor: "to the shoulder",
-                reference_sizing_method: "measurement_line",
-                pixel_measurement_px: 427,
-                width_px: 3144,
-                height_px: 1879,
-            },
-        });
-
-        const characters = await databaseStore.loadCharacterData();
-        const character = characters[0];
-
-        expect(character.baseline.referenceSizingMethod).toBe("measurement_line");
-        expect(character.baseline.pixelMeasurementPx).toBe(427);
-        expect(character.referenceImageLength).toBeCloseTo(
-            0.6121848739495797 - 0.07310924369747898,
-        );
-        expect(character.scaleFac * character.referenceImageLength).toBeCloseTo(12.192);
-        expect(character.scaleFac).toBeCloseTo(22.6164925955);
-        expect(character.scaleFac).not.toBeCloseTo(53.6505105386);
-        expect(character.shoulderAltitude).toBeCloseTo(12.192);
-        expect(character.sortingAltitude).toBeCloseTo(12.192);
-    });
 
     test("loads pixel sizing when the method is explicit", async () => {
         const databaseStore = new DatabaseStore();

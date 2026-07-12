@@ -43,6 +43,7 @@ let fileInput: HTMLInputElement = $state()!;
 let loading = $state(false);
 let saving = $state(false);
 let deleting = $state(false);
+let saveError: string | null = $state(null);
 const loadFile = async () => {
     const character = characterBeingEdited;
     if (character === null) return;
@@ -172,6 +173,7 @@ const submit = async () => {
     if (saving || deleting) return;
 
     saving = true;
+    saveError = null;
 
     try {
         if (characterBeingEdited.uploaded) {
@@ -182,6 +184,9 @@ const submit = async () => {
 
         originalCharacter = characterBeingEdited.clone();
         store.characterManager.stopEditingCharacter();
+    } catch (error) {
+        console.error("Failed to save character.", error);
+        saveError = "Could not save this character. Check your edit access and try again.";
     } finally {
         saving = false;
     }
@@ -392,6 +397,15 @@ const canLeave = $derived(!loading && !saving && !deleting);
 
 
         <div class="buttons">
+            <div
+                class="save-status"
+                aria-live="polite"
+            >
+                {#if saveError !== null}
+                    <span role="alert">{saveError}</span>
+                {/if}
+            </div>
+
             <Button
                 onclick={submit}
                 disabled={!canSubmit}
@@ -559,6 +573,14 @@ input[type="file"] {
     display: none;
 }
 
+.save-status {
+    min-height: 1.25rem;
+
+    color: oklch(0.48 0.19 25);
+    font-size: 0.8rem;
+    line-height: 1.25;
+}
+
 .buttons {
     display: flex;
     flex-direction: column;
@@ -578,6 +600,10 @@ input[type="file"] {
 
         flex-direction: row;
         flex-wrap: wrap;
+
+        .save-status {
+            flex: 1 0 100%;
+        }
 
         > :global(*) {
             flex: 1 1 5rem;

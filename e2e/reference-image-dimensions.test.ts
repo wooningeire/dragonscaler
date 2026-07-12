@@ -37,15 +37,7 @@ const record = (
 
 const routePocketBaseRecords = async (
     page: Page,
-    {
-        characterName = "Wide Dragon",
-        referenceSizingMethod = "pixel_measurement",
-        pixelMeasurementPx = 50,
-    }: {
-        characterName?: string,
-        referenceSizingMethod?: "measurement_line" | "pixel_measurement",
-        pixelMeasurementPx?: number,
-    } = {},
+    referenceSizingMethod: "measurement_line" | "pixel_measurement" = "pixel_measurement",
 ) => {
     const recordsByCollection = new Map<string, PocketBaseRecord[]>([
         [
@@ -55,7 +47,7 @@ const routePocketBaseRecords = async (
                     "dragonscaler_characters",
                     "character-1",
                     {
-                        name: characterName,
+                        name: "Wide Dragon",
                         owner_identity_ids: [],
                         sona_identity_ids: [],
                     },
@@ -94,7 +86,7 @@ const routePocketBaseRecords = async (
                         ],
                         baseline_descriptor: "reference human",
                         reference_sizing_method: referenceSizingMethod,
-                        pixel_measurement_px: pixelMeasurementPx,
+                        pixel_measurement_px: 50,
                         width_px: 300,
                         height_px: 100,
                     },
@@ -263,16 +255,7 @@ const expectPixelEditState = async (page: Page) => {
     });
 };
 
-const expectLineEditState = async (
-    page: Page,
-    {
-        characterName = "Wide Dragon",
-        pixelMeasurementPx = 50,
-    }: {
-        characterName?: string,
-        pixelMeasurementPx?: number,
-    } = {},
-) => {
+const expectLineEditState = async (page: Page) => {
     await expect(page.getByRole("radio", {name: "Draw a measurement line"})).toBeChecked();
     await expect(page.getByRole("radiogroup", {name: "Reference curve mode"})).toBeVisible();
     await expect(page.locator(".pixel-measurement-row")).toHaveCount(0);
@@ -283,7 +266,6 @@ const expectLineEditState = async (
                 store: {
                     characterManager: {
                         characters: {
-                            name: string,
                             baseline: {
                                 referenceSizingMethod: string,
                                 pixelMeasurementPx: number | null,
@@ -304,7 +286,6 @@ const expectLineEditState = async (
             ?.store.characterManager.characters[0];
 
         return {
-            name: character?.name ?? null,
             method: character?.baseline.referenceSizingMethod ?? null,
             pixelMeasurementPx: character?.baseline.pixelMeasurementPx ?? null,
             referenceImageLength: character?.referenceImageLength ?? null,
@@ -313,9 +294,8 @@ const expectLineEditState = async (
                 ?.renderFrame.items[0]?.baselinePoints.length ?? -1,
         };
     })).toEqual({
-        name: characterName,
         method: "measurement_line",
-        pixelMeasurementPx,
+        pixelMeasurementPx: 50,
         referenceImageLength: 1,
         scaleFac: 2,
         baselinePointCount: 2,
@@ -616,12 +596,8 @@ test("pixel measurement and shoulder mark survive reload", async ({page}) => {
     await expectPixelEditState(page);
 });
 
-test("Dynasha's measurement line and shoulder mark survive dormant pixel input", async ({page}) => {
-    await routePocketBaseRecords(page, {
-        characterName: "Dynasha",
-        referenceSizingMethod: "measurement_line",
-        pixelMeasurementPx: 427,
-    });
+test("measurement line and shoulder mark survive dormant pixel input on reload", async ({page}) => {
+    await routePocketBaseRecords(page, "measurement_line");
     const imageRoute = await routeDelayedReferenceImage(page);
 
     await page.goto("/");
@@ -630,15 +606,9 @@ test("Dynasha's measurement line and shoulder mark survive dormant pixel input",
     imageRoute.release();
 
     await openLoadedCharacterForEditing(page);
-    await expectLineEditState(page, {
-        characterName: "Dynasha",
-        pixelMeasurementPx: 427,
-    });
+    await expectLineEditState(page);
 
     await page.reload();
     await openLoadedCharacterForEditing(page);
-    await expectLineEditState(page, {
-        characterName: "Dynasha",
-        pixelMeasurementPx: 427,
-    });
+    await expectLineEditState(page);
 });

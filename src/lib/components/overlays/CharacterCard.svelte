@@ -18,11 +18,7 @@ const mutedByEditMode = $derived(
     store.characterManager.editingCharacter !== null
     && store.characterManager.editingCharacter !== character,
 );
-const currentAccountId = $derived(store.databaseStore.userRecord?.id ?? null);
-const canEdit = $derived(
-    currentAccountId !== null
-    && character.ownerIdentities.some(identity => identity.accountId === currentAccountId),
-);
+const canEdit = $derived(store.databaseStore.canEditCharacter(character));
 const characterName = $derived(character.name === "" ? "unnamed character" : character.name);
 const editLabel = $derived(`Edit ${characterName}`);
 </script>
