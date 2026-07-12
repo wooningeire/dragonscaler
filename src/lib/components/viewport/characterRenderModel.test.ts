@@ -112,6 +112,8 @@ describe("buildCharacterRenderFrame", () => {
 
         expect(smallerFrame.items[0].rectPx.height).toBe(220);
         expect(largerFrame.items[0].rectPx.height).toBe(300);
+        expect(smallerFrame.items[0].nameplateReferenceHeightPx).toBe(220);
+        expect(largerFrame.items[0].nameplateReferenceHeightPx).toBe(300);
         expect(characterLabelScale(smallerFrame.items[0])).toBeCloseTo(220 / 256);
         expect(characterLabelScale(largerFrame.items[0])).toBeCloseTo(300 / 256);
         expect(characterLabelScale(largerFrame.items[0])).toBeGreaterThan(characterLabelScale(smallerFrame.items[0]));
@@ -120,6 +122,98 @@ describe("buildCharacterRenderFrame", () => {
         ).toBeCloseTo(
             characterLabelScale(largerFrame.items[0]) / largerFrame.items[0].rectPx.height,
         );
+    });
+
+    test("sizes marked nameplates from equal shoulder altitudes in linear and log scale", () => {
+        const tallCharacter = makeCharacter("Tall image", 4);
+        tallCharacter.shoulderY = 0.25;
+        const shortCharacter = makeCharacter("Short image", 2);
+        shortCharacter.shoulderY = 0.5;
+        const buildFrame = (logPerspective: boolean) => buildCharacterRenderFrame({
+            characters: [
+                tallCharacter,
+                shortCharacter,
+            ],
+            positionsX: [
+                0,
+                1,
+            ],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: null,
+            logPerspective,
+        });
+        const findItem = (
+            frame: ReturnType<typeof buildCharacterRenderFrame>,
+            character: Character,
+        ) => frame.items.find(item => item.character === character)!;
+        const linearFrame = buildFrame(false);
+        const logarithmicFrame = buildFrame(true);
+        const linearTall = findItem(linearFrame, tallCharacter);
+        const linearShort = findItem(linearFrame, shortCharacter);
+        const logarithmicTall = findItem(logarithmicFrame, tallCharacter);
+        const logarithmicShort = findItem(logarithmicFrame, shortCharacter);
+
+        expect(linearTall.rectPx.height).toBe(400);
+        expect(linearShort.rectPx.height).toBe(200);
+        expect(linearTall.nameplateReferenceHeightPx).toBe(100);
+        expect(linearShort.nameplateReferenceHeightPx).toBe(100);
+        expect(characterLabelScale(linearTall)).toBeCloseTo(100 / 256);
+        expect(characterLabelScale(linearShort)).toBeCloseTo(100 / 256);
+        expect(linearTall.labelOpacity).toBeCloseTo(linearShort.labelOpacity);
+        expect(linearTall.shoulderY).toBeNull();
+        expect(linearShort.shoulderY).toBeNull();
+
+        expect(logarithmicTall.rectPx.height).toBeCloseTo(4 * Math.log1p(1) * 100);
+        expect(logarithmicShort.rectPx.height).toBeCloseTo(2 * Math.log1p(1) * 100);
+        expect(logarithmicTall.nameplateReferenceHeightPx).toBeCloseTo(Math.log1p(1) * 100);
+        expect(logarithmicShort.nameplateReferenceHeightPx).toBeCloseTo(Math.log1p(1) * 100);
+        expect(characterLabelScale(logarithmicTall)).toBeCloseTo(Math.log1p(1) * 100 / 256);
+        expect(characterLabelScale(logarithmicShort)).toBeCloseTo(Math.log1p(1) * 100 / 256);
+        expect(logarithmicTall.labelOpacity).toBeCloseTo(logarithmicShort.labelOpacity);
+        expect(logarithmicTall.shoulderY).toBeNull();
+        expect(logarithmicShort.shoulderY).toBeNull();
+    });
+
+    test("uses the live shoulder preview for the edited nameplate", () => {
+        const character = makeCharacter("Preview", 4);
+        character.shoulderY = 0.25;
+
+        const frame = buildCharacterRenderFrame({
+            characters: [character],
+            positionsX: [0],
+            camera: {
+                posMetersX: 0,
+                posMetersY: 0,
+                scalePxPerMeter: 100,
+                viewportPositionPx: {
+                    x: 400,
+                    y: 300,
+                },
+            },
+            widthPx: 800,
+            heightPx: 600,
+            editingCharacter: character,
+            shoulderPreview: {
+                character,
+                y: 0.5,
+            },
+        });
+
+        expect(frame.items[0].rectPx.height).toBe(400);
+        expect(frame.items[0].shoulderY).toBe(0.5);
+        expect(frame.items[0].nameplateReferenceHeightPx).toBe(200);
+        expect(characterLabelScale(frame.items[0])).toBeCloseTo(200 / 256);
+        expect(character.shoulderY).toBe(0.25);
     });
 
     test("uses the focused projected-height override after a shoulder change", () => {
@@ -154,6 +248,8 @@ describe("buildCharacterRenderFrame", () => {
         expect(frame.items[0].rectPx.x).toBeCloseTo(400);
         expect(frame.items[0].rectPx.y).toBeCloseTo(150);
         expect(frame.items[0].baselinePoints).toBe(character.baseline.points);
+        expect(frame.items[0].nameplateReferenceHeightPx).toBeCloseTo(50);
+        expect(characterLabelScale(frame.items[0])).toBeCloseTo(50 / 256);
     });
 
     test("hides stale line geometry when pixel reference sizing is active", () => {

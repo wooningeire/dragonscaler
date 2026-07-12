@@ -49,7 +49,7 @@ const NAMEPLATE_BORDER_WIDTH_PX = 1;
 const NAMEPLATE_SHADOW_OUTSET_PX = 14;
 const NAMEPLATE_SHADOW_BLUR_PX = 10;
 const NAMEPLATE_SHADOW_OFFSET_Y_PX = 3;
-const NAMEPLATE_WORLD_SCALE_TARGET_PX = 256;
+const NAMEPLATE_WORLD_SCALE_TARGET_PX = 96;
 const NAMEPLATE_BG_COLOR = "rgba(232, 248, 224, 0.68)";
 const NAMEPLATE_BORDER_COLOR = "rgba(255, 255, 255, 0.6)";
 const NAMEPLATE_SHADOW_COLOR = "rgba(30, 48, 27, 0.24)";
@@ -173,7 +173,7 @@ export const characterLabelTextSpec = (
 };
 
 export const characterLabelScale = (item: CharacterRenderItem) => (
-    item.rectPx.height / NAMEPLATE_WORLD_SCALE_TARGET_PX
+    item.nameplateReferenceHeightPx / NAMEPLATE_WORLD_SCALE_TARGET_PX
 );
 
 export const characterLabelTextureSizePx = (item: CharacterRenderItem): TextureSizePx => (

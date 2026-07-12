@@ -25,6 +25,7 @@ export type CharacterRenderItem = {
     rectPx: RectPx,
     baselinePoints: Point[],
     shoulderY: number | null,
+    nameplateReferenceHeightPx: number,
     aspect: number,
     opacity: number,
     baselineOpacity: number,
@@ -89,7 +90,7 @@ type OffsetLogGridlineCandidate = LogGridlineCandidate & {
 
 const EDIT_MUTED_OPACITY = 0.3333333;
 const BASELINE_OPACITY = 0.3333333;
-const LABEL_TARGET_SCALE_PX = 256;
+const LABEL_TARGET_SCALE_PX = 96;
 const TARGET_GRIDLINE_STEP_PX = 144;
 const LOG_GRIDLINE_EPSILON = 1e-4;
 const LOG_GRIDLINE_MAGNITUDE_FACTOR = 4;
@@ -164,9 +165,19 @@ export const buildCharacterRenderFrame = ({
             : null;
         const mutedByEditMode = editingCharacter !== null && editingCharacter !== character;
         const editing = editingCharacter === character;
+        const nameplateShoulderY = (
+            editing
+            && shoulderPreview?.character === character
+        )
+            ? shoulderPreview.y
+            : character.validShoulderY;
         const opacity = mutedByEditMode ? EDIT_MUTED_OPACITY : 1;
-        const characterViewportScale = height;
-        const labelOpacity = Math.exp(-((Math.log(characterViewportScale / LABEL_TARGET_SCALE_PX)) ** 2));
+        const nameplateReferenceHeightPx = nameplateShoulderY === null
+            ? height
+            : height * (nameplateShoulderY - character.anchor.y);
+        const labelOpacity = Math.exp(
+            -((Math.log(nameplateReferenceHeightPx / LABEL_TARGET_SCALE_PX)) ** 2),
+        );
 
         return {
             character,
@@ -190,11 +201,8 @@ export const buildCharacterRenderFrame = ({
                     ? []
                     : character.baseline.points,
             aspect: character.aspect,
-            shoulderY: editing
-                ? shoulderPreview?.character === character
-                    ? shoulderPreview.y
-                    : character.validShoulderY
-                : null,
+            shoulderY: editing ? nameplateShoulderY : null,
+            nameplateReferenceHeightPx,
             opacity,
             baselineOpacity: BASELINE_OPACITY * opacity,
             labelOpacity,

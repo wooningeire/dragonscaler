@@ -8,11 +8,54 @@ type NameplateSnapshot = {
     rendererStatus: string | null,
 };
 
+const waitForInitialLoad = async (page: Page) => {
+    await page.evaluate(async () => {
+        const browserWindow = window as typeof window & {
+            __dragonscalerDebug?: {
+                initialLoadPromise: Promise<void>,
+            },
+        };
+        const debug = browserWindow.__dragonscalerDebug;
+        if (debug === undefined) throw new Error("missing Dragonscaler debug hook");
+
+        await debug.initialLoadPromise;
+    });
+};
+
+const openEmptyApp = async (page: Page) => {
+    await page.route("**/api/collections/**/records*", async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+                page: 1,
+                perPage: 500,
+                totalItems: 0,
+                totalPages: 0,
+                items: [],
+            }),
+        });
+    });
+
+    await page.goto("/");
+    await expect(page.getByRole("application", {name: "Character height chart viewport"})).toBeVisible();
+    await expect.poll(async () => page.evaluate(() => "__dragonscalerDebug" in window)).toBe(true);
+    await waitForInitialLoad(page);
+};
+
 const snapshotAtScale = async (
     page: Page,
     scalePxPerMeter: number,
+    characterHeightMeters = 1,
+    shoulderY: number | null = null,
+    logPerspective = false,
 ): Promise<NameplateSnapshot> => {
-    await page.evaluate(scale => {
+    await page.evaluate(({
+        characterHeightMeters,
+        logPerspective,
+        scalePxPerMeter,
+        shoulderY,
+    }) => {
         const browserWindow = window as typeof window & {
             __dragonscalerDebug?: {
                 store: {
@@ -25,6 +68,7 @@ const snapshotAtScale = async (
                         characters: unknown[],
                         selectedCharacter: unknown | null,
                         editingCharacter: unknown | null,
+                        logPerspective: boolean,
                     },
                 },
                 Character: new (input: unknown) => unknown,
@@ -36,9 +80,10 @@ const snapshotAtScale = async (
 
         const character = new debug.Character({
             name: "Nameplate snap tester",
+            shoulderY,
             anchor: {x: 0.5, y: 0},
             baseline: new debug.Baseline({
-                targetLength: 1,
+                targetLength: characterHeightMeters,
                 points: [
                     {x: 0.5, y: 0},
                     {x: 0.5, y: 1},
@@ -59,10 +104,24 @@ const snapshotAtScale = async (
         debug.store.characterManager.characters = [character];
         debug.store.characterManager.selectedCharacter = null;
         debug.store.characterManager.editingCharacter = null;
+        debug.store.characterManager.logPerspective = logPerspective;
         debug.store.camera.setPosMetersX(0);
         debug.store.camera.setPosMetersY(0);
-        debug.store.camera.setScalePxPerMeter(scale);
-    }, scalePxPerMeter);
+        debug.store.camera.setScalePxPerMeter(scalePxPerMeter);
+    }, {
+        characterHeightMeters,
+        logPerspective,
+        scalePxPerMeter,
+        shoulderY,
+    });
+    const scaleReferenceAltitude = shoulderY === null
+        ? characterHeightMeters
+        : shoulderY * characterHeightMeters;
+    const expectedHeightPx = logPerspective
+        ? characterHeightMeters / scaleReferenceAltitude
+            * Math.log1p(scaleReferenceAltitude)
+            * scalePxPerMeter
+        : characterHeightMeters * scalePxPerMeter;
 
     await expect.poll(async () => page.evaluate(() => {
         const browserWindow = window as typeof window & {
@@ -77,8 +136,8 @@ const snapshotAtScale = async (
             },
         };
 
-        return Math.round(browserWindow.__dragonscalerViewportDebug?.renderFrame.items[0]?.rectPx.height ?? -1);
-    })).toBe(scalePxPerMeter);
+        return browserWindow.__dragonscalerViewportDebug?.renderFrame.items[0]?.rectPx.height ?? -1;
+    })).toBeCloseTo(expectedHeightPx);
 
     return await page.evaluate(() => {
         const browserWindow = window as typeof window & {
@@ -88,6 +147,7 @@ const snapshotAtScale = async (
                         rectPx: {
                             height: number,
                         },
+                        nameplateReferenceHeightPx: number,
                     }[],
                 },
             },
@@ -99,7 +159,7 @@ const snapshotAtScale = async (
 
         return {
             canvasCount: document.querySelectorAll("canvas[data-renderer=\"webgpu\"]").length,
-            labelScale: item.rectPx.height / 256,
+            labelScale: item.nameplateReferenceHeightPx / 256,
             rectHeight: item.rectPx.height,
             rendererStatus: canvas?.getAttribute("data-webgpu-status") ?? null,
         };
@@ -112,23 +172,7 @@ test.skip(
 );
 
 test("nameplates stay fixed in world space in the live viewport", async ({ page }) => {
-    await page.route("**/api/collections/**/records*", async route => {
-        await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-                page: 1,
-                perPage: 500,
-                totalItems: 0,
-                totalPages: 0,
-                items: [],
-            }),
-        });
-    });
-
-    await page.goto("/");
-    await expect(page.getByRole("application", {name: "Character height chart viewport"})).toBeVisible();
-    await expect.poll(async () => page.evaluate(() => "__dragonscalerDebug" in window)).toBe(true);
+    await openEmptyApp(page);
 
     const smallerSnapshot = await snapshotAtScale(page, 220);
     const largerSnapshot = await snapshotAtScale(page, 300);
@@ -152,4 +196,46 @@ test("nameplates stay fixed in world space in the live viewport", async ({ page 
         "ready",
         "unavailable",
     ]).toContain(largerSnapshot.rendererStatus);
+});
+
+test("shoulder marks size live nameplates independently of total image height", async ({ page }) => {
+    await openEmptyApp(page);
+
+    const linearTall = await snapshotAtScale(
+        page,
+        100,
+        4,
+        0.25,
+    );
+    const linearShort = await snapshotAtScale(
+        page,
+        100,
+        2,
+        0.5,
+    );
+
+    expect(linearTall.rectHeight).toBeCloseTo(400);
+    expect(linearShort.rectHeight).toBeCloseTo(200);
+    expect(linearTall.labelScale).toBeCloseTo(100 / 256);
+    expect(linearShort.labelScale).toBeCloseTo(100 / 256);
+
+    const logarithmicTall = await snapshotAtScale(
+        page,
+        100,
+        4,
+        0.25,
+        true,
+    );
+    const logarithmicShort = await snapshotAtScale(
+        page,
+        100,
+        2,
+        0.5,
+        true,
+    );
+
+    expect(logarithmicTall.rectHeight).toBeCloseTo(4 * Math.log1p(1) * 100);
+    expect(logarithmicShort.rectHeight).toBeCloseTo(2 * Math.log1p(1) * 100);
+    expect(logarithmicTall.labelScale).toBeCloseTo(Math.log1p(1) * 100 / 256);
+    expect(logarithmicShort.labelScale).toBeCloseTo(Math.log1p(1) * 100 / 256);
 });
