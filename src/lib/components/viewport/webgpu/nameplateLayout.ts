@@ -188,6 +188,10 @@ export const characterLabelRectPx = (
     const scale = characterLabelScale(item);
     const shadowOutsetPx = NAMEPLATE_SHADOW_OUTSET_PX * scale;
     const imageRightPx = item.rectPx.x + item.rectPx.width;
+    const imageAnchorYPx = (
+        item.rectPx.y
+        + (1 - item.character.anchor.y) * item.rectPx.height
+    );
 
     return {
         x: alignDevicePx(
@@ -195,7 +199,7 @@ export const characterLabelRectPx = (
             pixelRatio,
         ),
         y: alignDevicePx(
-            item.rectPx.y + item.rectPx.height + 8 * scale - shadowOutsetPx,
+            imageAnchorYPx + 8 * scale - shadowOutsetPx,
             pixelRatio,
         ),
         width: texture.widthPx,

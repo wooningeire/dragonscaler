@@ -24,6 +24,11 @@ export class Character {
         this.baseline.pixelMeasurementPx,
         resolvedImageDimensions(this.image, this.imageDimensions)?.height ?? null,
     ));
+    readonly hasUsableReferenceSizing = $derived.by(() => (
+        this.baseline.referenceSizingMethod === "pixel_measurement"
+            ? this.pixelMeasurementImageLength !== null
+            : this.baseline.arcLength > 0
+    ));
     readonly referenceImageLength = $derived.by(() => (
         this.baseline.referenceSizingMethod === "pixel_measurement"
         && this.pixelMeasurementImageLength !== null

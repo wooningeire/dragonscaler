@@ -33,4 +33,15 @@ describe("Baseline", () => {
             pixelMeasurementPx: 420,
         });
     });
+
+    test("infers legacy pixel sizing without overriding an explicit method", () => {
+        const inferred = new Baseline({pixelMeasurementPx: 420});
+        const explicit = new Baseline({
+            referenceSizingMethod: "measurement_line",
+            pixelMeasurementPx: 420,
+        });
+
+        expect(inferred.referenceSizingMethod).toBe("pixel_measurement");
+        expect(explicit.referenceSizingMethod).toBe("measurement_line");
+    });
 });

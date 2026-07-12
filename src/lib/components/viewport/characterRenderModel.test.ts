@@ -253,10 +253,48 @@ describe("buildCharacterRenderFrame", () => {
         );
         expect(panelRect.y).toBeCloseTo(
             item.rectPx.y
-            + item.rectPx.height
+            + (1 - item.character.anchor.y) * item.rectPx.height
             + 8 * characterLabelScale(item),
             0,
         );
+    });
+
+    test("keeps nameplates at the anchor line when the image anchor changes", () => {
+        const character = makeCharacter("Anchor Stable", 2);
+        const buildPanelRect = (anchorY: number) => {
+            character.anchor = {
+                x: 0.5,
+                y: anchorY,
+            };
+
+            const frame = buildCharacterRenderFrame({
+                characters: [character],
+                positionsX: [0],
+                camera: {
+                    posMetersX: 0,
+                    posMetersY: 0,
+                    scalePxPerMeter: 100,
+                    viewportPositionPx: {
+                        x: 400,
+                        y: 300,
+                    },
+                },
+                widthPx: 800,
+                heightPx: 600,
+                editingCharacter: null,
+            });
+            const item = frame.items[0];
+
+            return {
+                imageBottomPx: item.rectPx.y + item.rectPx.height,
+                panelRect: characterLabelPanelRectPx(item, 1),
+            };
+        };
+        const bottomAnchor = buildPanelRect(0);
+        const centerAnchor = buildPanelRect(0.5);
+
+        expect(centerAnchor.imageBottomPx).toBe(bottomAnchor.imageBottomPx + 100);
+        expect(centerAnchor.panelRect.y).toBe(bottomAnchor.panelRect.y);
     });
 
     test("projects character heights and horizontal gridlines logarithmically", () => {

@@ -129,6 +129,76 @@ describe("CharacterEditMenu", () => {
         expect(container.querySelector(".pixel-measurement-row")).not.toBeNull();
     });
 
+    test("requires usable reference sizing before updating", async () => {
+        const character = makeCharacter();
+        character.baseline.points = [
+            {x: 0.5, y: 0.5},
+            {x: 0.5, y: 0.5},
+        ];
+        store.characterManager.selectedCharacter = character;
+        store.characterManager.editingCharacter = character;
+
+        const {container} = render(CharacterEditMenu);
+        const updateButton = screen.getByRole("button", {name: "Update"});
+
+        expect(updateButton).toBeDisabled();
+
+        character.baseline.points = [
+            {x: 0.5, y: 0},
+            {x: 0.5, y: 1},
+        ];
+        await waitFor(() => expect(updateButton).toBeEnabled());
+
+        character.baseline.targetLength = 0;
+        await waitFor(() => expect(updateButton).toBeDisabled());
+
+        character.baseline.targetLength = 1;
+        await waitFor(() => expect(updateButton).toBeEnabled());
+
+
+        const targetLengthInput = screen
+            .getByText("Reference length")
+            .closest("label")
+            ?.querySelector("[contenteditable]");
+        if (targetLengthInput === null || targetLengthInput === undefined) {
+            throw new Error("missing target length input");
+        }
+
+        targetLengthInput.textContent = "invalid";
+        await fireEvent.input(targetLengthInput);
+        await fireEvent.blur(targetLengthInput);
+
+        expect(Number.isNaN(character.baseline.targetLength)).toBe(true);
+        await waitFor(() => expect(updateButton).toBeDisabled());
+
+        targetLengthInput.textContent = "1";
+        await fireEvent.input(targetLengthInput);
+        await fireEvent.blur(targetLengthInput);
+        await waitFor(() => expect(updateButton).toBeEnabled());
+        await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
+
+        expect(updateButton).toBeDisabled();
+
+        const pixelInput = screen
+            .getByText("Pixel measurement")
+            .closest("label")
+            ?.querySelector("[contenteditable]");
+        if (pixelInput === null || pixelInput === undefined) throw new Error("missing pixel input");
+
+        pixelInput.textContent = "150";
+        await fireEvent.input(pixelInput);
+        await fireEvent.blur(pixelInput);
+
+        await waitFor(() => expect(updateButton).toBeEnabled());
+
+        pixelInput.textContent = "0";
+        await fireEvent.input(pixelInput);
+        await fireEvent.blur(pixelInput);
+
+        expect(character.baseline.pixelMeasurementPx).toBeNull();
+        await waitFor(() => expect(updateButton).toBeDisabled());
+    });
+
     test("enables pixel sizing when the image arrives after the measurement", async () => {
         const character = new Character({
             name: "Pret",

@@ -80,6 +80,8 @@ const routePocketBaseRecords = async (page: Page) => {
                             {x: 1.5, y: 0},
                             {x: 1.5, y: 1},
                         ],
+                        baseline_descriptor: "reference human",
+                        pixel_measurement_px: 50,
                         width_px: 300,
                         height_px: 100,
                     },
@@ -171,6 +173,52 @@ const viewportSnapshot = async (page: Page): Promise<ViewportSnapshot> => await 
     };
 });
 
+const openLoadedCharacterForEditing = async (page: Page) => {
+    await expect.poll(async () => {
+        try {
+            return await page.evaluate(() => "__dragonscalerDebug" in window);
+        } catch {
+            return false;
+        }
+    }).toBe(true);
+
+    await page.evaluate(async () => {
+        const browserWindow = window as typeof window & {
+            __dragonscalerDebug?: {
+                initialLoadPromise: Promise<void>,
+                store: {
+                    characterManager: {
+                        characters: unknown[],
+                        selectedCharacter: unknown | null,
+                        editingCharacter: unknown | null,
+                    },
+                },
+            },
+        };
+        const debug = browserWindow.__dragonscalerDebug;
+        if (debug === undefined) throw new Error("missing Dragonscaler debug hook");
+
+        await debug.initialLoadPromise;
+
+        const character = debug.store.characterManager.characters[0];
+        if (character === undefined) throw new Error("missing loaded character");
+
+        debug.store.characterManager.selectedCharacter = character;
+        debug.store.characterManager.editingCharacter = character;
+    });
+};
+
+const expectPixelEditState = async (page: Page) => {
+    await expect(page.getByRole("radio", {name: "Give a pixel measurement"})).toBeChecked();
+
+    const pixelInput = page.locator(".pixel-measurement-input [contenteditable]");
+    const referenceLabelInput = page.locator(".reference-label-input [contenteditable]");
+
+    await expect(pixelInput).toHaveText("50");
+    await expect(referenceLabelInput).toHaveText("reference human");
+    await expect(page.getByRole("button", {name: "Update"})).toBeEnabled();
+};
+
 
 test.skip(
     process.env.PLAYWRIGHT_DEV_SERVER !== "1",
@@ -212,4 +260,22 @@ test("stored reference-image dimensions stabilize placeholder aspect", async ({ 
         hasImage: true,
         rectRatio: 3,
     });
+});
+
+
+test("pixel measurement survives reload", async ({page}) => {
+    await routePocketBaseRecords(page);
+    const imageRoute = await routeDelayedReferenceImage(page);
+
+    await page.goto("/");
+    await expect(page.getByRole("application", {name: "Character height chart viewport"})).toBeVisible();
+    await expect.poll(imageRoute.requestCount).toBeGreaterThan(0);
+    imageRoute.release();
+
+    await openLoadedCharacterForEditing(page);
+    await expectPixelEditState(page);
+
+    await page.reload();
+    await openLoadedCharacterForEditing(page);
+    await expectPixelEditState(page);
 });

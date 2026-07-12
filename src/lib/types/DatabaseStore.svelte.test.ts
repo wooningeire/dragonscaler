@@ -806,7 +806,7 @@ describe("DatabaseStore character loading", () => {
         expect(characters[0].baseline.measurementUnit).toBe("ft");
     });
 
-    test("loads the persisted pixel reference sizing input from the reference image", async () => {
+    test("loads persisted pixel sizing from records without the method field", async () => {
         const databaseStore = new DatabaseStore();
         const fakePocketBase = installFakePocketBase(databaseStore);
         seedStoredCharacter(fakePocketBase, {
@@ -818,7 +818,6 @@ describe("DatabaseStore character loading", () => {
                     {x: 0.5, y: 0},
                     {x: 0.5, y: 1},
                 ],
-                reference_sizing_method: "pixel_measurement",
                 pixel_measurement_px: 300,
                 width_px: 900,
                 height_px: 600,

@@ -104,7 +104,10 @@ const setTargetLength = (value: string) => {
     if (characterBeingEdited === null) return;
 
     const parsedValue = Number(value);
-    if (!Number.isFinite(parsedValue)) return;
+    if (!Number.isFinite(parsedValue)) {
+        characterBeingEdited.baseline.targetLength = Number.NaN;
+        return;
+    }
 
     characterBeingEdited.baseline.targetLength = measurementUnitToMeters(
         parsedValue,
@@ -134,7 +137,10 @@ const setPixelMeasurement = (value: string) => {
     }
 
     const parsedValue = Number(trimmedValue);
-    if (!Number.isFinite(parsedValue) || parsedValue <= 0) return;
+    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        characterBeingEdited.baseline.pixelMeasurementPx = null;
+        return;
+    }
 
     characterBeingEdited.baseline.pixelMeasurementPx = parsedValue;
 };
@@ -216,10 +222,9 @@ const canSubmit = $derived(
     characterBeingEdited !== null
     && characterBeingEdited.image !== null
     && characterBeingEdited.name !== ""
-    && (
-        characterBeingEdited.baseline.referenceSizingMethod === "measurement_line"
-        || characterBeingEdited.pixelMeasurementImageLength !== null
-    )
+    && Number.isFinite(characterBeingEdited.baseline.targetLength)
+    && characterBeingEdited.baseline.targetLength > 0
+    && characterBeingEdited.hasUsableReferenceSizing
     && !loading
     && !saving
     && !deleting,

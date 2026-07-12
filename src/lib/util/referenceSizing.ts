@@ -22,12 +22,15 @@ export const isReferenceSizingMethod = (value: string): value is ReferenceSizing
 
 export const normalizeReferenceSizingMethod = (
     value: string | null | undefined,
+    pixelMeasurementPx: number | null = null,
 ): ReferenceSizingMethod => (
     value !== null
     && value !== undefined
     && isReferenceSizingMethod(value)
         ? value
-        : DEFAULT_REFERENCE_SIZING_METHOD
+        : isPositiveFinite(pixelMeasurementPx)
+            ? "pixel_measurement"
+            : DEFAULT_REFERENCE_SIZING_METHOD
 );
 
 export const pixelMeasurementImageLength = (
@@ -35,15 +38,15 @@ export const pixelMeasurementImageLength = (
     imageHeightPx: number | null,
 ) => {
     if (
-        pixelMeasurementPx === null
-        || imageHeightPx === null
-        || pixelMeasurementPx <= 0
-        || imageHeightPx <= 0
+        !isPositiveFinite(pixelMeasurementPx)
+        || !isPositiveFinite(imageHeightPx)
     ) {
         return null;
     }
 
-    return pixelMeasurementPx / imageHeightPx;
+    const imageLength = pixelMeasurementPx / imageHeightPx;
+
+    return isPositiveFinite(imageLength) ? imageLength : null;
 };
 
 export const formatPixelMeasurementValue = (pixelMeasurementPx: number | null) => {
@@ -51,3 +54,9 @@ export const formatPixelMeasurementValue = (pixelMeasurementPx: number | null) =
 
     return Number(pixelMeasurementPx.toFixed(3)).toString();
 };
+
+const isPositiveFinite = (value: number | null): value is number => (
+    value !== null
+    && Number.isFinite(value)
+    && value > 0
+);

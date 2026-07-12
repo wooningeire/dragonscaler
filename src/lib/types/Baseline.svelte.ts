@@ -6,7 +6,6 @@ import {
     type MeasurementUnit,
 } from "$lib/util/measurementUnits";
 import {
-    DEFAULT_REFERENCE_SIZING_METHOD,
     normalizeReferenceSizingMethod,
     type ReferenceSizingMethod,
 } from "$lib/util/referenceSizing";
@@ -31,7 +30,7 @@ export class Baseline {
         targetLength = 1,
         measurementUnit = DEFAULT_MEASUREMENT_UNIT,
         descriptor = "",
-        referenceSizingMethod = DEFAULT_REFERENCE_SIZING_METHOD,
+        referenceSizingMethod = null,
         pixelMeasurementPx = null,
     }: {
         id?: string | null,
@@ -47,7 +46,10 @@ export class Baseline {
         this.targetLength = targetLength;
         this.measurementUnit = normalizeMeasurementUnit(measurementUnit);
         this.descriptor = descriptor;
-        this.referenceSizingMethod = normalizeReferenceSizingMethod(referenceSizingMethod);
+        this.referenceSizingMethod = normalizeReferenceSizingMethod(
+            referenceSizingMethod,
+            pixelMeasurementPx,
+        );
         this.pixelMeasurementPx = pixelMeasurementPx;
     }
 
