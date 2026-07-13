@@ -28,6 +28,7 @@ describe("CharacterEditMenu", () => {
         store.characterManager.characters = [];
         store.characterManager.selectedCharacter = null;
         store.characterManager.editingCharacter = null;
+        store.characterManager.activeMeasurementId = null;
         store.characterManager.setBaselineEditMode("curve");
         vi.restoreAllMocks();
     });
@@ -77,16 +78,16 @@ describe("CharacterEditMenu", () => {
         expect(screen.getByRole("button", {name: "Update"})).toBeEnabled();
     });
 
-    test("changes the reference curve editing mode", async () => {
+    test("changes the measurement redraw mode", async () => {
         const character = makeCharacter();
         store.characterManager.selectedCharacter = character;
         store.characterManager.editingCharacter = character;
 
         const {container} = render(CharacterEditMenu);
 
-        expect(screen.getByRole("radiogroup", {name: "Measurement line mode"})).toBeVisible();
+        expect(screen.getByRole("radiogroup", {name: "Redraw measurement as"})).toBeVisible();
         expect(screen.getByRole("radio", {name: "Curve"})).toBeChecked();
-        expect(container.querySelector(".baseline-mode-control radio-group-button-highlight")).not.toBeNull();
+        expect(container.querySelector(".measurement-redraw-control radio-group-button-highlight")).not.toBeNull();
 
         await fireEvent.click(screen.getByRole("radio", {name: "Line"}));
 
@@ -112,8 +113,9 @@ describe("CharacterEditMenu", () => {
         expect(screen.queryByRole("button", {name: "Mark shoulder"})).toBeNull();
         expect(screen.queryByRole("button", {name: "Clear shoulder"})).toBeNull();
 
-        await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
+        const pixelCount = screen.getByRole("radio", {name: "Pixel count"});
 
+        expect(pixelCount).toBeDisabled();
         expect(shoulderRadio).toBeChecked();
     });
 
@@ -143,13 +145,13 @@ describe("CharacterEditMenu", () => {
 
         const {container} = render(CharacterEditMenu);
 
-        expect(screen.getByRole("radiogroup", {name: "Reference sizing method"})).toBeVisible();
-        expect(screen.getByRole("radio", {name: "Draw a measurement line"})).toBeChecked();
+        expect(screen.getByRole("radiogroup", {name: "Redraw measurement as"})).toBeVisible();
+        expect(screen.getByRole("radio", {name: "Curve"})).toBeChecked();
 
-        await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
+        await fireEvent.click(screen.getByRole("radio", {name: "Pixel count"}));
 
         expect(character.baseline.referenceSizingMethod).toBe("pixel_measurement");
-        expect(screen.queryByRole("radiogroup", {name: "Measurement line mode"})).toBeNull();
+        expect(screen.getByRole("radiogroup", {name: "Redraw measurement as"})).toBeVisible();
         expect(screen.getByText("px", {exact: true})).toBeVisible();
 
         const referenceRow = container.querySelector<HTMLElement>(
@@ -164,11 +166,7 @@ describe("CharacterEditMenu", () => {
 
         expect(character.baseline.descriptor).toBe("reference human");
 
-        const pixelInput = screen
-            .getByText("Pixel measurement")
-            .closest("label")
-            ?.querySelector("[contenteditable]");
-        if (pixelInput === null || pixelInput === undefined) throw new Error("missing pixel input");
+        const pixelInput = screen.getByRole("textbox", {name: "Reference pixel count"});
 
         pixelInput.textContent = "150";
         await fireEvent.input(pixelInput);
@@ -178,12 +176,12 @@ describe("CharacterEditMenu", () => {
         expect(character.pixelMeasurementImageLength).toBe(150);
         expect(container.querySelector(".pixel-measurement-input")).not.toBeNull();
 
-        await fireEvent.click(screen.getByRole("radio", {name: "Draw a measurement line"}));
+        await fireEvent.click(screen.getByRole("radio", {name: "Curve"}));
 
         expect(character.baseline.referenceSizingMethod).toBe("measurement_line");
         expect(character.baseline.pixelMeasurementPx).toBe(150);
-        expect(screen.getByRole("radio", {name: "Draw a measurement line"})).toBeChecked();
-        expect(screen.getByRole("radiogroup", {name: "Measurement line mode"})).toBeVisible();
+        expect(screen.getByRole("radio", {name: "Curve"})).toBeChecked();
+        expect(screen.getByRole("radiogroup", {name: "Redraw measurement as"})).toBeVisible();
         expect(container.querySelector(".pixel-measurement-input")).toBeNull();
     });
 
@@ -227,15 +225,11 @@ describe("CharacterEditMenu", () => {
         await fireEvent.input(targetLengthInput);
         await fireEvent.blur(targetLengthInput);
         await waitFor(() => expect(updateButton).toBeEnabled());
-        await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
+        await fireEvent.click(screen.getByRole("radio", {name: "Pixel count"}));
 
         expect(updateButton).toBeDisabled();
 
-        const pixelInput = screen
-            .getByText("Pixel measurement")
-            .closest("label")
-            ?.querySelector("[contenteditable]");
-        if (pixelInput === null || pixelInput === undefined) throw new Error("missing pixel input");
+        const pixelInput = screen.getByRole("textbox", {name: "Reference pixel count"});
 
         pixelInput.textContent = "150";
         await fireEvent.input(pixelInput);
@@ -263,13 +257,9 @@ describe("CharacterEditMenu", () => {
 
         const {container} = render(CharacterEditMenu);
 
-        await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
+        await fireEvent.click(screen.getByRole("radio", {name: "Pixel count"}));
 
-        const pixelInput = screen
-            .getByText("Pixel measurement")
-            .closest("label")
-            ?.querySelector("[contenteditable]");
-        if (pixelInput === null || pixelInput === undefined) throw new Error("missing pixel input");
+        const pixelInput = screen.getByRole("textbox", {name: "Reference pixel count"});
 
         pixelInput.textContent = "150";
         await fireEvent.input(pixelInput);

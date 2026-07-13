@@ -61,6 +61,74 @@ describe("CharacterMeasurements", () => {
             "true",
         );
         expect(screen.getByRole("radiogroup", {name: "Measurement unit"})).toBeVisible();
+        expect(screen.getByRole("radiogroup", {name: "Redraw measurement as"})).toBeVisible();
+        expect(screen.getByRole("radio", {name: "Altitude"})).not.toBeChecked();
+        expect(screen.getByRole("radio", {name: "Line"})).not.toBeChecked();
+        expect(screen.getByRole("radio", {name: "Curve"})).toBeChecked();
+        expect(screen.getByRole("radio", {name: "Pixel count"})).not.toBeChecked();
+        expect(screen.getByRole("radio", {name: "Pixel count"})).toBeEnabled();
+    });
+
+    test("only enables pixel count while editing the reference measurement", async () => {
+        const character = makeCharacter();
+        store.characterManager.setActiveMeasurementId("shoulder");
+
+        const {container} = render(CharacterMeasurements, {character});
+        const referenceRow = container.querySelector<HTMLElement>(
+            "[data-measurement-id=\"reference\"]",
+        );
+        const shoulderRow = container.querySelector<HTMLElement>(
+            "[data-measurement-id=\"shoulder\"]",
+        );
+        if (referenceRow === null || shoulderRow === null) {
+            throw new Error("missing measurement rows");
+        }
+
+        const editLineButton = (row: HTMLElement) => Array.from(
+            row.querySelectorAll<HTMLButtonElement>("button"),
+        ).find(button => button.textContent?.trim() === "Edit line");
+        const referenceEditButton = editLineButton(referenceRow);
+        const shoulderEditButton = editLineButton(shoulderRow);
+        if (referenceEditButton === undefined || shoulderEditButton === undefined) {
+            throw new Error("missing edit line buttons");
+        }
+
+        const pixelCount = screen.getByRole("radio", {name: "Pixel count"});
+        const computedValue = screen.getByRole("textbox", {name: "to shoulder value"});
+
+        expect(pixelCount).toBeDisabled();
+        expect(screen.getByRole("radio", {name: "Curve"})).toBeChecked();
+        expect(computedValue).toHaveAttribute("aria-readonly", "true");
+        expect(computedValue).not.toHaveAttribute("aria-disabled");
+
+        await fireEvent.click(referenceEditButton);
+
+        expect(store.characterManager.activeMeasurementId).toBe("reference");
+        expect(pixelCount).toBeEnabled();
+
+        await fireEvent.click(pixelCount);
+
+        expect(character.baseline.referenceSizingMethod).toBe("pixel_measurement");
+        expect(pixelCount).toBeChecked();
+        expect(screen.getByRole("textbox", {name: "Reference pixel count"})).toBeVisible();
+
+        await fireEvent.click(shoulderEditButton);
+
+        expect(store.characterManager.activeMeasurementId).toBe("shoulder");
+        expect(pixelCount).toBeDisabled();
+        expect(screen.getByRole("radio", {name: "Curve"})).toBeChecked();
+        expect(screen.queryByRole("textbox", {name: "Reference pixel count"})).toBeNull();
+
+        await fireEvent.click(screen.getByRole("radio", {name: "Altitude"}));
+
+        expect(character.baseline.referenceSizingMethod).toBe("pixel_measurement");
+        expect(store.characterManager.baselineEditMode).toBe("altitude");
+
+        await fireEvent.click(referenceEditButton);
+
+        expect(pixelCount).toBeEnabled();
+        expect(pixelCount).toBeChecked();
+        expect(screen.getByRole("textbox", {name: "Reference pixel count"})).toBeVisible();
     });
 
     test("uses the same controls for every measurement row", () => {

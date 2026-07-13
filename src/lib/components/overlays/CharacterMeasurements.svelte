@@ -15,11 +15,7 @@ import {
     measurementUnits,
     measurementUnitToMeters,
 } from "$lib/util/measurementUnits";
-import {
-    formatPixelMeasurementValue,
-    isReferenceSizingMethod,
-    referenceSizingMethods,
-} from "$lib/util/referenceSizing";
+import { formatPixelMeasurementValue } from "$lib/util/referenceSizing";
 
 let {
     character,
@@ -31,6 +27,26 @@ let {
 
 const referenceMeasurement = $derived(character.baseline);
 const referenceUnit = $derived(referenceMeasurement.measurementUnit);
+const pixelCountSelected = $derived(
+    referenceMeasurement.referenceSizingMethod === "pixel_measurement",
+);
+const activeMeasurementIsReference = $derived(
+    store.characterManager.activeMeasurementId === null
+    || store.characterManager.activeMeasurementId === referenceMeasurement.id,
+);
+const measurementRedrawModes = $derived([
+    ...baselineEditModes,
+    {
+        id: "pixel_measurement",
+        label: "Pixel count",
+        disabled: !activeMeasurementIsReference,
+    },
+]);
+const measurementRedrawMode = $derived(
+    activeMeasurementIsReference && pixelCountSelected
+        ? "pixel_measurement"
+        : store.characterManager.baselineEditMode,
+);
 
 const measurementName = (
     measurement: Baseline,
@@ -71,12 +87,6 @@ const setMeasurementUnit = (value: string) => {
     referenceMeasurement.measurementUnit = value;
 };
 
-const setReferenceSizingMethod = (value: string) => {
-    if (!isReferenceSizingMethod(value)) return;
-
-    referenceMeasurement.referenceSizingMethod = value;
-};
-
 const setPixelMeasurement = (value: string) => {
     const trimmedValue = value.trim();
     if (trimmedValue === "") {
@@ -90,9 +100,20 @@ const setPixelMeasurement = (value: string) => {
         : null;
 };
 
-const setBaselineEditMode = (value: string) => {
+const setMeasurementRedrawMode = (value: string) => {
+    if (value === "pixel_measurement") {
+        if (!activeMeasurementIsReference) return;
+
+        referenceMeasurement.referenceSizingMethod = "pixel_measurement";
+        store.characterManager.setActiveMeasurementId(referenceMeasurement.id);
+        return;
+    }
+
     if (!isBaselineEditMode(value)) return;
 
+    if (activeMeasurementIsReference) {
+        referenceMeasurement.referenceSizingMethod = "measurement_line";
+    }
     store.characterManager.setBaselineEditMode(value);
 };
 
@@ -152,7 +173,10 @@ const removeMeasurement = (measurement: Baseline) => {
             {@const name = measurementName(measurement, index)}
             {@const isReference = measurement.id === character.referenceMeasurementId}
             {@const isToShoulder = measurement.id === character.shoulderMeasurementId}
-            {@const isActive = measurement.id === store.characterManager.activeMeasurementId}
+            {@const isActive = (
+                measurement.id === store.characterManager.activeMeasurementId
+                || (store.characterManager.activeMeasurementId === null && isReference)
+            )}
 
             <article
                 class="measurement-row"
@@ -216,10 +240,7 @@ const removeMeasurement = (measurement: Baseline) => {
                 <div class="measurement-actions">
                     <Button
                         onclick={() => selectMeasurement(measurement)}
-                        disabled={disabled || (
-                            isReference
-                            && measurement.referenceSizingMethod === "pixel_measurement"
-                        )}
+                        {disabled}
                         aria-pressed={isActive}
                     >
                         Edit line
@@ -238,13 +259,15 @@ const removeMeasurement = (measurement: Baseline) => {
     </div>
 
     <div class="measurement-controls">
-        <div class="reference-sizing-control">
+        <div class="measurement-redraw-control">
+            <span class="control-label">Redraw measurement as</span>
+
             <RadioGroup
-                ariaLabel="Reference sizing method"
-                name="reference-sizing-method"
-                options={referenceSizingMethods}
-                value={referenceMeasurement.referenceSizingMethod}
-                onValueChange={setReferenceSizingMethod}
+                ariaLabel="Redraw measurement as"
+                name="measurement-redraw-mode"
+                options={measurementRedrawModes}
+                value={measurementRedrawMode}
+                onValueChange={setMeasurementRedrawMode}
             />
         </div>
 
@@ -258,9 +281,9 @@ const removeMeasurement = (measurement: Baseline) => {
             />
         </div>
 
-        {#if referenceMeasurement.referenceSizingMethod === "pixel_measurement"}
+        {#if measurementRedrawMode === "pixel_measurement"}
             <label class="pixel-measurement-input">
-                <span>Pixel measurement</span>
+                <span>Pixel count</span>
 
                 <div class="pixel-measurement-value">
                     <TextEntry
@@ -269,21 +292,12 @@ const removeMeasurement = (measurement: Baseline) => {
                         )}
                         onValueChange={setPixelMeasurement}
                         placeholderText="Pixels"
+                        ariaLabel="Reference pixel count"
                     />
 
                     <span>px</span>
                 </div>
             </label>
-        {:else}
-            <div class="baseline-mode-control">
-                <RadioGroup
-                    ariaLabel="Measurement line mode"
-                    name="measurement-line-mode"
-                    options={baselineEditModes}
-                    value={store.characterManager.baselineEditMode}
-                    onValueChange={setBaselineEditMode}
-                />
-            </div>
         {/if}
     </div>
 </section>
@@ -384,17 +398,25 @@ const removeMeasurement = (measurement: Baseline) => {
 
 .measurement-controls {
     display: grid;
-    grid-template-columns: minmax(13rem, 1.6fr) minmax(7rem, 0.6fr) minmax(10rem, 1fr);
+    grid-template-columns: minmax(22rem, 2fr) minmax(7rem, 0.6fr) minmax(10rem, 1fr);
     gap: 0.5rem;
     min-width: 0;
 }
 
-.reference-sizing-control,
+.measurement-redraw-control,
 .measurement-unit-control,
-.baseline-mode-control,
 .pixel-measurement-input {
     display: grid;
     min-width: 0;
+}
+
+.measurement-redraw-control {
+    gap: 0.25rem;
+}
+
+.control-label {
+    color: oklch(0.4 0.03 145);
+    font-size: 0.75rem;
 }
 
 .pixel-measurement-input {
@@ -437,7 +459,7 @@ const removeMeasurement = (measurement: Baseline) => {
         grid-template-columns: minmax(0, 1fr) max-content;
     }
 
-    .baseline-mode-control,
+    .measurement-redraw-control,
     .pixel-measurement-input {
         grid-column: 1 / -1;
     }
@@ -456,9 +478,8 @@ const removeMeasurement = (measurement: Baseline) => {
 
     .measurement-value,
     .measurement-actions,
-    .reference-sizing-control,
+    .measurement-redraw-control,
     .measurement-unit-control,
-    .baseline-mode-control,
     .pixel-measurement-input {
         grid-column: 1 / -1;
     }

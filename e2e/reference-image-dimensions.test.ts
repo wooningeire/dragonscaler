@@ -214,7 +214,9 @@ const openLoadedCharacterForEditing = async (page: Page) => {
 };
 
 const expectPixelEditState = async (page: Page) => {
-    await expect(page.getByRole("radio", {name: "Give a pixel measurement"})).toBeChecked();
+    const pixelCount = page.getByRole("radio", {name: "Pixel count"});
+    await expect(pixelCount).toBeChecked();
+    await expect(pixelCount).toBeEnabled();
 
     const pixelInput = page.locator(".pixel-measurement-input [contenteditable]");
     const referenceLabelInput = page.locator(".measurement-row").first().locator(".measurement-label [contenteditable]");
@@ -253,8 +255,8 @@ const expectPixelEditState = async (page: Page) => {
 };
 
 const expectLineEditState = async (page: Page) => {
-    await expect(page.getByRole("radio", {name: "Draw a measurement line"})).toBeChecked();
-    await expect(page.getByRole("radiogroup", {name: "Measurement line mode"})).toBeVisible();
+    await expect(page.getByRole("radio", {name: "Curve"})).toBeChecked();
+    await expect(page.getByRole("radiogroup", {name: "Redraw measurement as"})).toBeVisible();
     await expect(page.locator(".pixel-measurement-input")).toHaveCount(0);
 
     await expect.poll(async () => page.evaluate(() => {
@@ -446,6 +448,7 @@ test("measurement list keeps reference and shoulder measurements visible after d
 
     await page.getByRole("button", {name: "Add measurement"}).click();
     await expect(page.locator(".measurement-row")).toHaveCount(3);
+    await expect(page.getByRole("radio", {name: "Pixel count"})).toBeDisabled();
 
     await page.setViewportSize({
         width: 640,

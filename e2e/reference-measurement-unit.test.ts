@@ -130,14 +130,13 @@ const snapshotReferenceMeasurement = async (page: Page): Promise<ReferenceMeasur
     const clippedSelectors = [
         "character-edit-menu",
         ".character-form-inputs",
-        ".reference-sizing-control",
+        ".measurement-redraw-control",
         ".measurement-list",
         ".measurement-row",
         ".measurement-controls",
         ".measurement-value",
         ".measurement-unit-control",
         ".measurement-label",
-        ".baseline-mode-control",
         ".buttons",
     ];
     const croppedSelectors = clippedSelectors.filter(selector => {
@@ -365,10 +364,10 @@ test("reference measurement unit radio preserves layout and updates the edited f
     expectSharedHighlightMotionTiming(mobileSnapshot);
     await expectEditControlsReachable(page);
 
-    await page.getByRole("radio", {name: "Give a pixel measurement"}).click();
-    await expect(page.getByText("Pixel measurement", {exact: true})).toBeVisible();
+    await page.getByRole("radio", {name: "Pixel count"}).click();
+    await expect(page.getByRole("textbox", {name: "Reference pixel count"})).toBeVisible();
     await expect(page.getByText("px", {exact: true})).toBeVisible();
-    await expect(page.getByRole("radiogroup", {name: "Measurement line mode"})).toHaveCount(0);
+    await expect(page.getByRole("radiogroup", {name: "Redraw measurement as"})).toBeVisible();
 
     const referenceLabelInput = page.locator(".measurement-label [contenteditable]");
     await expect(referenceLabelInput).toBeVisible();
@@ -383,7 +382,7 @@ test("reference measurement unit radio preserves layout and updates the edited f
         const selectors = [
             "character-edit-menu",
             ".character-form-inputs",
-            ".reference-sizing-control",
+            ".measurement-redraw-control",
             ".measurement-list",
             ".measurement-row",
             ".measurement-controls",

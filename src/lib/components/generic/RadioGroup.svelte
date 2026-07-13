@@ -2,6 +2,7 @@
 export type RadioGroupOption = {
     id: string,
     label: string,
+    disabled?: boolean,
 };
 </script>
 
@@ -37,13 +38,20 @@ const selectedIndex = $derived(options.findIndex(option => option.id === value))
 
     <radio-group-options>
         {#each options as option (option.id)}
-            <label class:active={value === option.id}>
+            <label
+                class:active={value === option.id}
+                class:disabled={option.disabled}
+            >
                 <input
                     type="radio"
                     {name}
                     value={option.id}
                     checked={value === option.id}
-                    onchange={() => onValueChange(option.id)}
+                    disabled={option.disabled}
+                    onchange={() => {
+                        if (option.disabled) return;
+                        onValueChange(option.id);
+                    }}
                 />
 
                 <span>{option.label}</span>
@@ -108,6 +116,16 @@ label {
     &:has(input:focus-visible) span {
         outline: 0.125rem solid oklch(0.42 0.12 145 / 0.7);
         outline-offset: -0.125rem;
+    }
+
+    &.disabled {
+        opacity: 0.45;
+
+        cursor: not-allowed;
+
+        input {
+            cursor: not-allowed;
+        }
     }
 }
 </style>

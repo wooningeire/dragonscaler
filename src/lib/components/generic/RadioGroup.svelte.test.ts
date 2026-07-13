@@ -49,6 +49,37 @@ describe("RadioGroup", () => {
         expect(onValueChange).toHaveBeenCalledWith("ft");
     });
 
+    test("does not report changes from disabled options", async () => {
+        const onValueChange = vi.fn();
+
+        render(RadioGroup, {
+            ariaLabel: "Redraw measurement as",
+            name: "measurement-redraw-mode",
+            options: [
+                {
+                    id: "curve",
+                    label: "Curve",
+                },
+                {
+                    id: "pixel_measurement",
+                    label: "Pixel count",
+                    disabled: true,
+                },
+            ],
+            value: "curve",
+            onValueChange,
+        });
+
+        const pixelCount = screen.getByRole("radio", {name: "Pixel count"});
+
+        expect(pixelCount).toBeDisabled();
+        await fireEvent.click(pixelCount);
+        expect(onValueChange).not.toHaveBeenCalled();
+
+        await fireEvent.click(screen.getByRole("radio", {name: "Curve"}));
+        expect(onValueChange).toHaveBeenCalledWith("curve");
+    });
+
     test("moves the grid highlight in both directions and remounts the squash surface", async () => {
         const props = {
             ariaLabel: "Measurement unit",
