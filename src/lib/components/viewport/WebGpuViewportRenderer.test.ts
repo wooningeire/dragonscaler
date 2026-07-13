@@ -27,6 +27,7 @@ const makeItem = (name: string): CharacterRenderItem => ({
         width: 100,
         height: 100,
     },
+    measurementLines: [],
     baselinePoints: [],
     shoulderY: null,
     nameplateReferenceHeightPx: 100,

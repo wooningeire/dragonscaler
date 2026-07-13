@@ -1,4 +1,5 @@
 import type {
+    CharacterMeasurementRenderItem,
     CharacterRenderFrame,
     CharacterRenderItem,
     RectPx,
@@ -12,6 +13,8 @@ import {
     CENTER_OUTLINE_COLOR,
     GRIDLINE_LIGHT_COLOR,
     GRIDLINE_STRONG_COLOR,
+    MEASUREMENT_RED_COLOR,
+    MEASUREMENT_RED_OUTLINE_COLOR,
     SHOULDER_MARK_COLOR,
     SHOULDER_MARK_OUTLINE_COLOR,
 } from "./constants";
@@ -61,20 +64,31 @@ export const buildCharacterLineVertices = (frame: CharacterRenderFrame) => {
     const vertices: number[] = [];
 
     for (const item of frame.items) {
-        if (item.baselinePoints.length >= 2) {
-            appendBaselineStroke(
+        for (const measurement of item.measurementLines) {
+            if (measurement.points.length < 2) continue;
+
+            const outlineColor = measurement.isReference
+                ? BASELINE_WHITE_COLOR
+                : MEASUREMENT_RED_OUTLINE_COLOR;
+            const fillColor = measurement.isReference
+                ? BASELINE_BLACK_COLOR
+                : MEASUREMENT_RED_COLOR;
+
+            appendMeasurementStroke(
                 vertices,
                 frame,
                 item,
+                measurement,
                 item.rectPx.height * 0.01,
-                withOpacity(BASELINE_WHITE_COLOR, item.baselineOpacity),
+                withOpacity(outlineColor, item.baselineOpacity),
             );
-            appendBaselineStroke(
+            appendMeasurementStroke(
                 vertices,
                 frame,
                 item,
+                measurement,
                 item.rectPx.height * 0.003,
-                withOpacity(BASELINE_BLACK_COLOR, item.baselineOpacity),
+                withOpacity(fillColor, item.baselineOpacity),
             );
         }
 
@@ -95,14 +109,15 @@ export const buildCharacterLineVertices = (frame: CharacterRenderFrame) => {
     return new Float32Array(vertices);
 };
 
-const appendBaselineStroke = (
+const appendMeasurementStroke = (
     vertices: number[],
     frame: CharacterRenderFrame,
     item: CharacterRenderItem,
+    measurement: CharacterMeasurementRenderItem,
     thicknessPx: number,
     color: ColorRgba,
 ) => {
-    const points = sampleBaselinePath(item.baselinePoints);
+    const points = sampleBaselinePath(measurement.points);
 
     for (let index = 1; index < points.length; index++) {
         const start = baselinePointToScreenPx(item, points[index - 1]);

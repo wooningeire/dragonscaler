@@ -46,6 +46,18 @@ describe("PocketBase data model types", () => {
             height_px: 100,
             reference_sizing_method: "pixel_measurement",
             pixel_measurement_px: 420,
+            measurements: [
+                {
+                    id: "measurement-1",
+                    points: [
+                        {x: 0.5, y: 0},
+                        {x: 0.5, y: 1},
+                    ],
+                    descriptor: "reference human",
+                },
+            ],
+            reference_measurement_id: "measurement-1",
+            shoulder_measurement_id: null,
         } satisfies Partial<ReferenceImageRecord>;
 
         expect(identity.account_ids).toHaveLength(2);
@@ -59,5 +71,8 @@ describe("PocketBase data model types", () => {
         expect(referenceImage.baseline_points).toHaveLength(2);
         expect(referenceImage.baseline_descriptor).toBe("to the shoulder");
         expect(referenceImage.width_px / referenceImage.height_px).toBe(3);
+        expect(referenceImage.measurements).toHaveLength(1);
+        expect(referenceImage.reference_measurement_id).toBe("measurement-1");
+        expect(referenceImage.shoulder_measurement_id).toBeNull();
     });
 });

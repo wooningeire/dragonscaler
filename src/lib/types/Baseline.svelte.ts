@@ -12,18 +12,18 @@ import {
 } from "$lib/util/referenceSizing";
 
 export class Baseline {
+    id: string = $state()!;
     points: Point[] = $state.raw()!;
     targetLength: number = $state()!;
     measurementUnit: MeasurementUnit = $state()!;
     descriptor: string = $state()!;
     referenceSizingMethod: ReferenceSizingMethod = $state()!;
     pixelMeasurementPx: number | null = $state(null);
-    id: string | null = $state(null);
     
     readonly arcLength = $derived(computeBaselineArcLength(this.points));
 
     constructor({
-        id = null,
+        id = createMeasurementId(),
         points = [
             {x: 0.5, y: 0},
             {x: 0.5, y: 0.5},
@@ -34,13 +34,13 @@ export class Baseline {
         referenceSizingMethod = DEFAULT_REFERENCE_SIZING_METHOD,
         pixelMeasurementPx = null,
     }: {
-        id?: string | null,
         points?: {x: number, y: number}[],
         targetLength?: number,
         measurementUnit?: MeasurementUnit | string | null,
         descriptor?: string,
         referenceSizingMethod?: ReferenceSizingMethod | string | null,
         pixelMeasurementPx?: number | null,
+        id?: string,
     } = {}) {
         this.id = id;
         this.points = points;
@@ -73,3 +73,17 @@ export class Baseline {
         this.pixelMeasurementPx = other.pixelMeasurementPx;
     }
 }
+
+
+let nextMeasurementId = 1;
+
+const createMeasurementId = () => {
+    if (typeof globalThis.crypto?.randomUUID === "function") {
+        return globalThis.crypto.randomUUID();
+    }
+
+    const id = `measurement-${nextMeasurementId}`;
+    nextMeasurementId += 1;
+
+    return id;
+};

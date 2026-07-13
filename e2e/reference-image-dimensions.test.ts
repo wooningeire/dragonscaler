@@ -217,16 +217,13 @@ const expectPixelEditState = async (page: Page) => {
     await expect(page.getByRole("radio", {name: "Give a pixel measurement"})).toBeChecked();
 
     const pixelInput = page.locator(".pixel-measurement-input [contenteditable]");
-    const referenceLabelInput = page.locator(".reference-label-input [contenteditable]");
+    const referenceLabelInput = page.locator(".measurement-row").first().locator(".measurement-label [contenteditable]");
 
     await expect(pixelInput).toHaveText("50");
     await expect(referenceLabelInput).toHaveText("reference human");
     await expect(page.getByRole("button", {name: "Update"})).toBeEnabled();
-    await expect(page.getByRole("button", {name: "Mark shoulder"})).toHaveAttribute(
-        "aria-pressed",
-        "false",
-    );
-    await expect(page.getByRole("button", {name: "Clear mark"})).toBeEnabled();
+    await expect(page.getByRole("button", {name: "Mark shoulder"})).toHaveCount(0);
+    await expect(page.getByRole("button", {name: "Clear shoulder"})).toHaveCount(0);
     await expect.poll(async () => page.evaluate(() => {
         const browserWindow = window as typeof window & {
             __dragonscalerDebug?: {
@@ -257,8 +254,8 @@ const expectPixelEditState = async (page: Page) => {
 
 const expectLineEditState = async (page: Page) => {
     await expect(page.getByRole("radio", {name: "Draw a measurement line"})).toBeChecked();
-    await expect(page.getByRole("radiogroup", {name: "Reference curve mode"})).toBeVisible();
-    await expect(page.locator(".pixel-measurement-row")).toHaveCount(0);
+    await expect(page.getByRole("radiogroup", {name: "Measurement line mode"})).toBeVisible();
+    await expect(page.locator(".pixel-measurement-input")).toHaveCount(0);
 
     await expect.poll(async () => page.evaluate(() => {
         const browserWindow = window as typeof window & {
@@ -387,198 +384,6 @@ test("stored shoulder mark and reference-image dimensions stabilize placeholder 
 });
 
 
-test("shoulder marking commits on release without changing the measurement line", async ({page}) => {
-    await routePocketBaseRecords(page);
-    const imageRoute = await routeDelayedReferenceImage(page);
-
-    await page.goto("/");
-    await expect(page.getByRole("application", {name: "Character height chart viewport"})).toBeVisible();
-    await expect.poll(imageRoute.requestCount).toBeGreaterThan(0);
-    imageRoute.release();
-
-    await openLoadedCharacterForEditing(page);
-    await expectPixelEditState(page);
-    // Pointer coordinates must use the settled selected-character camera frame.
-    await page.waitForTimeout(600);
-
-    const baselineBefore = await page.evaluate(() => {
-        const browserWindow = window as typeof window & {
-            __dragonscalerDebug?: {
-                store: {
-                    characterManager: {
-                        characters: {
-                            baseline: {
-                                points: {x: number, y: number}[],
-                            },
-                        }[],
-                    },
-                },
-            },
-        };
-
-        return browserWindow.__dragonscalerDebug
-            ?.store.characterManager.characters[0]?.baseline.points ?? [];
-    });
-    const menuBefore = await page.locator("character-edit-menu").boundingBox();
-    if (menuBefore === null) throw new Error("missing character edit menu");
-    const readShoulderY = () => page.evaluate(() => {
-        const browserWindow = window as typeof window & {
-            __dragonscalerDebug?: {
-                store: {
-                    characterManager: {
-                        characters: {shoulderY: number | null}[],
-                    },
-                },
-            },
-        };
-
-        return browserWindow.__dragonscalerDebug
-            ?.store.characterManager.characters[0]?.shoulderY ?? null;
-    });
-
-    await page.getByRole("button", {name: "Mark shoulder"}).click();
-
-    const viewport = page.locator(".character-viewport");
-    await expect(viewport).toBeFocused();
-    await page.keyboard.press("ArrowDown");
-    await expect.poll(readShoulderY).toBeCloseTo(0.74);
-    await expect(page.getByRole("status", {name: "Shoulder mark status"})).toHaveText(
-        "Shoulder mark 74% from image bottom.",
-    );
-
-    // Keyboard adjustment retargets the selected-character camera.
-    await page.waitForTimeout(600);
-
-    const drag = await page.evaluate(() => {
-        const viewport = document.querySelector<HTMLElement>(".character-viewport");
-        const browserWindow = window as typeof window & {
-            __dragonscalerViewportDebug?: {
-                renderFrame: {
-                    items: {
-                        editing: boolean,
-                        rectPx: {
-                            x: number,
-                            y: number,
-                            width: number,
-                            height: number,
-                        },
-                    }[],
-                },
-            },
-        };
-        const item = browserWindow.__dragonscalerViewportDebug
-            ?.renderFrame.items.find(candidate => candidate.editing);
-        if (viewport === null || item === undefined) return null;
-
-        const viewportRect = viewport.getBoundingClientRect();
-
-        return {
-            x: viewportRect.left + item.rectPx.x + item.rectPx.width * 0.5,
-            startY: viewportRect.top + item.rectPx.y + (1 - 0.75) * item.rectPx.height,
-            endY: viewportRect.top + item.rectPx.y + (1 - 0.6) * item.rectPx.height,
-        };
-    });
-    if (drag === null) throw new Error("missing editable character geometry");
-
-    await viewport.evaluate(element => {
-        element.addEventListener(
-            "pointerdown",
-            event => element.dataset.pointerId = String(event.pointerId),
-            {once: true},
-        );
-    });
-    await page.mouse.move(
-        drag.x,
-        drag.startY,
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-        drag.x,
-        drag.endY,
-    );
-    const pointerId = Number(await viewport.getAttribute("data-pointer-id"));
-    if (!Number.isFinite(pointerId)) throw new Error("missing active pointer id");
-
-    await viewport.dispatchEvent(
-        "pointercancel",
-        {
-            bubbles: true,
-            button: 0,
-            pointerId,
-        },
-    );
-    await page.mouse.up();
-
-    await expect.poll(readShoulderY).toBeCloseTo(0.74);
-
-    await page.mouse.move(
-        drag.x,
-        drag.startY,
-    );
-    await page.mouse.down();
-    await page.mouse.move(
-        drag.x,
-        drag.endY,
-    );
-    await page.mouse.up();
-
-    await expect.poll(readShoulderY).toBeCloseTo(0.6);
-
-    const result = await page.evaluate(() => {
-        const browserWindow = window as typeof window & {
-            __dragonscalerDebug?: {
-                store: {
-                    characterManager: {
-                        characters: {
-                            baseline: {
-                                points: {x: number, y: number}[],
-                            },
-                        }[],
-                    },
-                },
-            },
-            __dragonscalerViewportDebug?: {
-                renderFrame: {
-                    items: {shoulderY: number | null}[],
-                },
-            },
-        };
-
-        return {
-            baseline: browserWindow.__dragonscalerDebug
-                ?.store.characterManager.characters[0]?.baseline.points ?? [],
-            guideY: browserWindow.__dragonscalerViewportDebug
-                ?.renderFrame.items[0]?.shoulderY ?? null,
-            horizontalOverflowPx:
-                document.documentElement.scrollWidth - document.documentElement.clientWidth,
-            verticalOverflowPx:
-                document.documentElement.scrollHeight - document.documentElement.clientHeight,
-        };
-    });
-    const menuAfter = await page.locator("character-edit-menu").boundingBox();
-    if (menuAfter === null) throw new Error("missing character edit menu after marking");
-
-    expect(result.baseline).toEqual(baselineBefore);
-    expect(result.guideY).toBeCloseTo(0.6);
-    expect(result.horizontalOverflowPx).toBe(0);
-    expect(result.verticalOverflowPx).toBe(0);
-    expect(menuAfter.x).toBeCloseTo(menuBefore.x);
-    expect(menuAfter.y).toBeCloseTo(menuBefore.y);
-    expect(menuAfter.width).toBeCloseTo(menuBefore.width);
-    expect(menuAfter.height).toBeCloseTo(menuBefore.height);
-    await expect(page.getByRole("button", {name: "Mark shoulder"})).toHaveAttribute(
-        "aria-pressed",
-        "true",
-    );
-
-    await expectEditControlsReachable(page);
-    await page.setViewportSize({
-        width: 640,
-        height: 360,
-    });
-    await expectEditControlsReachable(page);
-});
-
 test("pixel measurement and shoulder mark survive reload", async ({page}) => {
     await routePocketBaseRecords(page);
     const imageRoute = await routeDelayedReferenceImage(page);
@@ -611,4 +416,118 @@ test("measurement line and shoulder mark survive dormant pixel input on reload",
     await page.reload();
     await openLoadedCharacterForEditing(page);
     await expectLineEditState(page);
+});
+
+test("measurement list keeps reference and shoulder measurements visible after deselection", async ({page}) => {
+    await routePocketBaseRecords(page);
+    const imageRoute = await routeDelayedReferenceImage(page);
+
+    await page.goto("/");
+    await expect(page.getByRole("application", {name: "Character height chart viewport"})).toBeVisible();
+    await expect.poll(imageRoute.requestCount).toBeGreaterThan(0);
+    imageRoute.release();
+
+    await openLoadedCharacterForEditing(page);
+    await expectPixelEditState(page);
+
+    await expect(page.locator(".measurement-row")).toHaveCount(2);
+    await expect(page.getByRole("radio", {
+        name: "Use reference human as reference",
+    })).toBeChecked();
+    await expect(page.getByRole("radio", {
+        name: "Use to shoulder as shoulder measurement",
+    })).toBeChecked();
+    await expect(page.getByRole("textbox", {
+        name: "to shoulder value",
+    })).toHaveText("3");
+    await expect(page.getByRole("textbox", {
+        name: "to shoulder value",
+    })).toHaveAttribute("aria-readonly", "true");
+
+    await page.getByRole("button", {name: "Add measurement"}).click();
+    await expect(page.locator(".measurement-row")).toHaveCount(3);
+
+    await page.setViewportSize({
+        width: 640,
+        height: 360,
+    });
+    await expectEditControlsReachable(page);
+
+    const roleIds = await page.evaluate(() => {
+        const browserWindow = window as typeof window & {
+            __dragonscalerDebug?: {
+                store: {
+                    characterManager: {
+                        characters: {
+                            measurements: {id: string}[],
+                            referenceMeasurementId: string,
+                            shoulderMeasurementId: string | null,
+                        }[],
+                    },
+                },
+            },
+        };
+        const character = browserWindow.__dragonscalerDebug
+            ?.store.characterManager.characters[0];
+        if (character === undefined) throw new Error("missing measured character");
+
+        return {
+            reference: character.referenceMeasurementId,
+            shoulder: character.shoulderMeasurementId,
+            ordinary: character.measurements[2]?.id ?? null,
+        };
+    });
+
+    await page.evaluate(() => {
+        const browserWindow = window as typeof window & {
+            __dragonscalerDebug?: {
+                store: {
+                    characterManager: {
+                        selectedCharacter: unknown | null,
+                        editingCharacter: unknown | null,
+                    },
+                },
+            },
+        };
+        const manager = browserWindow.__dragonscalerDebug?.store.characterManager;
+        if (manager === undefined) throw new Error("missing character manager");
+
+        manager.selectedCharacter = null;
+        manager.editingCharacter = null;
+    });
+
+    await expect.poll(async () => page.evaluate(() => {
+        const browserWindow = window as typeof window & {
+            __dragonscalerViewportDebug?: {
+                renderFrame: {
+                    items: {
+                        measurementLines: {
+                            measurementId: string,
+                            isReference: boolean,
+                            isToShoulder: boolean,
+                        }[],
+                    }[],
+                },
+            },
+        };
+
+        return browserWindow.__dragonscalerViewportDebug
+            ?.renderFrame.items[0]?.measurementLines.map(line => ({
+                measurementId: line.measurementId,
+                isReference: line.isReference,
+                isToShoulder: line.isToShoulder,
+            })) ?? [];
+    })).toEqual([
+        {
+            measurementId: roleIds.reference,
+            isReference: true,
+            isToShoulder: false,
+        },
+        {
+            measurementId: roleIds.shoulder,
+            isReference: false,
+            isToShoulder: true,
+        },
+    ]);
+    expect(roleIds.ordinary).not.toBeNull();
 });

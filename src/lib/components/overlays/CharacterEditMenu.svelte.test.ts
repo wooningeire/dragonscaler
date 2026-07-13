@@ -84,7 +84,7 @@ describe("CharacterEditMenu", () => {
 
         const {container} = render(CharacterEditMenu);
 
-        expect(screen.getByRole("radiogroup", {name: "Reference curve mode"})).toBeVisible();
+        expect(screen.getByRole("radiogroup", {name: "Measurement line mode"})).toBeVisible();
         expect(screen.getByRole("radio", {name: "Curve"})).toBeChecked();
         expect(container.querySelector(".baseline-mode-control radio-group-button-highlight")).not.toBeNull();
 
@@ -94,36 +94,27 @@ describe("CharacterEditMenu", () => {
         expect(screen.getByRole("radio", {name: "Line"})).toBeChecked();
     });
 
-    test("keeps shoulder marking separate from reference sizing", async () => {
+    test("keeps the shoulder role separate from reference sizing", async () => {
         const character = makeCharacter();
         store.characterManager.selectedCharacter = character;
         store.characterManager.editingCharacter = character;
 
         render(CharacterEditMenu);
+        await fireEvent.click(screen.getByRole("button", {name: "Add measurement"}));
 
-        const markButton = screen.getByRole("button", {name: "Mark shoulder"});
-        const clearButton = screen.getByRole("button", {name: "Clear mark"});
+        const shoulderRadio = screen.getByRole("radio", {
+            name: "Use Measurement 2 as shoulder measurement",
+        });
+        await fireEvent.click(shoulderRadio);
 
-        expect(markButton).toHaveAttribute("aria-pressed", "false");
-        expect(clearButton).toBeDisabled();
-
-        await fireEvent.click(markButton);
-
-        expect(store.characterManager.shoulderMarkingActive).toBe(true);
-        expect(markButton).toHaveAttribute("aria-pressed", "true");
+        expect(character.referenceMeasurementId).not.toBe(character.shoulderMeasurementId);
+        expect(shoulderRadio).toBeChecked();
+        expect(screen.queryByRole("button", {name: "Mark shoulder"})).toBeNull();
+        expect(screen.queryByRole("button", {name: "Clear shoulder"})).toBeNull();
 
         await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
 
-        expect(markButton).toBeEnabled();
-        expect(store.characterManager.shoulderMarkingActive).toBe(true);
-
-        character.shoulderY = 0.75;
-        await waitFor(() => expect(clearButton).toBeEnabled());
-        await fireEvent.click(clearButton);
-
-        expect(character.shoulderY).toBeNull();
-        expect(store.characterManager.shoulderMarkingActive).toBe(false);
-        expect(markButton).toHaveAttribute("aria-pressed", "false");
+        expect(shoulderRadio).toBeChecked();
     });
 
     test("switches the reference measurement display between meters and feet", async () => {
@@ -134,7 +125,7 @@ describe("CharacterEditMenu", () => {
 
         render(CharacterEditMenu);
 
-        expect(screen.getByText("Reference length")).toBeVisible();
+        expect(screen.getByRole("textbox", {name: "Measurement 1 value"})).toHaveTextContent("1");
         expect(screen.getByRole("radiogroup", {name: "Measurement unit"})).toBeVisible();
         expect(screen.getByRole("radio", {name: "m"})).toBeChecked();
 
@@ -142,7 +133,7 @@ describe("CharacterEditMenu", () => {
 
         expect(character.baseline.measurementUnit).toBe("ft");
         expect(screen.getByRole("radio", {name: "ft"})).toBeChecked();
-        expect(screen.getByText("3.281")).toBeVisible();
+        expect(screen.getByRole("textbox", {name: "Measurement 1 value"})).toHaveTextContent("3.281");
     });
 
     test("records pixel sizing and keeps the reference label editable", async () => {
@@ -158,13 +149,14 @@ describe("CharacterEditMenu", () => {
         await fireEvent.click(screen.getByRole("radio", {name: "Give a pixel measurement"}));
 
         expect(character.baseline.referenceSizingMethod).toBe("pixel_measurement");
-        expect(screen.queryByRole("radiogroup", {name: "Reference curve mode"})).toBeNull();
+        expect(screen.queryByRole("radiogroup", {name: "Measurement line mode"})).toBeNull();
         expect(screen.getByText("px", {exact: true})).toBeVisible();
 
-        const labelInput = container.querySelector<HTMLElement>(
-            ".reference-label-input [contenteditable]",
+        const referenceRow = container.querySelector<HTMLElement>(
+            `[data-measurement-id="${character.referenceMeasurementId}"]`,
         );
-        if (labelInput === null) throw new Error("missing reference label input");
+        const labelInput = referenceRow?.querySelector<HTMLElement>(".measurement-label [contenteditable]");
+        if (labelInput === null || labelInput === undefined) throw new Error("missing reference label input");
 
         labelInput.textContent = "reference human";
         await fireEvent.input(labelInput);
@@ -184,15 +176,15 @@ describe("CharacterEditMenu", () => {
 
         expect(character.baseline.pixelMeasurementPx).toBe(150);
         expect(character.pixelMeasurementImageLength).toBe(150);
-        expect(container.querySelector(".pixel-measurement-row")).not.toBeNull();
+        expect(container.querySelector(".pixel-measurement-input")).not.toBeNull();
 
         await fireEvent.click(screen.getByRole("radio", {name: "Draw a measurement line"}));
 
         expect(character.baseline.referenceSizingMethod).toBe("measurement_line");
         expect(character.baseline.pixelMeasurementPx).toBe(150);
         expect(screen.getByRole("radio", {name: "Draw a measurement line"})).toBeChecked();
-        expect(screen.getByRole("radiogroup", {name: "Reference curve mode"})).toBeVisible();
-        expect(container.querySelector(".pixel-measurement-row")).toBeNull();
+        expect(screen.getByRole("radiogroup", {name: "Measurement line mode"})).toBeVisible();
+        expect(container.querySelector(".pixel-measurement-input")).toBeNull();
     });
 
     test("requires usable reference sizing before updating", async () => {
@@ -222,13 +214,7 @@ describe("CharacterEditMenu", () => {
         await waitFor(() => expect(updateButton).toBeEnabled());
 
 
-        const targetLengthInput = screen
-            .getByText("Reference length")
-            .closest("label")
-            ?.querySelector("[contenteditable]");
-        if (targetLengthInput === null || targetLengthInput === undefined) {
-            throw new Error("missing target length input");
-        }
+        const targetLengthInput = screen.getByRole("textbox", {name: "Measurement 1 value"});
 
         targetLengthInput.textContent = "invalid";
         await fireEvent.input(targetLengthInput);

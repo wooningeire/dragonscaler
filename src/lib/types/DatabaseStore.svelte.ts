@@ -144,26 +144,48 @@ export class DatabaseStore {
                 ?? characterData.center_point
                 ?? {x: 0.5, y: 0}
             );
-            const character = new Character({
-                id: characterData.id,
-                image: null,
-                imageDimensions: this.referenceImageDimensions(referenceImage),
-                name: characterData.name,
-                anchor,
-                shoulderY: normalizeShoulderY({
-                    shoulderY: referenceImage?.shoulder_y,
-                    groundY: anchor.y,
-                }),
-                formId: form?.id ?? null,
-                referenceImageIds: form?.reference_image_ids ?? [],
-                baseline: new Baseline({
+            const storedMeasurements = referenceImage?.measurements ?? [];
+            const hasStoredMeasurements = storedMeasurements.length > 0;
+            const measurements = hasStoredMeasurements
+                ? storedMeasurements.map(measurement => new Baseline({
+                    id: measurement.id,
+                    points: measurement.points,
+                    targetLength: form?.length_meters ?? legacyBaseline?.length_meters,
+                    measurementUnit: form?.length_unit,
+                    descriptor: measurement.descriptor,
+                    referenceSizingMethod: measurement.reference_sizing_method,
+                    pixelMeasurementPx: measurement.pixel_measurement_px ?? null,
+                }))
+                : [new Baseline({
                     points: referenceImage?.baseline_points ?? legacyBaseline?.points,
                     descriptor: referenceImage?.baseline_descriptor ?? legacyBaseline?.descriptor,
                     targetLength: form?.length_meters ?? legacyBaseline?.length_meters,
                     measurementUnit: form?.length_unit,
                     referenceSizingMethod: referenceImage?.reference_sizing_method,
                     pixelMeasurementPx: referenceImage?.pixel_measurement_px ?? null,
-                }),
+                })];
+            const shoulderY = hasStoredMeasurements
+                ? null
+                : normalizeShoulderY({
+                    shoulderY: referenceImage?.shoulder_y,
+                    groundY: anchor.y,
+                });
+            const character = new Character({
+                id: characterData.id,
+                image: null,
+                imageDimensions: this.referenceImageDimensions(referenceImage),
+                name: characterData.name,
+                anchor,
+                shoulderY,
+                measurements,
+                referenceMeasurementId: hasStoredMeasurements
+                    ? referenceImage?.reference_measurement_id
+                    : measurements[0].id,
+                shoulderMeasurementId: hasStoredMeasurements
+                    ? referenceImage?.shoulder_measurement_id
+                    : null,
+                formId: form?.id ?? null,
+                referenceImageIds: form?.reference_image_ids ?? [],
                 ownerIdentities,
                 sonaIdentities,
                 uploaded: true,
@@ -840,6 +862,15 @@ export class DatabaseStore {
             height_px: character.image.dimensions.height,
             reference_sizing_method: character.baseline.referenceSizingMethod,
             pixel_measurement_px: character.baseline.pixelMeasurementPx,
+            measurements: character.measurements.map(measurement => ({
+                id: measurement.id,
+                points: measurement.points,
+                descriptor: measurement.descriptor,
+                reference_sizing_method: measurement.referenceSizingMethod,
+                pixel_measurement_px: measurement.pixelMeasurementPx,
+            })),
+            reference_measurement_id: character.referenceMeasurementId,
+            shoulder_measurement_id: character.shoulderMeasurementId,
         };
         const referenceImageCreateData = {
             ...referenceImageData,

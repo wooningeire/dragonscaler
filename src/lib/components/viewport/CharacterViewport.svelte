@@ -203,6 +203,8 @@ const renderFrame = $derived(buildCharacterRenderFrame({
     widthPx: viewportWidth,
     heightPx: viewportHeight,
     editingCharacter: store.characterManager.editingCharacter,
+    selectedCharacter: store.characterManager.selectedCharacter,
+    activeMeasurementId: store.characterManager.activeMeasurementId,
     baselinePreview,
     shoulderPreview,
     projectionOverride,
@@ -320,6 +322,11 @@ const viewportPointFromEvent = (event: PointerEvent): Point => {
 };
 
 const editingItem = () => renderFrame.items.find(item => item.editing) ?? null;
+const activeMeasurement = (character: Character) => (
+    character.measurements.find(measurement => (
+        measurement.id === store.characterManager.activeMeasurementId
+    )) ?? character.baseline
+);
 
 const baselinePointFromEvent = (
     event: PointerEvent,
@@ -449,7 +456,11 @@ const beginPointerDrag = (event: PointerEvent) => {
         return;
     }
 
-    if (item.character.baseline.referenceSizingMethod === "pixel_measurement") return;
+    const measurement = activeMeasurement(item.character);
+    if (
+        measurement === item.character.baseline
+        && measurement.referenceSizingMethod === "pixel_measurement"
+    ) return;
 
     rawDrawPoints = [baselinePointFromEvent(event, item)];
     dragState = {
@@ -537,7 +548,7 @@ const finishPointerDrag = (event: PointerEvent) => {
         );
 
         if (computeBaselineArcLength(points) > 0) {
-            character.baseline.points = points;
+            activeMeasurement(character).points = points;
         }
     }
 

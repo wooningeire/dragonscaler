@@ -31,6 +31,15 @@ export type IdentityRecord = {
     avatar?: string,
 } & PocketbaseCommonRecord;
 
+export type CharacterMeasurementRecord = {
+    id: string,
+    points: Point[],
+    descriptor: string,
+    reference_sizing_method?: ReferenceSizingMethod | null,
+    pixel_measurement_px?: number | null,
+};
+
+
 export type ReferenceImageRecord = {
     image: string,
     caption?: string,
@@ -45,6 +54,9 @@ export type ReferenceImageRecord = {
     height_px?: number | null,
     reference_sizing_method?: ReferenceSizingMethod | null,
     pixel_measurement_px?: number | null,
+    measurements?: CharacterMeasurementRecord[],
+    reference_measurement_id?: string | null,
+    shoulder_measurement_id?: string | null,
 } & PocketbaseCommonRecord;
 
 export type CharacterFormRecord = {

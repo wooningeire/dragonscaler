@@ -23,6 +23,8 @@ export type CharacterRenderItem = {
     name: string,
     owners: IdentitySummary[],
     rectPx: RectPx,
+    measurementLines: CharacterMeasurementRenderItem[],
+    /** @deprecated Use measurementLines. */
     baselinePoints: Point[],
     shoulderY: number | null,
     nameplateReferenceHeightPx: number,
@@ -32,6 +34,13 @@ export type CharacterRenderItem = {
     labelOpacity: number,
     mutedByEditMode: boolean,
     editing: boolean,
+};
+
+export type CharacterMeasurementRenderItem = {
+    measurementId: string,
+    points: Point[],
+    isReference: boolean,
+    isToShoulder: boolean,
 };
 
 export type GridlineRenderItem = {
@@ -105,6 +114,8 @@ export const buildCharacterRenderFrame = ({
     widthPx,
     heightPx,
     editingCharacter,
+    selectedCharacter = null,
+    activeMeasurementId = null,
     baselinePreview = null,
     shoulderPreview = null,
     projectionOverride = null,
@@ -117,6 +128,8 @@ export const buildCharacterRenderFrame = ({
     widthPx: number,
     heightPx: number,
     editingCharacter: Character | null,
+    selectedCharacter?: Character | null,
+    activeMeasurementId?: string | null,
     baselinePreview?: BaselinePreview,
     shoulderPreview?: ShoulderPreview,
     projectionOverride?: CharacterProjectionOverride | null,
@@ -165,6 +178,32 @@ export const buildCharacterRenderFrame = ({
             : null;
         const mutedByEditMode = editingCharacter !== null && editingCharacter !== character;
         const editing = editingCharacter === character;
+        const selected = selectedCharacter === character;
+        const showAllMeasurements = editing || selected;
+        const previewMeasurementId = activeMeasurementId ?? character.referenceMeasurementId;
+        const measurementLines = character.measurements
+            .filter(measurement => (
+                showAllMeasurements
+                || measurement.id === character.referenceMeasurementId
+                || measurement.id === character.shoulderMeasurementId
+            ))
+            .map(measurement => {
+                const isReference = measurement.id === character.referenceMeasurementId;
+                const isActivePreview = baselinePreview?.character === character
+                    && measurement.id === previewMeasurementId;
+
+                return {
+                    measurementId: measurement.id,
+                    points: isReference && measurement.referenceSizingMethod === "pixel_measurement"
+                        ? []
+                        : isActivePreview
+                            ? baselinePreview.points
+                            : measurement.points,
+                    isReference,
+                    isToShoulder: measurement.id === character.shoulderMeasurementId,
+                };
+            });
+        const referenceMeasurementLine = measurementLines.find(line => line.isReference);
         const nameplateShoulderY = (
             editing
             && shoulderPreview?.character === character
@@ -195,11 +234,8 @@ export const buildCharacterRenderFrame = ({
                 width,
                 height,
             },
-            baselinePoints: baselinePreview?.character === character
-                ? baselinePreview.points
-                : character.baseline.referenceSizingMethod === "pixel_measurement"
-                    ? []
-                    : character.baseline.points,
+            measurementLines,
+            baselinePoints: referenceMeasurementLine?.points ?? [],
             aspect: character.aspect,
             shoulderY: editing ? nameplateShoulderY : null,
             nameplateReferenceHeightPx,

@@ -19,7 +19,7 @@ const buildFrame = (shoulderY: number | null) => {
         }),
     });
 
-    return buildCharacterRenderFrame({
+    const frame = buildCharacterRenderFrame({
         characters: [character],
         positionsX: [0],
         camera: {
@@ -35,6 +35,9 @@ const buildFrame = (shoulderY: number | null) => {
         heightPx: 600,
         editingCharacter: character,
     });
+    frame.items[0].measurementLines = [];
+
+    return frame;
 };
 
 

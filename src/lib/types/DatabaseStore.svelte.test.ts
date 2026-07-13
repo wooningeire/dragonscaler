@@ -586,6 +586,40 @@ describe("DatabaseStore write idempotency", () => {
         );
     });
 
+    test("persists the measurement list and role ids alongside legacy fields", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        const character = makeNewCharacter();
+        character.anchor.y = 0.1;
+        const shoulderMeasurement = character.addMeasurement({
+            descriptor: "to shoulder",
+            points: [
+                {x: 0.5, y: 0.1},
+                {x: 0.5, y: 0.65},
+            ],
+        });
+        character.setShoulderMeasurement(shoulderMeasurement);
+
+        await databaseStore.createCharacter(character);
+
+        expect(fakePocketBase.collection(Collections.ReferenceImages).createCalls[0]).toEqual(
+            expect.objectContaining({
+                measurements: character.measurements.map(measurement => ({
+                    id: measurement.id,
+                    points: measurement.points,
+                    descriptor: measurement.descriptor,
+                    reference_sizing_method: measurement.referenceSizingMethod,
+                    pixel_measurement_px: measurement.pixelMeasurementPx,
+                })),
+                reference_measurement_id: character.referenceMeasurementId,
+                shoulder_measurement_id: shoulderMeasurement.id,
+                baseline_points: character.baseline.points,
+                baseline_descriptor: character.baseline.descriptor,
+                shoulder_y: 0.65,
+            }),
+        );
+    });
+
     test("persists the authored pixel reference sizing input", async () => {
         const databaseStore = new DatabaseStore();
         const fakePocketBase = installFakePocketBase(databaseStore);
@@ -879,6 +913,70 @@ describe("DatabaseStore character loading", () => {
         expect(characters[0].image).toBeNull();
         expect(characters[0].shoulderY).toBe(0.75);
         expect(characters[0].shoulderAltitude).toBeCloseTo(2.6);
+        expect(characters[0].measurements).toHaveLength(2);
+        expect(characters[0].shoulderMeasurement?.descriptor).toBe("to shoulder");
+        expect(characters[0].shoulderMeasurement?.points).toEqual([
+            {x: 0.5, y: 0.1},
+            {x: 0.5, y: 0.75},
+        ]);
+    });
+
+    test("loads stored measurements and roles before legacy geometry", async () => {
+        const databaseStore = new DatabaseStore();
+        const fakePocketBase = installFakePocketBase(databaseStore);
+        vi.spyOn(CharacterImage, "fromUrl").mockReturnValue(new Promise<CharacterImage>(() => {}));
+
+        seedStoredCharacter(fakePocketBase, {
+            form: {
+                length_meters: 4,
+                length_unit: "ft",
+            },
+            referenceImage: {
+                anchor_point: {x: 0.5, y: 0.1},
+                baseline_points: [
+                    {x: 0, y: 0},
+                    {x: 0, y: 0.25},
+                ],
+                baseline_descriptor: "legacy reference",
+                shoulder_y: 0.9,
+                measurements: [
+                    {
+                        id: "measurement-reference",
+                        points: [
+                            {x: 0.5, y: 0},
+                            {x: 0.5, y: 1},
+                        ],
+                        descriptor: "new reference",
+                        reference_sizing_method: "measurement_line",
+                        pixel_measurement_px: null,
+                    },
+                    {
+                        id: "measurement-shoulder",
+                        points: [
+                            {x: 0.5, y: 0.1},
+                            {x: 0.5, y: 0.75},
+                        ],
+                        descriptor: "new shoulder",
+                        reference_sizing_method: "measurement_line",
+                        pixel_measurement_px: null,
+                    },
+                ],
+                reference_measurement_id: "measurement-reference",
+                shoulder_measurement_id: "measurement-shoulder",
+            },
+        });
+
+        const characters = await databaseStore.loadCharacterData();
+        const character = characters[0];
+
+        expect(character.measurements).toHaveLength(2);
+        expect(character.referenceMeasurementId).toBe("measurement-reference");
+        expect(character.shoulderMeasurementId).toBe("measurement-shoulder");
+        expect(character.baseline.descriptor).toBe("new reference");
+        expect(character.baseline.targetLength).toBe(4);
+        expect(character.baseline.measurementUnit).toBe("ft");
+        expect(character.shoulderY).toBe(0.75);
+        expect(character.shoulderAltitude).toBeCloseTo(2.6);
     });
 
     test("uses decoded dimensions without writing during character load", async () => {

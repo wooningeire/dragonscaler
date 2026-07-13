@@ -5,38 +5,10 @@ import { CharacterImage } from "$lib/types/CharacterImage.svelte";
 import Button from "../generic/Button.svelte";
 import { store } from "$lib/types/Store.svelte";
 import { untrack } from "svelte";
-import {
-    baselineEditModes,
-    isBaselineEditMode,
-} from "$lib/util/baselineGeometry";
-import {
-    formatMeasurementValue,
-    isMeasurementUnit,
-    measurementUnits,
-    measurementUnitToMeters,
-} from "$lib/util/measurementUnits";
-import {
-    formatPixelMeasurementValue,
-    isReferenceSizingMethod,
-    referenceSizingMethods,
-} from "$lib/util/referenceSizing";
 import Separator from "../generic/Separator.svelte";
-import RadioGroup from "$lib/components/generic/RadioGroup.svelte";
+import CharacterMeasurements from "./CharacterMeasurements.svelte";
 
 const characterBeingEdited = $derived(store.characterManager.editingCharacter);
-const targetLengthText = $derived(
-    characterBeingEdited === null
-        ? ""
-        : formatMeasurementValue(
-            characterBeingEdited.baseline.targetLength,
-            characterBeingEdited.baseline.measurementUnit,
-        ),
-);
-const pixelMeasurementText = $derived(
-    characterBeingEdited === null
-        ? ""
-        : formatPixelMeasurementValue(characterBeingEdited.baseline.pixelMeasurementPx),
-);
 
 let fileInput: HTMLInputElement = $state()!;
 
@@ -85,10 +57,12 @@ const mirrorReferenceGeometry = (character: Character) => {
         ...character.anchor,
         x: 1 - character.anchor.x,
     };
-    character.baseline.points = character.baseline.points.map(point => ({
-        x: image.aspect - point.x,
-        y: point.y,
-    }));
+    for (const measurement of character.measurements) {
+        measurement.points = measurement.points.map(point => ({
+            x: image.aspect - point.x,
+            y: point.y,
+        }));
+    }
 };
 
 const flipImage = () => {
@@ -99,70 +73,6 @@ const flipImage = () => {
 
     mirrorReferenceGeometry(characterBeingEdited);
     characterBeingEdited.image = image.withFlippedHorizontally(!image.flippedHorizontally);
-};
-
-const setTargetLength = (value: string) => {
-    if (characterBeingEdited === null) return;
-
-    const parsedValue = Number(value);
-    if (!Number.isFinite(parsedValue)) {
-        characterBeingEdited.baseline.targetLength = Number.NaN;
-        return;
-    }
-
-    characterBeingEdited.baseline.targetLength = measurementUnitToMeters(
-        parsedValue,
-        characterBeingEdited.baseline.measurementUnit,
-    );
-};
-
-const setMeasurementUnit = (value: string) => {
-    if (characterBeingEdited === null || !isMeasurementUnit(value)) return;
-
-    characterBeingEdited.baseline.measurementUnit = value;
-};
-
-const setReferenceSizingMethod = (value: string) => {
-    if (characterBeingEdited === null || !isReferenceSizingMethod(value)) return;
-
-    characterBeingEdited.baseline.referenceSizingMethod = value;
-};
-
-const setPixelMeasurement = (value: string) => {
-    if (characterBeingEdited === null) return;
-
-    const trimmedValue = value.trim();
-    if (trimmedValue === "") {
-        characterBeingEdited.baseline.pixelMeasurementPx = null;
-        return;
-    }
-
-    const parsedValue = Number(trimmedValue);
-    if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
-        characterBeingEdited.baseline.pixelMeasurementPx = null;
-        return;
-    }
-
-    characterBeingEdited.baseline.pixelMeasurementPx = parsedValue;
-};
-
-const setBaselineEditMode = (value: string) => {
-    if (!isBaselineEditMode(value)) return;
-
-    store.characterManager.setBaselineEditMode(value);
-};
-
-const toggleShoulderMarking = () => {
-    store.characterManager.setShoulderMarkingActive(
-        !store.characterManager.shoulderMarkingActive,
-    );
-};
-
-const clearShoulderMark = () => {
-    if (characterBeingEdited === null) return;
-
-    characterBeingEdited.shoulderY = null;
-    store.characterManager.setShoulderMarkingActive(false);
 };
 
 const submit = async () => {
@@ -297,101 +207,10 @@ const canLeave = $derived(!loading && !saving && !deleting);
                 />
             </label>
 
-            <div class="shoulder-altitude-row">
-                <span>Sorting / log scale</span>
-
-                <Button
-                    onclick={toggleShoulderMarking}
-                    disabled={characterBeingEdited.image === null || loading || saving || deleting}
-                    aria-pressed={store.characterManager.shoulderMarkingActive}
-                    title="Click or drag on the image, or use the viewport arrow keys, to mark shoulder altitude."
-                >
-                    Mark shoulder
-                </Button>
-
-                <Button
-                    onclick={clearShoulderMark}
-                    disabled={characterBeingEdited.validShoulderY === null || loading || saving || deleting}
-                >
-                    Clear mark
-                </Button>
-            </div>
-
-            <div class="baseline-editor">
-                <div class="reference-sizing-control">
-                    <RadioGroup
-                        ariaLabel="Reference sizing method"
-                        name="reference-sizing-method"
-                        options={referenceSizingMethods}
-                        value={characterBeingEdited.baseline.referenceSizingMethod}
-                        onValueChange={setReferenceSizingMethod}
-                    />
-                </div>
-
-                <div class="reference-measurement-row">
-                    <label class="reference-measurement-input">
-                        <span>Reference length</span>
-
-                        <TextEntry
-                            value={targetLengthText}
-                            onValueChange={setTargetLength}
-                            placeholderText="Length"
-                        />
-                    </label>
-
-                    <div
-                        class="measurement-unit-control"
-                    >
-                        <RadioGroup
-                            ariaLabel="Measurement unit"
-                            name="reference-measurement-unit"
-                            options={measurementUnits}
-                            value={characterBeingEdited.baseline.measurementUnit}
-                            onValueChange={setMeasurementUnit}
-                        />
-                    </div>
-
-                    <label class="reference-label-input">
-                        <span class="visually-hidden">Reference label</span>
-
-                        <TextEntry
-                            value={characterBeingEdited.baseline.descriptor}
-                            onValueChange={value => characterBeingEdited.baseline.descriptor = value}
-                            placeholderText="to the shoulder"
-                        />
-                    </label>
-                </div>
-
-                {#if characterBeingEdited.baseline.referenceSizingMethod === "pixel_measurement"}
-                    <div class="pixel-measurement-row">
-                        <label class="pixel-measurement-input">
-                            <span>Pixel measurement</span>
-
-                            <div class="pixel-measurement-value">
-                                <TextEntry
-                                    value={pixelMeasurementText}
-                                    onValueChange={setPixelMeasurement}
-                                    placeholderText="Pixels"
-                                />
-
-                                <span>px</span>
-                            </div>
-                        </label>
-                    </div>
-                {:else}
-                    <div
-                        class="baseline-mode-control"
-                    >
-                        <RadioGroup
-                            ariaLabel="Reference curve mode"
-                            name="reference-curve-mode"
-                            options={baselineEditModes}
-                            value={store.characterManager.baselineEditMode}
-                            onValueChange={setBaselineEditMode}
-                        />
-                    </div>
-                {/if}
-            </div>
+            <CharacterMeasurements
+                character={characterBeingEdited}
+                disabled={characterBeingEdited.image === null || loading || saving || deleting}
+            />
         </div>
 
 
@@ -468,83 +287,6 @@ character-edit-menu {
     min-width: 0;
 }
 
-.shoulder-altitude-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-    min-width: 0;
-
-    > span {
-        grid-column: 1 / -1;
-    }
-}
-
-.baseline-editor {
-    display: grid;
-    gap: 0.5rem;
-}
-
-.reference-measurement-row {
-    display: grid;
-    grid-template-columns: minmax(13rem, max-content) max-content minmax(10rem, 1fr);
-    gap: 0.5rem;
-    align-items: center;
-    min-width: 0;
-}
-
-.reference-measurement-input,
-.pixel-measurement-input {
-    display: grid;
-    grid-template-columns: max-content minmax(5.5rem, 7rem);
-    gap: 0.5rem;
-    align-items: center;
-    min-width: 0;
-
-    > span {
-        white-space: nowrap;
-    }
-}
-
-.pixel-measurement-input {
-    grid-template-columns: max-content minmax(7rem, 8.5rem);
-}
-
-.pixel-measurement-value {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content;
-    gap: 0.5rem;
-    align-items: center;
-    min-width: 0;
-}
-
-.reference-label-input {
-    display: grid;
-    min-width: 0;
-}
-
-.pixel-measurement-row {
-    display: grid;
-    grid-template-columns: minmax(13rem, max-content);
-    min-width: 0;
-}
-
-
-.reference-sizing-control,
-.measurement-unit-control,
-.baseline-mode-control {
-    display: grid;
-    min-width: 0;
-}
-
-.visually-hidden {
-    position: fixed;
-    width: 0.0625rem;
-    height: 0.0625rem;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-}
-
 :global(.character-image) {
     width: $image-size;
     aspect-ratio: 1/1;
@@ -608,31 +350,6 @@ input[type="file"] {
         > :global(*) {
             flex: 1 1 5rem;
         }
-    }
-
-    .reference-measurement-row {
-        grid-template-columns: minmax(0, 1fr) max-content;
-    }
-
-    .reference-measurement-input,
-    .pixel-measurement-input {
-        grid-column: 1 / 2;
-        grid-template-columns: minmax(0, 1fr);
-        gap: 0.25rem;
-    }
-
-    .measurement-unit-control {
-        grid-column: 2 / 3;
-        align-self: end;
-    }
-
-    .reference-label-input {
-        grid-column: 1 / -1;
-        min-width: 0;
-    }
-
-    .pixel-measurement-row {
-        grid-template-columns: minmax(0, 1fr);
     }
 
 }

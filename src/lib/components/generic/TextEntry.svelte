@@ -5,10 +5,14 @@ let {
     value,
     onValueChange,
     placeholderText,
+    readonly = false,
+    ariaLabel,
 }: {
     value: string,
     onValueChange: (value: string) => void,
     placeholderText: string,
+    readonly?: boolean,
+    ariaLabel?: string,
 } = $props();
 </script>
 
@@ -38,6 +42,11 @@ let {
             class="text-input-input"
             {...elProps}
             contenteditable
+            aria-readonly={readonly}
+            aria-label={ariaLabel}
+            onbeforeinput={event => {
+                if (readonly) event.preventDefault();
+            }}
         ></div>
     {/snippet}
 </TextInput>

@@ -50,6 +50,7 @@ export class CharacterManager {
     characters = $state<Character[]>([]);
     selectedCharacter = $state<Character | null>(null);
     editingCharacter = $state<Character | null>(null);
+    activeMeasurementId: string | null = $state(null);
     baselineEditMode: BaselineEditMode = $state(readBaselineEditMode());
     shoulderMarkingActive = $state(false);
 
@@ -87,11 +88,13 @@ export class CharacterManager {
     editCharacter = (character: Character) => {
         this.selectCharacter(character);
         this.editingCharacter = character;
+        this.activeMeasurementId = character.baseline.id;
         this.shoulderMarkingActive = false;
     };
 
     stopEditingCharacter = () => {
         this.editingCharacter = null;
+        this.activeMeasurementId = null;
         this.shoulderMarkingActive = false;
     };
 
@@ -111,12 +114,17 @@ export class CharacterManager {
 
         if (this.editingCharacter === character) {
             this.editingCharacter = null;
+            this.activeMeasurementId = null;
             this.shoulderMarkingActive = false;
         }
     };
 
     setBaselineEditMode = (baselineEditMode: BaselineEditMode) => {
         this.baselineEditMode = baselineEditMode;
+    };
+
+    setActiveMeasurementId = (activeMeasurementId: string | null) => {
+        this.activeMeasurementId = activeMeasurementId;
     };
 
     setShoulderMarkingActive = (active: boolean) => {

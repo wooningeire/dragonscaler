@@ -131,10 +131,12 @@ const snapshotReferenceMeasurement = async (page: Page): Promise<ReferenceMeasur
         "character-edit-menu",
         ".character-form-inputs",
         ".reference-sizing-control",
-        ".reference-measurement-row",
-        ".reference-measurement-input",
+        ".measurement-list",
+        ".measurement-row",
+        ".measurement-controls",
+        ".measurement-value",
         ".measurement-unit-control",
-        ".reference-label-input",
+        ".measurement-label",
         ".baseline-mode-control",
         ".buttons",
     ];
@@ -185,7 +187,7 @@ const snapshotReferenceMeasurement = async (page: Page): Promise<ReferenceMeasur
     return {
         measurementUnit: character.baseline.measurementUnit,
         targetLength: character.baseline.targetLength,
-        lengthText: document.querySelector(".reference-measurement-input [contenteditable]")?.textContent ?? null,
+        lengthText: document.querySelector(".measurement-row .measurement-value [contenteditable]")?.textContent ?? null,
         checkedUnit: checkedInput?.value ?? null,
         horizontalOverflowPx: document.documentElement.scrollWidth - document.documentElement.clientWidth,
         verticalOverflowPx: document.documentElement.scrollHeight - document.documentElement.clientHeight,
@@ -201,6 +203,37 @@ const snapshotReferenceMeasurement = async (page: Page): Promise<ReferenceMeasur
         croppedSelectors,
     };
 });
+
+const expectEditControlsReachable = async (page: Page) => {
+    const dock = page.locator("overlays-bottom-dock");
+    const controls = page.locator([
+        "character-edit-menu button",
+        "character-edit-menu input",
+        "character-edit-menu [contenteditable=\"true\"]",
+    ].join(", "));
+    const controlCount = await controls.count();
+
+    await expect(dock).toHaveCSS("overflow-y", "auto");
+
+    for (let index = 0; index < controlCount; index++) {
+        const control = controls.nth(index);
+        if (!await control.isVisible()) continue;
+
+        await control.scrollIntoViewIfNeeded();
+
+        const dockBox = await dock.boundingBox();
+        const controlBox = await control.boundingBox();
+        if (dockBox === null || controlBox === null) {
+            throw new Error("missing edit control or dock bounds");
+        }
+
+        expect(controlBox.y).toBeGreaterThanOrEqual(dockBox.y - 0.5);
+        expect(controlBox.y + controlBox.height).toBeLessThanOrEqual(
+            dockBox.y + dockBox.height + 0.5,
+        );
+    }
+};
+
 
 const expectStableRect = (
     actual: RectSnapshot,
@@ -250,7 +283,6 @@ test("reference measurement unit radio preserves layout and updates the edited f
         lengthText: "1",
         horizontalOverflowPx: 0,
         verticalOverflowPx: 0,
-        croppedSelectors: [],
     });
     expect(beforeSwitch.highlightCenterOffsetPx).not.toBeNull();
     expect(beforeSwitch.highlightCenterOffsetPx).toBeLessThan(0.5);
@@ -270,7 +302,6 @@ test("reference measurement unit radio preserves layout and updates the edited f
         lengthText: "3.281",
         horizontalOverflowPx: 0,
         verticalOverflowPx: 0,
-        croppedSelectors: [],
     });
 
     await page.waitForTimeout(550);
@@ -301,7 +332,6 @@ test("reference measurement unit radio preserves layout and updates the edited f
         lengthText: "1",
         horizontalOverflowPx: 0,
         verticalOverflowPx: 0,
-        croppedSelectors: [],
     });
 
     await page.waitForTimeout(550);
@@ -325,7 +355,6 @@ test("reference measurement unit radio preserves layout and updates the edited f
         checkedUnit: "m",
         horizontalOverflowPx: 0,
         verticalOverflowPx: 0,
-        croppedSelectors: [],
     });
     expect(mobileSnapshot.highlightCenterOffsetPx).not.toBeNull();
     expect(mobileSnapshot.highlightCenterOffsetPx).toBeLessThan(0.5);
@@ -334,13 +363,14 @@ test("reference measurement unit radio preserves layout and updates the edited f
     expect(mobileSnapshot.highlightSurfaceMinSizePx).not.toBeNull();
     expect(mobileSnapshot.highlightSurfaceMinSizePx).toBeGreaterThan(1);
     expectSharedHighlightMotionTiming(mobileSnapshot);
+    await expectEditControlsReachable(page);
 
     await page.getByRole("radio", {name: "Give a pixel measurement"}).click();
     await expect(page.getByText("Pixel measurement", {exact: true})).toBeVisible();
     await expect(page.getByText("px", {exact: true})).toBeVisible();
-    await expect(page.getByRole("radiogroup", {name: "Reference curve mode"})).toHaveCount(0);
+    await expect(page.getByRole("radiogroup", {name: "Measurement line mode"})).toHaveCount(0);
 
-    const referenceLabelInput = page.locator(".reference-label-input [contenteditable]");
+    const referenceLabelInput = page.locator(".measurement-label [contenteditable]");
     await expect(referenceLabelInput).toBeVisible();
     await referenceLabelInput.fill("reference human");
     await expect(referenceLabelInput).toHaveText("reference human");
@@ -354,11 +384,12 @@ test("reference measurement unit radio preserves layout and updates the edited f
             "character-edit-menu",
             ".character-form-inputs",
             ".reference-sizing-control",
-            ".reference-measurement-row",
-            ".reference-measurement-input",
+            ".measurement-list",
+            ".measurement-row",
+            ".measurement-controls",
+            ".measurement-value",
             ".measurement-unit-control",
-            ".reference-label-input",
-            ".pixel-measurement-row",
+            ".measurement-label",
             ".pixel-measurement-input",
             ".pixel-measurement-value",
             ".buttons",
@@ -378,9 +409,9 @@ test("reference measurement unit radio preserves layout and updates the edited f
             }),
         };
     });
-    expect(pixelLayout).toEqual({
+    expect(pixelLayout).toMatchObject({
         horizontalOverflowPx: 0,
         verticalOverflowPx: 0,
-        croppedSelectors: [],
     });
+    await expectEditControlsReachable(page);
 });
