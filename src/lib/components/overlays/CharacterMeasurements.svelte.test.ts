@@ -50,13 +50,24 @@ describe("CharacterMeasurements", () => {
         expect(screen.getByRole("radio", {name: "Use to shoulder as shoulder measurement"})).toBeChecked();
         expect(screen.getByRole("radio", {name: "Use body reference as shoulder measurement"})).not.toBeChecked();
         expect(screen.getByRole("radio", {name: "Use to shoulder as reference"})).not.toBeChecked();
-        expect(screen.getByRole("textbox", {name: "body reference value"})).toHaveTextContent("2");
-        expect(screen.getByRole("textbox", {name: "body reference value"})).toHaveAttribute(
+        const referenceLabel = screen.getByRole("textbox", {name: "body reference label"});
+        const referenceValue = screen.getByRole("textbox", {name: "body reference value"});
+        const shoulderLabel = screen.getByRole("textbox", {name: "to shoulder label"});
+        const shoulderValue = screen.getByRole("textbox", {name: "to shoulder value"});
+
+        expect(referenceLabel).toHaveAttribute("contenteditable", "true");
+        expect(referenceValue).toHaveTextContent("2");
+        expect(referenceValue).toHaveAttribute("contenteditable", "true");
+        expect(referenceValue.closest(".measurement-value")).not.toHaveClass("computed");
+        expect(referenceValue).toHaveAttribute(
             "aria-readonly",
             "false",
         );
-        expect(screen.getByRole("textbox", {name: "to shoulder value"})).toHaveTextContent("1");
-        expect(screen.getByRole("textbox", {name: "to shoulder value"})).toHaveAttribute(
+        expect(shoulderLabel).toHaveAttribute("contenteditable", "false");
+        expect(shoulderValue).toHaveTextContent("1");
+        expect(shoulderValue).toHaveAttribute("contenteditable", "false");
+        expect(shoulderValue.closest(".measurement-value")).toHaveClass("computed");
+        expect(shoulderValue).toHaveAttribute(
             "aria-readonly",
             "true",
         );
@@ -166,11 +177,33 @@ describe("CharacterMeasurements", () => {
         expect(character.referenceMeasurementId).toBe("shoulder");
         expect(character.shoulderMeasurementId).toBe("shoulder");
         expect(character.scaleFac).toBe(4);
+        expect(screen.getByRole("textbox", {name: "body reference label"})).toHaveAttribute(
+            "contenteditable",
+            "false",
+        );
         expect(screen.getByRole("textbox", {name: "body reference value"})).toHaveTextContent("2");
+        expect(screen.getByRole("textbox", {name: "body reference value"})).toHaveAttribute(
+            "contenteditable",
+            "false",
+        );
+        expect(screen.getByRole("textbox", {name: "body reference value"}).closest(
+            ".measurement-value",
+        )).toHaveClass("computed");
         expect(screen.getByRole("textbox", {name: "body reference value"})).toHaveAttribute(
             "aria-readonly",
             "true",
         );
+        expect(screen.getByRole("textbox", {name: "to shoulder label"})).toHaveAttribute(
+            "contenteditable",
+            "true",
+        );
+        expect(screen.getByRole("textbox", {name: "to shoulder value"})).toHaveAttribute(
+            "contenteditable",
+            "true",
+        );
+        expect(screen.getByRole("textbox", {name: "to shoulder value"}).closest(
+            ".measurement-value",
+        )).not.toHaveClass("computed");
 
         await fireEvent.click(screen.getByRole("radio", {name: "Use body reference as shoulder measurement"}));
 

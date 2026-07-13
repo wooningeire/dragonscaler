@@ -445,6 +445,22 @@ test("measurement list keeps reference and shoulder measurements visible after d
     await expect(page.getByRole("textbox", {
         name: "to shoulder value",
     })).toHaveAttribute("aria-readonly", "true");
+    await expect(page.getByRole("textbox", {
+        name: "reference human label",
+    })).toHaveAttribute("contenteditable", "true");
+    await expect(page.getByRole("textbox", {
+        name: "reference human value",
+    })).toHaveAttribute("contenteditable", "true");
+    await expect(page.getByRole("textbox", {
+        name: "to shoulder label",
+    })).toHaveAttribute("contenteditable", "false");
+    await expect(page.getByRole("textbox", {
+        name: "to shoulder value",
+    })).toHaveAttribute("contenteditable", "false");
+    await expect(page.locator(".measurement-value.computed .text-input-container"))
+        .toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(page.locator(".measurement-value.computed .text-input-container"))
+        .toHaveCSS("box-shadow", "none");
 
     await page.getByRole("button", {name: "Add measurement"}).click();
     await expect(page.locator(".measurement-row")).toHaveCount(3);

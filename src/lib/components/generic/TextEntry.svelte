@@ -36,18 +36,26 @@ let {
     {/snippet}
 
     {#snippet input({localText, onLocalTextChange, el, onElChange, elProps})}
-        <div
-            bind:this={() => el, onElChange}
-            bind:textContent={() => localText, onLocalTextChange}
-            class="text-input-input"
-            {...elProps}
-            contenteditable
-            aria-readonly={readonly}
-            aria-label={ariaLabel}
-            onbeforeinput={event => {
-                if (readonly) event.preventDefault();
-            }}
-        ></div>
+        {#if readonly}
+            <div
+                bind:this={() => el, onElChange}
+                class="text-input-input"
+                {...elProps}
+                contenteditable="false"
+                aria-readonly="true"
+                aria-label={ariaLabel}
+            >{localText}</div>
+        {:else}
+            <div
+                bind:this={() => el, onElChange}
+                bind:textContent={() => localText, onLocalTextChange}
+                class="text-input-input"
+                {...elProps}
+                contenteditable
+                aria-readonly="false"
+                aria-label={ariaLabel}
+            ></div>
+        {/if}
     {/snippet}
 </TextInput>
 

@@ -191,11 +191,15 @@ const removeMeasurement = (measurement: Baseline) => {
                         value={measurement.descriptor}
                         onValueChange={value => measurement.descriptor = value}
                         placeholderText={name}
+                        readonly={!isReference}
                         ariaLabel={`${name} label`}
                     />
                 </label>
 
-                <div class="measurement-value">
+                <div
+                    class="measurement-value"
+                    class:computed={!isReference}
+                >
                     <TextEntry
                         value={formattedMeasurementValue(measurement)}
                         onValueChange={value => setMeasurementValue(
@@ -393,6 +397,14 @@ const removeMeasurement = (measurement: Baseline) => {
 
     :global(button-display.text-button) {
         padding-inline: 0.5rem;
+    }
+}
+
+.measurement-value.computed {
+    :global(.text-input-container) {
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
     }
 }
 
