@@ -611,19 +611,8 @@ const adjustShoulderMark = (event: KeyboardEvent) => {
 };
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_tabindex (The viewport is an interactive canvas.) -->
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions (The viewport supports pointer, wheel, and keyboard input.) -->
-<div
-    class="character-viewport"
+<character-viewport
     class:shoulder-marking-active={store.characterManager.shoulderMarkingActive}
-    role="application"
-    aria-label={store.characterManager.shoulderMarkingActive
-        ? "Character height chart viewport. Shoulder marking active. Use arrow keys to adjust the mark."
-        : "Character height chart viewport"}
-    aria-keyshortcuts={store.characterManager.shoulderMarkingActive
-        ? "ArrowUp ArrowDown PageUp PageDown Home End"
-        : undefined}
-    tabindex="0"
     bind:this={viewport}
     bind:clientWidth={viewportWidth}
     bind:clientHeight={viewportHeight}
@@ -653,7 +642,7 @@ const adjustShoulderMark = (event: KeyboardEvent) => {
     }}
 >
     <CharacterCanvas frame={renderFrame} />
-</div>
+</character-viewport>
 
 {#if store.characterManager.shoulderMarkingActive}
     <span
@@ -678,7 +667,7 @@ const adjustShoulderMark = (event: KeyboardEvent) => {
 }
 
 
-.character-viewport {
+character-viewport {
     grid-area: 1/1;
 
     position: relative;

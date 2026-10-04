@@ -84,9 +84,6 @@ export const centeredCameraPositionForCharacter = ({
     };
 };
 
-/**
- * Storage for global application state.
- */
 export class Store {
     readonly characterManager = new CharacterManager();
     readonly databaseStore = new DatabaseStore();
