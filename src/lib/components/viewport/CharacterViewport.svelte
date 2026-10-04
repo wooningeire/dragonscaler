@@ -212,14 +212,6 @@ const renderFrame = $derived(buildCharacterRenderFrame({
     gridlinesOnTop: store.gridlinesOnTop,
 }));
 
-$effect(() => {
-    if (!import.meta.env.DEV || typeof window === "undefined") return;
-
-    (window as DragonscalerViewportDebugWindow).__dragonscalerViewportDebug = {
-        renderFrame,
-    };
-});
-
 const focusSelectedCharacter = (selected: Character) => {
     const index = displayCharacters.indexOf(selected);
     if (index === -1) return;
@@ -643,18 +635,6 @@ const adjustShoulderMark = (event: KeyboardEvent) => {
 >
     <CharacterCanvas frame={renderFrame} />
 </character-viewport>
-
-{#if store.characterManager.shoulderMarkingActive}
-    <span
-        class="shoulder-mark-status"
-        role="status"
-        aria-label="Shoulder mark status"
-        aria-atomic="true"
-    >
-        {shoulderMarkStatus}
-    </span>
-
-{/if}
 
 <style lang="scss">
 .shoulder-mark-status {

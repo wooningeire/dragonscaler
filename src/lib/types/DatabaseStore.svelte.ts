@@ -20,7 +20,11 @@ import {
     type Dimensions,
 } from "./CharacterImage.svelte";
 import { Baseline } from "./Baseline.svelte";
-import { getPocketbaseFileUrl, pocketbaseUrl } from "$lib/util/pocketbase";
+import {
+    CHARACTER_IMAGE_THUMB_SIZE,
+    getPocketbaseFileUrl,
+    pocketbaseUrl,
+} from "$lib/util/pocketbase";
 import type { IdentitySummary } from "./Identity";
 import { normalizeShoulderY } from "$lib/util/shoulderAltitude";
 
@@ -200,7 +204,10 @@ export class DatabaseStore {
                 };
 
             if (imageSource !== null) {
-                const characterImageUrl = getPocketbaseFileUrl(imageSource);
+                const characterImageUrl = getPocketbaseFileUrl({
+                    ...imageSource,
+                    thumb: CHARACTER_IMAGE_THUMB_SIZE,
+                });
 
                 void CharacterImage.fromUrl(
                     characterImageUrl,
