@@ -66,7 +66,7 @@ type FocusedCharacterGeometry = {
 
 const MIN_SHOULDER_IMAGE_ALTITUDE = 1e-3;
 
-let viewport: HTMLDivElement | undefined = $state();
+let viewport: HTMLDivElement;
 let viewportWidth = $state(0);
 let viewportHeight = $state(0);
 let viewportLeft = $state(0);

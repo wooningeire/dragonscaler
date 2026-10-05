@@ -45,8 +45,6 @@ export class WebGpuViewportRenderer {
     private readonly device: GPUDevice;
     private readonly context: GPUCanvasContext;
     private readonly format: GPUTextureFormat;
-    private readonly pipelines: WebGpuPipelines;
-    private readonly sampler: GPUSampler;
     private readonly quadRenderer: WebGpuQuadRenderer;
     private readonly gridQuadRenderer: WebGpuQuadRenderer;
     private readonly outlineQuadRenderer: WebGpuQuadRenderer;
@@ -65,8 +63,6 @@ export class WebGpuViewportRenderer {
         device,
         format,
         context,
-        pipelines,
-        sampler,
         quadRenderer,
         gridQuadRenderer,
         outlineQuadRenderer,
@@ -79,8 +75,6 @@ export class WebGpuViewportRenderer {
         device: GPUDevice,
         format: GPUTextureFormat,
         context: GPUCanvasContext,
-        pipelines: WebGpuPipelines,
-        sampler: GPUSampler,
         quadRenderer: WebGpuQuadRenderer,
         gridQuadRenderer: WebGpuQuadRenderer,
         outlineQuadRenderer: WebGpuQuadRenderer,
@@ -93,8 +87,6 @@ export class WebGpuViewportRenderer {
         this.device = device;
         this.format = format;
         this.context = context;
-        this.pipelines = pipelines;
-        this.sampler = sampler;
         this.quadRenderer = quadRenderer;
         this.gridQuadRenderer = gridQuadRenderer;
         this.outlineQuadRenderer = outlineQuadRenderer;
@@ -173,8 +165,6 @@ export class WebGpuViewportRenderer {
                     device,
                     format,
                     context,
-                    pipelines,
-                    sampler,
                     quadRenderer,
                     gridQuadRenderer,
                     outlineQuadRenderer,

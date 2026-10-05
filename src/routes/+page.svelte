@@ -14,6 +14,7 @@ onMount(() => {
 
 <main>
     <CharacterViewport />
+    
     <Overlays />
 </main>
 
