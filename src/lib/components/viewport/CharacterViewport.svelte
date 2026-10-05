@@ -64,12 +64,6 @@ type FocusedCharacterGeometry = {
     shoulderY: number | null,
 };
 
-type DragonscalerViewportDebugWindow = typeof window & {
-    __dragonscalerViewportDebug?: {
-        renderFrame: CharacterRenderFrame,
-    },
-};
-
 const MIN_SHOULDER_IMAGE_ALTITUDE = 1e-3;
 
 let viewport: HTMLDivElement | undefined = $state();
@@ -556,51 +550,6 @@ const cancelPointerDrag = (event: PointerEvent) => {
 
     clearPointerDrag(event);
 };
-
-const adjustShoulderMark = (event: KeyboardEvent) => {
-    if (!store.characterManager.shoulderMarkingActive) return;
-
-    const character = store.characterManager.editingCharacter;
-    if (character === null) return;
-
-    const groundY = character.anchor.y;
-    if (
-        !Number.isFinite(groundY)
-        || groundY < 0
-        || groundY >= 1
-    ) return;
-
-    const minimumY = Math.min(groundY + MIN_SHOULDER_IMAGE_ALTITUDE, 1);
-
-    const currentY = character.validShoulderY ?? Math.min(
-        Math.max(0.75, minimumY),
-        1,
-    );
-    const step = event.shiftKey ? 0.1 : 0.01;
-    let shoulderY = currentY;
-
-    if (event.key === "ArrowUp") {
-        shoulderY += step;
-    } else if (event.key === "ArrowDown") {
-        shoulderY -= step;
-    } else if (event.key === "PageUp") {
-        shoulderY += 0.1;
-    } else if (event.key === "PageDown") {
-        shoulderY -= 0.1;
-    } else if (event.key === "Home") {
-        shoulderY = minimumY;
-    } else if (event.key === "End") {
-        shoulderY = 1;
-    } else {
-        return;
-    }
-
-    event.preventDefault();
-    character.shoulderY = Math.min(
-        Math.max(shoulderY, minimumY),
-        1,
-    );
-};
 </script>
 
 <character-viewport
@@ -612,8 +561,7 @@ const adjustShoulderMark = (event: KeyboardEvent) => {
     onpointermove={continuePointerDrag}
     onpointerup={finishPointerDrag}
     onpointercancel={cancelPointerDrag}
-    onkeydown={adjustShoulderMark}
-    onwheel={event => {
+    onwheel={(event: WheelEvent) => {
         const mouseX = event.clientX - store.camera.viewportPositionPx.x;
         const mouseY = event.clientY - store.camera.viewportPositionPx.y;
 
@@ -632,21 +580,12 @@ const adjustShoulderMark = (event: KeyboardEvent) => {
             logPerspective,
         ));
     }}
+    role="application"
 >
     <CharacterCanvas frame={renderFrame} />
 </character-viewport>
 
 <style lang="scss">
-.shoulder-mark-status {
-    position: fixed;
-    width: 0.0625rem;
-    height: 0.0625rem;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-}
-
-
 character-viewport {
     grid-area: 1/1;
 

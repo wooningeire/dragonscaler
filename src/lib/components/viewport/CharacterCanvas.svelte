@@ -13,15 +13,10 @@ let {
 } = $props();
 
 let canvas: HTMLCanvasElement = $state()!;
-let renderer: WebGpuViewportRenderer | null = null;
-let rendererStatus: WebGpuRendererStatus = $state("initializing");
+let renderer: WebGpuViewportRenderer | null = $state(null);
 
-onMount(() => {
-    renderer = new WebGpuViewportRenderer(
-        canvas,
-        status => rendererStatus = status,
-    );
-    void renderer.initialize();
+onMount(async () => {
+    renderer = await WebGpuViewportRenderer.mount(canvas);
 });
 
 onDestroy(() => {
@@ -34,11 +29,7 @@ $effect(() => {
 });
 </script>
 
-<canvas
-    bind:this={canvas}
-    data-renderer="webgpu"
-    data-webgpu-status={rendererStatus}
-></canvas>
+<canvas bind:this={canvas}></canvas>
 
 <style lang="scss">
 canvas {

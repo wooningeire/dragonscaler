@@ -40,123 +40,141 @@ export type WebGpuRendererStatus =
     | "unavailable";
 
 export class WebGpuViewportRenderer {
-    private adapter: GPUAdapter | null = null;
-    private device: GPUDevice | null = null;
-    private context: GPUCanvasContext | null = null;
-    private format: GPUTextureFormat | null = null;
-    private pipelines: WebGpuPipelines | null = null;
-    private sampler: GPUSampler | null = null;
-    private quadRenderer: WebGpuQuadRenderer | null = null;
-    private gridQuadRenderer: WebGpuQuadRenderer | null = null;
-    private outlineQuadRenderer: WebGpuQuadRenderer | null = null;
-    private dropShadowQuadRenderer: WebGpuQuadRenderer | null = null;
-    private gridLineRenderer: WebGpuLineRenderer | null = null;
-    private lineRenderer: WebGpuLineRenderer | null = null;
-    private textureResources: WebGpuTextureResources | null = null;
+    private readonly canvas: HTMLCanvasElement;
+    private readonly device: GPUDevice;
+    private readonly context: GPUCanvasContext;
+    private readonly format: GPUTextureFormat;
+    private readonly pipelines: WebGpuPipelines;
+    private readonly sampler: GPUSampler;
+    private readonly quadRenderer: WebGpuQuadRenderer;
+    private readonly gridQuadRenderer: WebGpuQuadRenderer;
+    private readonly outlineQuadRenderer: WebGpuQuadRenderer;
+    private readonly dropShadowQuadRenderer: WebGpuQuadRenderer;
+    private readonly gridLineRenderer: WebGpuLineRenderer;
+    private readonly lineRenderer: WebGpuLineRenderer;
+    private readonly textureResources: WebGpuTextureResources;
     private latestFrame: CharacterRenderFrame | null = null;
     private renderLoopRunning = false;
-    private status: WebGpuRendererStatus = "initializing";
     private configuredWidthPx = 0;
     private configuredHeightPx = 0;
-    private readonly pixelRatio = window.devicePixelRatio || 1;
     private destroyed = false;
 
-    constructor(
-        private readonly canvas: HTMLCanvasElement,
-        private readonly onStatusChange: (status: WebGpuRendererStatus) => void = () => {},
-    ) {}
-
-    async initialize() {
-        if (this.destroyed) return;
-
-        this.setStatus("initializing");
-
-        if (!("gpu" in navigator)) {
-            this.setStatus("unavailable");
-            return;
-        }
-
-        let adapter: GPUAdapter | null = null;
-        try {
-            adapter = await navigator.gpu.requestAdapter();
-        } catch {
-            this.setStatus("unavailable");
-            return;
-        }
-
-        if (this.destroyed) return;
-
-        this.adapter = adapter;
-        if (this.adapter === null) {
-            this.setStatus("unavailable");
-            return;
-        }
-
-        let device: GPUDevice | null = null;
-        try {
-            device = await this.adapter.requestDevice();
-        } catch {
-            this.setStatus("unavailable");
-            return;
-        }
-
-        if (this.destroyed) {
-            device.destroy();
-            return;
-        }
-
+    private constructor({
+        canvas,
+        device,
+        format,
+        context,
+        pipelines,
+        sampler,
+        quadRenderer,
+        gridQuadRenderer,
+        outlineQuadRenderer,
+        dropShadowQuadRenderer,
+        gridLineRenderer,
+        lineRenderer,
+        textureResources,
+    }: {
+        canvas: HTMLCanvasElement,
+        device: GPUDevice,
+        format: GPUTextureFormat,
+        context: GPUCanvasContext,
+        pipelines: WebGpuPipelines,
+        sampler: GPUSampler,
+        quadRenderer: WebGpuQuadRenderer,
+        gridQuadRenderer: WebGpuQuadRenderer,
+        outlineQuadRenderer: WebGpuQuadRenderer,
+        dropShadowQuadRenderer: WebGpuQuadRenderer,
+        gridLineRenderer: WebGpuLineRenderer,
+        lineRenderer: WebGpuLineRenderer,
+        textureResources: WebGpuTextureResources,
+    }) {
+        this.canvas = canvas;
         this.device = device;
-        this.context = this.canvas.getContext("webgpu") as GPUCanvasContext | null;
-        if (this.context === null) {
-            this.setStatus("unavailable");
-            return;
-        }
+        this.format = format;
+        this.context = context;
+        this.pipelines = pipelines;
+        this.sampler = sampler;
+        this.quadRenderer = quadRenderer;
+        this.gridQuadRenderer = gridQuadRenderer;
+        this.outlineQuadRenderer = outlineQuadRenderer;
+        this.dropShadowQuadRenderer = dropShadowQuadRenderer;
+        this.gridLineRenderer = gridLineRenderer;
+        this.lineRenderer = lineRenderer;
+        this.textureResources = textureResources;
+    }
 
-        this.format = navigator.gpu.getPreferredCanvasFormat();
-        this.sampler = this.device.createSampler({
+    static async mount(canvas: HTMLCanvasElement) {
+        if (navigator.gpu === undefined) return null;
+
+        const adapter = await navigator.gpu.requestAdapter();
+        if (adapter === null) return null;
+
+
+        const context = canvas.getContext("webgpu") as GPUCanvasContext | null;
+        if (context === null) return null;
+
+        const device = await adapter.requestDevice();
+
+        const format = navigator.gpu.getPreferredCanvasFormat();
+
+        const sampler = device.createSampler({
             magFilter: "linear",
             minFilter: "linear",
         });
-        this.pipelines = createWebGpuPipelines(
-            this.device,
-            this.format,
+        const pipelines = createWebGpuPipelines(
+            device,
+            format,
         );
-        this.quadRenderer = new WebGpuQuadRenderer(
-            this.device,
-            this.pipelines.quadPipeline,
+        const quadRenderer = new WebGpuQuadRenderer(
+            device,
+            pipelines.quadPipeline,
         );
-        this.gridQuadRenderer = new WebGpuQuadRenderer(
-            this.device,
-            this.pipelines.gridQuadPipeline,
+        const gridQuadRenderer = new WebGpuQuadRenderer(
+            device,
+            pipelines.gridQuadPipeline,
         );
-        this.outlineQuadRenderer = new WebGpuQuadRenderer(
-            this.device,
-            this.pipelines.outlineQuadPipeline,
+        const outlineQuadRenderer = new WebGpuQuadRenderer(
+            device,
+            pipelines.outlineQuadPipeline,
         );
-        this.dropShadowQuadRenderer = new WebGpuQuadRenderer(
-            this.device,
-            this.pipelines.dropShadowQuadPipeline,
+        const dropShadowQuadRenderer = new WebGpuQuadRenderer(
+            device,
+            pipelines.dropShadowQuadPipeline,
         );
-        this.gridLineRenderer = new WebGpuLineRenderer(
-            this.device,
-            this.pipelines.gridLinePipeline,
+        const gridLineRenderer = new WebGpuLineRenderer(
+            device,
+            pipelines.gridLinePipeline,
         );
-        this.lineRenderer = new WebGpuLineRenderer(
-            this.device,
-            this.pipelines.linePipeline,
+        const lineRenderer = new WebGpuLineRenderer(
+            device,
+            pipelines.linePipeline,
         );
-        this.textureResources = new WebGpuTextureResources(
-            this.device,
-            this.pipelines.quadPipeline,
-            this.sampler,
-            this.pixelRatio,
+        const textureResources = new WebGpuTextureResources(
+            device,
+            pipelines.quadPipeline,
+            sampler,
+            devicePixelRatio,
         );
 
         await loadTextFonts();
-        if (this.destroyed) return;
 
-        this.setStatus("ready");
-        this.queueLatestFrame();
+        const renderer = new WebGpuViewportRenderer({
+            canvas,
+            device,
+            format,
+            context,
+            pipelines,
+            sampler,
+            quadRenderer,
+            gridQuadRenderer,
+            outlineQuadRenderer,
+            dropShadowQuadRenderer,
+            gridLineRenderer,
+            lineRenderer,
+            textureResources,
+        });
+
+        return renderer;
     }
 
     render(frame: CharacterRenderFrame) {
@@ -170,7 +188,6 @@ export class WebGpuViewportRenderer {
         if (this.destroyed) return;
 
         this.destroyed = true;
-        this.status = "unavailable";
         this.latestFrame = null;
         this.gridLineRenderer?.destroy();
         this.lineRenderer?.destroy();
@@ -181,19 +198,6 @@ export class WebGpuViewportRenderer {
         this.textureResources?.destroy();
         this.unconfigureContext();
         this.device?.destroy();
-        this.adapter = null;
-        this.device = null;
-        this.context = null;
-        this.format = null;
-        this.pipelines = null;
-        this.sampler = null;
-        this.quadRenderer = null;
-        this.gridQuadRenderer = null;
-        this.outlineQuadRenderer = null;
-        this.dropShadowQuadRenderer = null;
-        this.gridLineRenderer = null;
-        this.lineRenderer = null;
-        this.textureResources = null;
         this.configuredWidthPx = 0;
         this.configuredHeightPx = 0;
     }
@@ -201,7 +205,6 @@ export class WebGpuViewportRenderer {
     private queueLatestFrame() {
         if (this.renderLoopRunning) return;
         if (this.latestFrame === null) return;
-        if (this.status !== "ready") return;
 
         this.renderLoopRunning = true;
         void this.drawQueuedFrames();
@@ -224,21 +227,6 @@ export class WebGpuViewportRenderer {
 
     private async draw(frame: CharacterRenderFrame) {
         if (this.destroyed) return;
-
-        if (
-            this.device === null
-            || this.context === null
-            || this.format === null
-            || this.quadRenderer === null
-            || this.gridQuadRenderer === null
-            || this.outlineQuadRenderer === null
-            || this.dropShadowQuadRenderer === null
-            || this.gridLineRenderer === null
-            || this.lineRenderer === null
-            || this.textureResources === null
-        ) {
-            return;
-        }
 
         if (frame.widthPx <= 0 || frame.heightPx <= 0) return;
 
@@ -322,7 +310,7 @@ export class WebGpuViewportRenderer {
             lineRenderer,
             gridLineRange,
             characterLineRange,
-            pixelRatio: this.pixelRatio,
+            pixelRatio: devicePixelRatio,
             quadIndex,
             outlineQuadIndex,
             dropShadowQuadIndex,
@@ -333,10 +321,8 @@ export class WebGpuViewportRenderer {
     }
 
     private configure(widthPx: number, heightPx: number) {
-        if (this.device === null || this.context === null || this.format === null) return;
-
-        const canvasWidthPx = Math.max(1, Math.round(widthPx * this.pixelRatio));
-        const canvasHeightPx = Math.max(1, Math.round(heightPx * this.pixelRatio));
+        const canvasWidthPx = Math.max(1, Math.round(widthPx * devicePixelRatio));
+        const canvasHeightPx = Math.max(1, Math.round(heightPx * devicePixelRatio));
 
         if (
             this.configuredWidthPx === canvasWidthPx
@@ -366,12 +352,5 @@ export class WebGpuViewportRenderer {
         ) | null;
 
         context?.unconfigure?.();
-    }
-
-    private setStatus(status: WebGpuRendererStatus) {
-        if (this.destroyed) return;
-
-        this.status = status;
-        this.onStatusChange(status);
     }
 }
