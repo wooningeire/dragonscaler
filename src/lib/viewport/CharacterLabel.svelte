@@ -1,7 +1,7 @@
 <script lang="ts">
 import AuthorBadge from "./AuthorBadge.svelte";
 import type { Character } from "$lib/types/Character.svelte";
-    import Separator from "../generic/Separator.svelte";
+import Separator from "../components/Separator.svelte";
 
 let {
     character,

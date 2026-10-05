@@ -1,7 +1,7 @@
 <script lang="ts">
 import { store } from "$lib/types/Store.svelte";
-import Button from "../generic/Button.svelte";
-import Slider from "../generic/Slider.svelte";
+import Button from "$lib/components/Button.svelte";
+import Slider from "$lib/components/Slider.svelte";
 import BottomDock from "./BottomDock.svelte";
 
 const currentAccountName = $derived(store.databaseStore.currentAccountName());

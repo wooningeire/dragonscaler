@@ -1,7 +1,7 @@
 <script lang="ts">
-import Button from "$lib/components/generic/Button.svelte";
-import RadioGroup from "$lib/components/generic/RadioGroup.svelte";
-import TextEntry from "$lib/components/generic/TextEntry.svelte";
+import Button from "$lib/components/Button.svelte";
+import RadioGroup from "$lib/components/RadioGroup.svelte";
+import TextEntry from "$lib/components/TextEntry.svelte";
 import type { Baseline } from "$lib/types/Baseline.svelte";
 import type { Character } from "$lib/types/Character.svelte";
 import { store } from "$lib/types/Store.svelte";

@@ -28,7 +28,7 @@ const defaultEffectParams = (radiusPx: number): QuadEffectParams => [
     0,
 ];
 
-export class WebGpuQuadRenderer {
+export class GpuQuadPipelineManager {
     private readonly uniforms: QuadUniformResource[] = [];
 
     constructor(

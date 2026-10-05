@@ -19,7 +19,7 @@ import {
     createWebGpuPipelines,
     type WebGpuPipelines,
 } from "./webgpu/pipelines";
-import { WebGpuQuadRenderer } from "./webgpu/quadRenderer";
+import { GpuQuadPipelineManager } from "./webgpu/GpuQuadPipelineManager";
 import { WebGpuTextureResources } from "./webgpu/textureResources";
 import type { LineVertexRange } from "./webgpu/types";
 
@@ -40,15 +40,15 @@ export type WebGpuRendererStatus =
     | "ready"
     | "unavailable";
 
-export class WebGpuViewportRenderer {
+export class GpuViewportManager {
     private readonly canvas: HTMLCanvasElement;
     private readonly device: GPUDevice;
     private readonly context: GPUCanvasContext;
     private readonly format: GPUTextureFormat;
-    private readonly quadRenderer: WebGpuQuadRenderer;
-    private readonly gridQuadRenderer: WebGpuQuadRenderer;
-    private readonly outlineQuadRenderer: WebGpuQuadRenderer;
-    private readonly dropShadowQuadRenderer: WebGpuQuadRenderer;
+    private readonly quadRenderer: GpuQuadPipelineManager;
+    private readonly gridQuadRenderer: GpuQuadPipelineManager;
+    private readonly outlineQuadRenderer: GpuQuadPipelineManager;
+    private readonly dropShadowQuadRenderer: GpuQuadPipelineManager;
     private readonly gridLineRenderer: WebGpuLineRenderer;
     private readonly lineRenderer: WebGpuLineRenderer;
     private readonly textureResources: WebGpuTextureResources;
@@ -75,10 +75,10 @@ export class WebGpuViewportRenderer {
         device: GPUDevice,
         format: GPUTextureFormat,
         context: GPUCanvasContext,
-        quadRenderer: WebGpuQuadRenderer,
-        gridQuadRenderer: WebGpuQuadRenderer,
-        outlineQuadRenderer: WebGpuQuadRenderer,
-        dropShadowQuadRenderer: WebGpuQuadRenderer,
+        quadRenderer: GpuQuadPipelineManager,
+        gridQuadRenderer: GpuQuadPipelineManager,
+        outlineQuadRenderer: GpuQuadPipelineManager,
+        dropShadowQuadRenderer: GpuQuadPipelineManager,
         gridLineRenderer: WebGpuLineRenderer,
         lineRenderer: WebGpuLineRenderer,
         textureResources: WebGpuTextureResources,
@@ -100,9 +100,9 @@ export class WebGpuViewportRenderer {
         getCanvas,
     }: {
         getCanvas: () => HTMLCanvasElement,
-    }): Promise<WebGpuViewportRenderer> {
+    }): Promise<GpuViewportManager> {
         return new Promise(resolve => {
-            let renderer: WebGpuViewportRenderer | null = null;
+            let renderer: GpuViewportManager | null = null;
 
             onMount(async () => {
                 const canvas = getCanvas();
@@ -127,19 +127,19 @@ export class WebGpuViewportRenderer {
                     device,
                     format,
                 );
-                const quadRenderer = new WebGpuQuadRenderer(
+                const quadRenderer = new GpuQuadPipelineManager(
                     device,
                     pipelines.quadPipeline,
                 );
-                const gridQuadRenderer = new WebGpuQuadRenderer(
+                const gridQuadRenderer = new GpuQuadPipelineManager(
                     device,
                     pipelines.gridQuadPipeline,
                 );
-                const outlineQuadRenderer = new WebGpuQuadRenderer(
+                const outlineQuadRenderer = new GpuQuadPipelineManager(
                     device,
                     pipelines.outlineQuadPipeline,
                 );
-                const dropShadowQuadRenderer = new WebGpuQuadRenderer(
+                const dropShadowQuadRenderer = new GpuQuadPipelineManager(
                     device,
                     pipelines.dropShadowQuadPipeline,
                 );
@@ -160,7 +160,7 @@ export class WebGpuViewportRenderer {
 
                 await loadTextFonts();
 
-                renderer = new WebGpuViewportRenderer({
+                renderer = new GpuViewportManager({
                     canvas,
                     device,
                     format,

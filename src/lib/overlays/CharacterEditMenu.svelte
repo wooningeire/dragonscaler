@@ -1,11 +1,11 @@
 <script lang="ts">
 import { Character } from "$lib/types/Character.svelte";
-import TextEntry from "$lib/components/generic/TextEntry.svelte";
+import TextEntry from "$lib/components/TextEntry.svelte";
 import { CharacterImage } from "$lib/types/CharacterImage.svelte";
-import Button from "../generic/Button.svelte";
+import Button from "$lib/components/Button.svelte";
 import { store } from "$lib/types/Store.svelte";
 import { untrack } from "svelte";
-import Separator from "../generic/Separator.svelte";
+import Separator from "$lib/components/Separator.svelte";
 import CharacterMeasurements from "./CharacterMeasurements.svelte";
 
 const characterBeingEdited = $derived(store.characterManager.editingCharacter);

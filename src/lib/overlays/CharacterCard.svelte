@@ -1,6 +1,6 @@
 <script lang="ts">
 import type { Character } from "$lib/types/Character.svelte";
-import Button from "../generic/Button.svelte";
+import Button from "../components/Button.svelte";
 import CharacterLabel from "../viewport/CharacterLabel.svelte";
 import { store } from "$lib/types/Store.svelte";
 import { fade } from "svelte/transition";

@@ -15,7 +15,7 @@ import {
 } from "./imageShadow";
 import type { WebGpuLineRenderer } from "./lineRenderer";
 import { characterLabelRectPx } from "./nameplateLayout";
-import type { WebGpuQuadRenderer } from "./quadRenderer";
+import type { GpuQuadPipelineManager } from "./GpuQuadPipelineManager";
 import type {
     LineVertexRange,
     TextureResource,
@@ -32,7 +32,7 @@ type GridlineLabelDrawOptions = {
     pass: GPURenderPassEncoder,
     frame: CharacterRenderFrame,
     gridLabelTextures: TextureResource[],
-    gridQuadRenderer: WebGpuQuadRenderer,
+    gridQuadRenderer: GpuQuadPipelineManager,
     quadIndex: number,
 };
 
@@ -40,7 +40,7 @@ type CharacterLabelDrawOptions = {
     pass: GPURenderPassEncoder,
     frame: CharacterRenderFrame,
     characterLabelTextures: (TextureResource | null)[],
-    quadRenderer: WebGpuQuadRenderer,
+    quadRenderer: GpuQuadPipelineManager,
     pixelRatio: number,
     quadIndex: number,
 };
@@ -51,10 +51,10 @@ type FrameContentDrawOptions = {
     characterTextures: TextureResource[],
     gridLabelTextures: TextureResource[],
     characterLabelTextures: (TextureResource | null)[],
-    quadRenderer: WebGpuQuadRenderer,
-    gridQuadRenderer: WebGpuQuadRenderer,
-    outlineQuadRenderer: WebGpuQuadRenderer,
-    dropShadowQuadRenderer: WebGpuQuadRenderer,
+    quadRenderer: GpuQuadPipelineManager,
+    gridQuadRenderer: GpuQuadPipelineManager,
+    outlineQuadRenderer: GpuQuadPipelineManager,
+    dropShadowQuadRenderer: GpuQuadPipelineManager,
     gridLineRenderer: WebGpuLineRenderer,
     lineRenderer: WebGpuLineRenderer,
     gridLineRange: LineVertexRange,
@@ -217,9 +217,9 @@ export const drawCharacterImageQuads = ({
     pass: GPURenderPassEncoder,
     frame: CharacterRenderFrame,
     characterTextures: TextureResource[],
-    quadRenderer: WebGpuQuadRenderer,
-    outlineQuadRenderer: WebGpuQuadRenderer,
-    dropShadowQuadRenderer: WebGpuQuadRenderer,
+    quadRenderer: GpuQuadPipelineManager,
+    outlineQuadRenderer: GpuQuadPipelineManager,
+    dropShadowQuadRenderer: GpuQuadPipelineManager,
 } & CharacterImageQuadDrawState): CharacterImageQuadDrawState => {
     for (let index = 0; index < frame.items.length; index++) {
         const item = frame.items[index];

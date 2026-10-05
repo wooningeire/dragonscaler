@@ -2,9 +2,9 @@
 import { onDestroy, onMount } from "svelte";
 import type { CharacterRenderFrame } from "./characterRenderModel";
 import {
-    WebGpuViewportRenderer,
+    GpuViewportManager,
     type WebGpuRendererStatus,
-} from "./WebGpuViewportRenderer";
+} from "./GpuViewportManager";
 
 let {
     frame,
@@ -13,16 +13,16 @@ let {
 } = $props();
 
 let canvas: HTMLCanvasElement = $state()!;
-let renderer: WebGpuViewportRenderer | null = $state(null);
+let manager: GpuViewportManager | null = $state(null);
 
-WebGpuViewportRenderer.mount({
+GpuViewportManager.mount({
     getCanvas: () => canvas,
 })
-    .then(result => renderer = result);
+    .then(result => manager = result);
 
 
 $effect(() => {
-    renderer?.render(frame);
+    manager?.render(frame);
 });
 </script>
 
