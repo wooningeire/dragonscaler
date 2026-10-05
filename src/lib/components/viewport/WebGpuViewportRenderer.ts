@@ -1,3 +1,4 @@
+import { onDestroy, onMount } from "svelte";
 import type { CharacterRenderFrame } from "./characterRenderModel";
 import {
     LINE_VERTEX_FLOAT_COUNT,
@@ -103,78 +104,94 @@ export class WebGpuViewportRenderer {
         this.textureResources = textureResources;
     }
 
-    static async mount(canvas: HTMLCanvasElement) {
-        if (navigator.gpu === undefined) return null;
+    static mount({
+        getCanvas,
+    }: {
+        getCanvas: () => HTMLCanvasElement,
+    }): Promise<WebGpuViewportRenderer> {
+        return new Promise(resolve => {
+            let renderer: WebGpuViewportRenderer | null = null;
 
-        const adapter = await navigator.gpu.requestAdapter();
-        if (adapter === null) return null;
+            onMount(async () => {
+                const canvas = getCanvas();
+                if (navigator.gpu === undefined) return null;
+
+                const adapter = await navigator.gpu.requestAdapter();
+                if (adapter === null) return null;
 
 
-        const context = canvas.getContext("webgpu") as GPUCanvasContext | null;
-        if (context === null) return null;
+                const context = canvas.getContext("webgpu") as GPUCanvasContext | null;
+                if (context === null) return null;
 
-        const device = await adapter.requestDevice();
+                const device = await adapter.requestDevice();
 
-        const format = navigator.gpu.getPreferredCanvasFormat();
+                const format = navigator.gpu.getPreferredCanvasFormat();
 
-        const sampler = device.createSampler({
-            magFilter: "linear",
-            minFilter: "linear",
+                const sampler = device.createSampler({
+                    magFilter: "linear",
+                    minFilter: "linear",
+                });
+                const pipelines = createWebGpuPipelines(
+                    device,
+                    format,
+                );
+                const quadRenderer = new WebGpuQuadRenderer(
+                    device,
+                    pipelines.quadPipeline,
+                );
+                const gridQuadRenderer = new WebGpuQuadRenderer(
+                    device,
+                    pipelines.gridQuadPipeline,
+                );
+                const outlineQuadRenderer = new WebGpuQuadRenderer(
+                    device,
+                    pipelines.outlineQuadPipeline,
+                );
+                const dropShadowQuadRenderer = new WebGpuQuadRenderer(
+                    device,
+                    pipelines.dropShadowQuadPipeline,
+                );
+                const gridLineRenderer = new WebGpuLineRenderer(
+                    device,
+                    pipelines.gridLinePipeline,
+                );
+                const lineRenderer = new WebGpuLineRenderer(
+                    device,
+                    pipelines.linePipeline,
+                );
+                const textureResources = new WebGpuTextureResources(
+                    device,
+                    pipelines.quadPipeline,
+                    sampler,
+                    devicePixelRatio,
+                );
+
+                await loadTextFonts();
+
+                renderer = new WebGpuViewportRenderer({
+                    canvas,
+                    device,
+                    format,
+                    context,
+                    pipelines,
+                    sampler,
+                    quadRenderer,
+                    gridQuadRenderer,
+                    outlineQuadRenderer,
+                    dropShadowQuadRenderer,
+                    gridLineRenderer,
+                    lineRenderer,
+                    textureResources,
+                });
+
+                resolve(renderer);
+
+            });
+
+            onDestroy(() => {
+                renderer?.destroy();
+            });
         });
-        const pipelines = createWebGpuPipelines(
-            device,
-            format,
-        );
-        const quadRenderer = new WebGpuQuadRenderer(
-            device,
-            pipelines.quadPipeline,
-        );
-        const gridQuadRenderer = new WebGpuQuadRenderer(
-            device,
-            pipelines.gridQuadPipeline,
-        );
-        const outlineQuadRenderer = new WebGpuQuadRenderer(
-            device,
-            pipelines.outlineQuadPipeline,
-        );
-        const dropShadowQuadRenderer = new WebGpuQuadRenderer(
-            device,
-            pipelines.dropShadowQuadPipeline,
-        );
-        const gridLineRenderer = new WebGpuLineRenderer(
-            device,
-            pipelines.gridLinePipeline,
-        );
-        const lineRenderer = new WebGpuLineRenderer(
-            device,
-            pipelines.linePipeline,
-        );
-        const textureResources = new WebGpuTextureResources(
-            device,
-            pipelines.quadPipeline,
-            sampler,
-            devicePixelRatio,
-        );
-
-        await loadTextFonts();
-
-        const renderer = new WebGpuViewportRenderer({
-            canvas,
-            device,
-            format,
-            context,
-            pipelines,
-            sampler,
-            quadRenderer,
-            gridQuadRenderer,
-            outlineQuadRenderer,
-            dropShadowQuadRenderer,
-            gridLineRenderer,
-            lineRenderer,
-            textureResources,
-        });
-
-        return renderer;
     }
 
     render(frame: CharacterRenderFrame) {
@@ -185,8 +202,6 @@ export class WebGpuViewportRenderer {
     }
 
     destroy() {
-        if (this.destroyed) return;
-
         this.destroyed = true;
         this.latestFrame = null;
         this.gridLineRenderer?.destroy();

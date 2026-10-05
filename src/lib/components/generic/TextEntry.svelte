@@ -72,6 +72,8 @@ let {
         0 0.25rem 1rem oklch(0.75 0.05 140 / 0.5) inset;
     border: 0.0625rem solid oklch(0 0 0 / 0.25);
 
+    cursor: text;
+
     &,
     > * {
         border-radius: 0.5rem;

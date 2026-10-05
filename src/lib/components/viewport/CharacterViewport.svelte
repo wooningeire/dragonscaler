@@ -102,17 +102,6 @@ const shoulderPreview: ShoulderPreview = $derived.by(() => {
         y: shoulderPreviewY,
     };
 });
-const shoulderMarkStatus = $derived.by(() => {
-    if (!store.characterManager.shoulderMarkingActive) return "";
-
-    const character = store.characterManager.editingCharacter;
-    const shoulderY = character?.validShoulderY ?? null;
-    if (shoulderY === null) return "Shoulder mark not set.";
-
-    const percentFromImageBottom = Math.round(shoulderY * 1_000) / 10;
-
-    return `Shoulder mark ${percentFromImageBottom}% from image bottom.`;
-});
 
 const logPerspective = $derived(store.characterManager.logPerspective);
 const focusOffsetPx = $derived({

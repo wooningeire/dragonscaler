@@ -15,14 +15,11 @@ let {
 let canvas: HTMLCanvasElement = $state()!;
 let renderer: WebGpuViewportRenderer | null = $state(null);
 
-onMount(async () => {
-    renderer = await WebGpuViewportRenderer.mount(canvas);
-});
+WebGpuViewportRenderer.mount({
+    getCanvas: () => canvas,
+})
+    .then(result => renderer = result);
 
-onDestroy(() => {
-    renderer?.destroy();
-    renderer = null;
-});
 
 $effect(() => {
     renderer?.render(frame);
