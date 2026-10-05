@@ -1,6 +1,6 @@
 import type { Point } from "./Point";
-import type { MeasurementUnit } from "#lib/util/measurementUnits.js";
-import type { ReferenceSizingMethod } from "#lib/util/referenceSizing.js";
+import type { MeasurementUnit } from "$lib/util/measurementUnits";
+import type { ReferenceSizingMethod } from "$lib/util/referenceSizing";
 
 export enum Collections {
     Accounts = "users",

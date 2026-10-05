@@ -24,9 +24,9 @@ import {
     CHARACTER_IMAGE_THUMB_SIZE,
     getPocketbaseFileUrl,
     pocketbaseUrl,
-} from "#lib/util/pocketbase.js";
+} from "$lib/util/pocketbase";
 import type { IdentitySummary } from "./Identity";
-import { normalizeShoulderY } from "#lib/util/shoulderAltitude.js";
+import { normalizeShoulderY } from "$lib/util/shoulderAltitude";
 
 
 type PocketBaseWritePayload = Record<string, unknown>;

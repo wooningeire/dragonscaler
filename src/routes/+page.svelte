@@ -4,7 +4,7 @@ import "./index.scss";
 import Overlays from "../lib/components/overlays/Overlays.svelte";
 import CharacterViewport from "../lib/components/viewport/CharacterViewport.svelte";
 import { onMount } from "svelte";
-import { store } from "#lib/types/Store.svelte.js";
+import { store } from "$lib/types/Store.svelte";
 
 onMount(() => {
     store.databaseStore.loadUserRecord();

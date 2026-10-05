@@ -7,14 +7,14 @@ import { Tween } from "svelte/motion";
 import {
     centeredCameraPositionForCharacter,
     store,
-} from "#lib/types/Store.svelte.js";
+} from "$lib/types/Store.svelte";
 import {
     CAMERA_EASE_DURATION_MS,
     CAMERA_EASE_OPTIONS,
     cameraScaleFromTweenValue,
     cameraScaleToTweenValue,
-} from "#lib/types/Camera2d.svelte.js";
-import type { Character } from "#lib/types/Character.svelte.js";
+} from "$lib/types/Camera2d.svelte";
+import type { Character } from "$lib/types/Character.svelte";
 import CharacterCanvas from "./CharacterCanvas.svelte";
 import {
     buildCharacterRenderFrame,
@@ -23,18 +23,18 @@ import {
     type CharacterRenderFrame,
     type ShoulderPreview,
 } from "./characterRenderModel";
-import type { Point } from "#lib/types/Point.js";
+import type { Point } from "$lib/types/Point";
 import {
     buildBaselinePoints,
     clampBaselinePoint,
     computeBaselineArcLength,
-} from "#lib/util/baselineGeometry.js";
+} from "$lib/util/baselineGeometry";
 import {
     characterProjectionMetrics,
     projectViewportYMeters,
     unprojectViewportYMeters,
-} from "#lib/util/viewportProjection.js";
-import { normalizeShoulderY } from "#lib/util/shoulderAltitude.js";
+} from "$lib/util/viewportProjection";
+import { normalizeShoulderY } from "$lib/util/shoulderAltitude";
 
 type DragState =
     | {

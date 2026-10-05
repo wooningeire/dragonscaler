@@ -1,6 +1,6 @@
 <script lang="ts">
 import CharacterCard from "./CharacterCard.svelte";
-import { store } from "#lib/types/Store.svelte.js";
+import { store } from "$lib/types/Store.svelte";
 </script>
 
 <character-carousel>

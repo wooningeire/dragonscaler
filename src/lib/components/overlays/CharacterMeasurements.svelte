@@ -1,21 +1,21 @@
 <script lang="ts">
-import Button from "#lib/components/generic/Button.svelte";
-import RadioGroup from "#lib/components/generic/RadioGroup.svelte";
-import TextEntry from "#lib/components/generic/TextEntry.svelte";
-import type { Baseline } from "#lib/types/Baseline.svelte.js";
-import type { Character } from "#lib/types/Character.svelte.js";
-import { store } from "#lib/types/Store.svelte.js";
+import Button from "$lib/components/generic/Button.svelte";
+import RadioGroup from "$lib/components/generic/RadioGroup.svelte";
+import TextEntry from "$lib/components/generic/TextEntry.svelte";
+import type { Baseline } from "$lib/types/Baseline.svelte";
+import type { Character } from "$lib/types/Character.svelte";
+import { store } from "$lib/types/Store.svelte";
 import {
     baselineEditModes,
     isBaselineEditMode,
-} from "#lib/util/baselineGeometry.js";
+} from "$lib/util/baselineGeometry";
 import {
     formatMeasurementValue,
     isMeasurementUnit,
     measurementUnits,
     measurementUnitToMeters,
-} from "#lib/util/measurementUnits.js";
-import { formatPixelMeasurementValue } from "#lib/util/referenceSizing.js";
+} from "$lib/util/measurementUnits";
+import { formatPixelMeasurementValue } from "$lib/util/referenceSizing";
 
 let {
     character,

@@ -1,8 +1,8 @@
 <script lang="ts">
-import type { Character } from "#lib/types/Character.svelte.js";
+import type { Character } from "$lib/types/Character.svelte";
 import Button from "../generic/Button.svelte";
 import CharacterLabel from "../viewport/CharacterLabel.svelte";
-import { store } from "#lib/types/Store.svelte.js";
+import { store } from "$lib/types/Store.svelte";
 import { fade } from "svelte/transition";
 import { cubicInOut } from "svelte/easing";
 
