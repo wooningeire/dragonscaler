@@ -5,7 +5,7 @@ import { circOut } from "svelte/easing";
 import CharacterEditMenu from "./CharacterEditMenu.svelte";
 import CharacterCarousel from "./CharacterCarousel.svelte";
 
-import { store } from "$lib/types/Store.svelte";
+import { store } from "#lib/types/Store.svelte.js";
 
 const grow = (
     node: HTMLElement,

@@ -4,8 +4,8 @@ import type {
     CharacterRenderItem,
     RectPx,
 } from "../characterRenderModel";
-import type { Point } from "$lib/types/Point";
-import { sampleBaselinePath } from "$lib/util/baselineGeometry";
+import type { Point } from "#lib/types/Point.js";
+import { sampleBaselinePath } from "#lib/util/baselineGeometry.js";
 import {
     BASELINE_BLACK_COLOR,
     BASELINE_WHITE_COLOR,

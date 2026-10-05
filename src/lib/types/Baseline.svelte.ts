@@ -1,15 +1,15 @@
 import type { Point } from "./Point";
-import { computeBaselineArcLength } from "$lib/util/baselineGeometry";
+import { computeBaselineArcLength } from "#lib/util/baselineGeometry.js";
 import {
     DEFAULT_MEASUREMENT_UNIT,
     normalizeMeasurementUnit,
     type MeasurementUnit,
-} from "$lib/util/measurementUnits";
+} from "#lib/util/measurementUnits.js";
 import {
     DEFAULT_REFERENCE_SIZING_METHOD,
     normalizeReferenceSizingMethod,
     type ReferenceSizingMethod,
-} from "$lib/util/referenceSizing";
+} from "#lib/util/referenceSizing.js";
 
 export class Baseline {
     id: string = $state()!;

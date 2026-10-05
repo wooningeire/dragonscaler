@@ -1,12 +1,12 @@
-import type { Character } from "$lib/types/Character.svelte";
-import type { CharacterImage } from "$lib/types/CharacterImage.svelte";
-import type { IdentitySummary } from "$lib/types/Identity";
-import type { Point } from "$lib/types/Point";
+import type { Character } from "#lib/types/Character.svelte.js";
+import type { CharacterImage } from "#lib/types/CharacterImage.svelte.js";
+import type { IdentitySummary } from "#lib/types/Identity.js";
+import type { Point } from "#lib/types/Point.js";
 import {
     characterProjectionMetrics,
     projectViewportYMeters,
     unprojectViewportYMeters,
-} from "$lib/util/viewportProjection";
+} from "#lib/util/viewportProjection.js";
 
 
 export type RectPx = {

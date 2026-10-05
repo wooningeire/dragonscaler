@@ -7,8 +7,8 @@ import type { Point } from "./Point";
 import { Baseline } from "./Baseline.svelte";
 import {
     pixelMeasurementImageLength as computePixelMeasurementImageLength,
-} from "$lib/util/referenceSizing";
-import { normalizeShoulderY } from "$lib/util/shoulderAltitude";
+} from "#lib/util/referenceSizing.js";
+import { normalizeShoulderY } from "#lib/util/shoulderAltitude.js";
 
 export class Character {
     id: string | null = $state(null);

@@ -1,7 +1,7 @@
-import type { Handle } from "@sveltejs/kit";
+import type { Handle } from "@sveltejs/kit/hooks";
 import PocketBase from "pocketbase";
-import { pocketbaseUrl } from "$lib/util/pocketbase";
-import { Collections } from "$lib/types/PocketBaseTypes";
+import { pocketbaseUrl } from "#lib/util/pocketbase.js";
+import { Collections } from "#lib/types/PocketBaseTypes.js";
 
 
 export const handle: Handle = async ({ event, resolve }) => {

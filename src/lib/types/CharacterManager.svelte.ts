@@ -4,8 +4,8 @@ import {
     DEFAULT_BASELINE_EDIT_MODE,
     isBaselineEditMode,
     type BaselineEditMode,
-} from "$lib/util/baselineGeometry";
-import { characterViewportWidthForProjection } from "$lib/util/viewportProjection";
+} from "#lib/util/baselineGeometry.js";
+import { characterViewportWidthForProjection } from "#lib/util/viewportProjection.js";
 
 const BASELINE_EDIT_MODE_STORAGE_KEY = "dragonscaler:baseline-edit-mode";
 

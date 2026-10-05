@@ -1,12 +1,12 @@
-import { PUBLIC__POCKETBASE_URL } from "$env/static/public";
+import { PUBLIC__POCKETBASE_URL } from "$app/env/public";
 
 
-export type PocketBaseFileUrlInput = {
-    collection: string,
-    recordId: string,
-    filename: string,
-    thumb?: string | null,
-};
+export type PocketBaseFileUrlInput = { 
+    collection: string;
+    recordId: string;
+    filename: string;
+    thumb?: string | null
+ };
 
 
 export const CHARACTER_IMAGE_THUMB_SIZE = "0x1024";

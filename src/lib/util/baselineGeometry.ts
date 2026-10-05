@@ -1,4 +1,4 @@
-import type { Point } from "$lib/types/Point";
+import type { Point } from "#lib/types/Point.js";
 
 export type BaselineEditMode = "altitude" | "line" | "curve";
 

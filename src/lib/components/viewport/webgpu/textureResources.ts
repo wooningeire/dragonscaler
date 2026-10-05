@@ -1,4 +1,4 @@
-import type { CharacterImage } from "$lib/types/CharacterImage.svelte";
+import type { CharacterImage } from "#lib/types/CharacterImage.svelte.js";
 import {
     GPU_TEXTURE_USAGE,
     PLACEHOLDER_COLOR,

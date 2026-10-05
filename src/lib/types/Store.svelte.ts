@@ -5,7 +5,7 @@ import type { Character } from "./Character.svelte";
 import {
     characterProjectionMetrics,
     unprojectViewportYMeters,
-} from "$lib/util/viewportProjection";
+} from "#lib/util/viewportProjection.js";
 
 
 const FOCUS_PADDING_FAC = 1.5;

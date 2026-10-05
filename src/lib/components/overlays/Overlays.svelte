@@ -1,5 +1,5 @@
 <script lang="ts">
-import { store } from "$lib/types/Store.svelte";
+import { store } from "#lib/types/Store.svelte.js";
 import Button from "../generic/Button.svelte";
 import Slider from "../generic/Slider.svelte";
 import BottomDock from "./BottomDock.svelte";
