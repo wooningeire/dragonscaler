@@ -97,7 +97,7 @@ const promptDiscordLogin = () => {
 </overlays-panel>
 
 <style lang="scss">
-$dock-bg-col: oklch(0.8 0.05 140 / 0.5);
+$dock-bg-col: oklch(0.8 0.05 140 / 0.75);
 
 
 overlays-panel {
@@ -180,6 +180,9 @@ overlays-panel {
     padding: 0.5rem 1rem;
     background: $dock-bg-col;
     border-radius: 1rem;
+
+    box-shadow: 0 0.25rem 1rem 0.5rem oklch(0.75 0.05 140 / 0.5);
+    backdrop-filter: blur(4px);
     
     > :global(*) {
         pointer-events: auto;
